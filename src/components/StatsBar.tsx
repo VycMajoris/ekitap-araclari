@@ -1,0 +1,171 @@
+import React from 'react';
+import {
+  Play,
+  Square,
+  Download,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  RotateCcw,
+  Loader2,
+} from 'lucide-react';
+import { ProcessingStats } from '../lib/types';
+
+interface StatsBarProps {
+  stats: ProcessingStats;
+  isProcessing: boolean;
+  isCompleted: boolean;
+  isPacking: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onDownload: () => void;
+  onResetProgress: () => void;
+  selectedCount: number;
+}
+
+export const StatsBar: React.FC<StatsBarProps> = ({
+  stats,
+  isProcessing,
+  isCompleted,
+  isPacking,
+  onStart,
+  onStop,
+  onDownload,
+  onResetProgress,
+  selectedCount,
+}) => {
+  const percent =
+    stats.totalBlocks > 0
+      ? Math.min(100, Math.round((stats.processedBlocks / stats.totalBlocks) * 100))
+      : 0;
+
+  const formatSeconds = (sec?: number) => {
+    if (sec === undefined || isNaN(sec) || sec < 0) return 'Hesaplanıyor...';
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m > 0 ? `${m} dk ${s} sn` : `${s} sn`;
+  };
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {/* Metric Badges */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
+          {/* Progress */}
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+            <span className="text-[11px] font-medium text-zinc-500 block">İlerleme</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-lg font-extrabold text-zinc-900 dark:text-white">
+                %{percent}
+              </span>
+              <span className="text-[11px] text-zinc-400">
+                ({stats.processedBlocks}/{stats.totalBlocks})
+              </span>
+            </div>
+          </div>
+
+          {/* Fixed Words */}
+          <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-3">
+            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> Düzeltilen Kelime
+            </span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+                {stats.totalFixedWords.toLocaleString('tr-TR')}
+              </span>
+              <span className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">adet</span>
+            </div>
+          </div>
+
+          {/* Chapters */}
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+            <span className="text-[11px] font-medium text-zinc-500 block">Bölüm Durumu</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-lg font-extrabold text-zinc-900 dark:text-white">
+                {stats.completedChapters}
+              </span>
+              <span className="text-[11px] text-zinc-400">/ {stats.totalChapters}</span>
+            </div>
+          </div>
+
+          {/* Time Remaining */}
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+            <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-zinc-400" />
+              {isProcessing ? 'Kalan Süre' : 'Geçen Süre'}
+            </span>
+            <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-1 truncate">
+              {isProcessing
+                ? formatSeconds(stats.estimatedRemainingSeconds)
+                : `${stats.elapsedSeconds} sn`}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+          {stats.processedBlocks > 0 && !isProcessing && (
+            <button
+              onClick={onResetProgress}
+              className="p-2.5 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-zinc-800"
+              title="İlerlemeyi Sıfırla"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+
+          {!isProcessing ? (
+            <button
+              onClick={onStart}
+              disabled={selectedCount === 0}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              <span>
+                {stats.processedBlocks > 0 ? 'Düzeltmeye Devam Et' : 'Düzeltmeyi Başlat'}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={onStop}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all cursor-pointer"
+            >
+              <Square className="w-4 h-4 fill-white" />
+              <span>Durdur / Duraklat</span>
+            </button>
+          )}
+
+          <button
+            onClick={onDownload}
+            disabled={stats.processedBlocks === 0 || isProcessing || isPacking}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all cursor-pointer"
+          >
+            {isPacking ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Paketleniyor...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span>EPUB İndir</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Progress Track */}
+      <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden relative">
+        <div
+          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-300 relative overflow-hidden"
+          style={{ width: `${percent}%` }}
+        >
+          {isProcessing && (
+            <div className="absolute inset-0 bg-white/20 animate-[shimmer_1.5s_infinite] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)]" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
