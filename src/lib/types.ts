@@ -73,6 +73,8 @@ export interface ProcessingOptions {
   temperature: number;
   customPrompt?: string;
   debugMode?: boolean;
+  isDevMode?: boolean;
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export interface ProcessingStats {

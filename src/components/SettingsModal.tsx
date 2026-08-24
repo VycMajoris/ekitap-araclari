@@ -4,8 +4,6 @@ import {
   Key,
   Cpu,
   Sliders,
-  Sparkles,
-  Zap,
   RotateCw,
   ExternalLink,
   Eye,
@@ -16,6 +14,10 @@ import {
   CheckCircle2,
   Database,
   Trash2,
+  Sun,
+  Moon,
+  Monitor,
+  Wrench,
 } from 'lucide-react';
 import {
   OpenRouterModel,
@@ -42,6 +44,8 @@ interface SettingsModalProps {
   options: ProcessingOptions;
   onOptionsChange: (newOptions: ProcessingOptions) => void;
   onLoginGoogle?: () => void;
+  currentTheme?: 'light' | 'dark' | 'system';
+  onThemeChange?: (theme: 'light' | 'dark' | 'system') => void;
 }
 
 const GoogleGIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -71,6 +75,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   options,
   onOptionsChange,
   onLoginGoogle,
+  currentTheme = 'system',
+  onThemeChange,
 }) => {
   const [showKey, setShowKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
@@ -83,6 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isClearingCache, setIsClearingCache] = useState(false);
 
   const activeTab: LlmProvider = options.provider || 'openrouter';
+  const isDevMode = Boolean(options.isDevMode);
 
   useEffect(() => {
     if (isOpen) {
@@ -276,9 +283,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div>
               <h2 className="font-bold text-base text-zinc-900 dark:text-white">
-                Düzeltme &amp; Model Ayarları
+                Uygulama &amp; Model Ayarları
               </h2>
-              <p className="text-xs text-zinc-500">Model sağlayıcısı ve OCR işlem parametreleri</p>
+              <p className="text-xs text-zinc-500">Yapay zeka sağlayıcısı ve görünüm tercihleri</p>
             </div>
           </div>
           <button
@@ -291,7 +298,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Body */}
         <div className="p-6 overflow-y-auto space-y-6 text-sm">
-          {/* Provider Switcher */}
+          {onThemeChange && (
+            <div className="space-y-2">
+              <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300">
+                Görünüm Teması
+              </label>
+              <div className="grid grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => onThemeChange('light')}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    currentTheme === 'light'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200 dark:border-zinc-700'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                  }`}
+                >
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Aydınlık</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onThemeChange('dark')}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    currentTheme === 'dark'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200 dark:border-zinc-700'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                  }`}
+                >
+                  <Moon className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Karanlık</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onThemeChange('system')}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    currentTheme === 'system'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200 dark:border-zinc-700'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                  }`}
+                >
+                  <Monitor className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Sistem</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300">
               Yapay Zeka Sağlayıcısı
@@ -307,7 +361,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <GoogleGIcon className="w-3.5 h-3.5" />
-                <span className="truncate">Google Hesabı (Antigravity)</span>
+                <span className="truncate">Google Hesabı</span>
               </button>
 
               <button
@@ -320,7 +374,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <Key className="w-3.5 h-3.5 text-amber-500" />
-                <span className="truncate">Google AI Studio (Gemini Key)</span>
+                <span className="truncate">AI Studio (Gemini)</span>
               </button>
 
               <button
@@ -333,7 +387,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <Cpu className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="truncate">OpenRouter (Ücretsiz API Key)</span>
+                <span className="truncate">OpenRouter Free</span>
               </button>
             </div>
           </div>
@@ -406,7 +460,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-2">
                 <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-emerald-500" />
-                  Google / Antigravity Model Seçimi
+                  Model Seçimi
                 </label>
                 <select
                   value={options.model}
@@ -600,188 +654,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* Processing Mode */}
-          <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-500" />
-              İşleme &amp; Hız Modu
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => onOptionsChange({ ...options, scanMode: 'smart', useLlm: true, useRegexPreClean: true })}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  (options.scanMode || 'smart') === 'smart'
-                    ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 text-emerald-950 dark:text-emerald-200 shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-xs">Akıllı Hibrit</span>
-                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                    Önerilen
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-500 leading-snug">
-                  Kural temizliği + Sadece şüpheli paragraflar LLM&apos;e gider (~1-2 dk, 0 rate limit).
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onOptionsChange({ ...options, scanMode: 'rules_only', useLlm: false, useRegexPreClean: true })}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  options.scanMode === 'rules_only'
-                    ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-200 shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-xs">Yıldırım Hızı</span>
-                  <span className="text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded">
-                    0 Saniye
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-500 leading-snug">
-                  Yalnızca regex &amp; kural motoru (API anahtarı gerekmez, anında biter).
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onOptionsChange({ ...options, scanMode: 'deep_llm', useLlm: true, useRegexPreClean: true })}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  options.scanMode === 'deep_llm'
-                    ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-xs">Tam Derin</span>
-                  <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded">
-                    Tüm Metin
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-500 leading-snug">
-                  Her paragraf istisnasız LLM&apos;e gönderilir (Daha uzun sürer).
-                </p>
-              </button>
-            </div>
-          </div>
-
-          {/* Engines & Switches */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-zinc-900 dark:text-white flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-amber-500" />
-                  Kural Tabanlı Ön Temizlik
-                </span>
-                <input
-                  type="checkbox"
-                  checked={options.useRegexPreClean}
-                  onChange={(e) =>
-                    onOptionsChange({ ...options, useRegexPreClean: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-                />
-              </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Satır sonu tirelerini (&quot;yapı- lamaz&quot;) ve kesin bilinen OCR kalıplarını regex ile anında düzeltir.
-              </p>
-            </div>
-
-            <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-zinc-900 dark:text-white flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
-                  LLM ile Akıllı Düzeltme
-                </span>
-                <input
-                  type="checkbox"
-                  checked={options.useLlm}
-                  onChange={(e) => onOptionsChange({ ...options, useLlm: e.target.checked })}
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-                />
-              </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Cümle bağlamı gerektiren karmaşık harf birleşme hatalarını (yarm &rarr; yarın) seçili yapay zeka ile çözer.
-              </p>
-            </div>
-
-            <div className="sm:col-span-2 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-zinc-900 dark:text-white flex items-center gap-1.5">
-                  <Bug className="w-4 h-4 text-emerald-500" />
-                  Detaylı Debug &amp; Günlükleme Modu (Konsol + Arayüz logları)
-                </span>
-                <input
-                  type="checkbox"
-                  checked={Boolean(options.debugMode)}
-                  onChange={(e) =>
-                    onOptionsChange({ ...options, debugMode: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-                />
-              </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Yapılan tüm regex kural eşleşmelerini ve LLM düzeltmelerini canlı olarak Değişiklik Günlüğü panelinde kayıt altına alır.
-              </p>
-            </div>
-          </div>
-
-          {/* Sliders */}
-          <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            {/* Concurrency */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-zinc-700 dark:text-zinc-300 font-medium">
-                  Eşzamanlı İstek Sayısı (Concurrency)
-                </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {options.concurrency}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="3"
-                step="1"
-                value={options.concurrency}
-                onChange={(e) =>
-                  onOptionsChange({ ...options, concurrency: parseInt(e.target.value, 10) })
-                }
-                className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
-              />
-              <p className="text-[11px] text-zinc-400">
-                Rate limit (429) yaşamamak için 1 veya 2 önerilir.
-              </p>
-            </div>
-
-            {/* Chunk Size */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-zinc-700 dark:text-zinc-300 font-medium">
-                  Paragraf Paket Boyutu (Batch Chars)
-                </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {options.chunkSize} karakter
-                </span>
-              </div>
-              <input
-                type="range"
-                min="800"
-                max="3000"
-                step="200"
-                value={options.chunkSize}
-                onChange={(e) =>
-                  onOptionsChange({ ...options, chunkSize: parseInt(e.target.value, 10) })
-                }
-                className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
-              />
-            </div>
-          </div>
-
           {/* Persistent Cache Management */}
           <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -794,7 +666,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Kalıcı Blok Önbelleği (IndexedDB)
                   </h4>
                   <p className="text-[11px] text-zinc-500">
-                    İşlem yarım kaldığında veya durdurulduğunda tamamlanan blokları saklar, tekrar token harcatmaz.
+                    Tamamlanan paragrafları saklar, işlem tekrarında token harcatmaz.
                   </p>
                 </div>
               </div>
@@ -811,46 +683,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="flex items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400 pt-1 border-t border-zinc-200/50 dark:border-zinc-800/50">
-              <span>Kayıtlı Blok Sayısı: <b className="text-zinc-900 dark:text-white">{cacheStats.count.toLocaleString('tr-TR')}</b></span>
+              <span>Kayıtlı Blok: <b className="text-zinc-900 dark:text-white">{cacheStats.count.toLocaleString('tr-TR')}</b></span>
               <span>Tahmini Boyut: <b className="text-zinc-900 dark:text-white">~{cacheStats.estimatedSizeKb} KB</b></span>
             </div>
           </div>
 
-          {/* Collapsible System Prompt */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowPromptEditor(!showPromptEditor)}
-              className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-emerald-500" />
-                Özel Sistem Talimatı (System Prompt)
-              </span>
-              <span className="text-zinc-400">{showPromptEditor ? 'Gizle' : 'Göster'}</span>
-            </button>
-            {showPromptEditor && (
-              <div className="p-4 bg-white dark:bg-zinc-900 space-y-2">
-                <textarea
-                  value={options.customPrompt || TURKISH_OCR_SYSTEM_PROMPT}
-                  onChange={(e) =>
-                    onOptionsChange({ ...options, customPrompt: e.target.value })
+          <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-xs text-zinc-900 dark:text-white block">
+                    Geliştirici Modu (Developer Mode)
+                  </span>
+                  <p className="text-[11px] text-zinc-500">
+                    Canlı değişiklik günlüğü, prompt editörü ve teknik parametreleri açar.
+                  </p>
+                </div>
+              </div>
+
+              <input
+                type="checkbox"
+                checked={isDevMode}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  onOptionsChange({ ...options, isDevMode: val });
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('epub_ocr_dev_mode', String(val));
                   }
-                  rows={8}
-                  className="w-full font-mono text-[11px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+                }}
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {isDevMode && (
+            <div className="space-y-4 pt-2 border-t border-amber-200/60 dark:border-amber-900/40 animate-in fade-in">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Gelişmiş Geliştirici Ayarları</span>
+              </div>
+
+              <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <Bug className="w-4 h-4 text-emerald-500" />
+                    Detaylı Debug &amp; Günlükleme Modu (Konsol + Arayüz logları)
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(options.debugMode)}
+                    onChange={(e) =>
+                      onOptionsChange({ ...options, debugMode: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  Yapılan tüm regex kural eşleşmelerini ve LLM düzeltmelerini canlı olarak Değişiklik Günlüğü panelinde kayıt altına alır.
+                </p>
+              </div>
+
+              {/* Sliders */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Concurrency */}
+                <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                      Eşzamanlı İstek (Concurrency)
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {options.concurrency}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="1"
+                    value={options.concurrency}
+                    onChange={(e) =>
+                      onOptionsChange({ ...options, concurrency: parseInt(e.target.value, 10) })
+                    }
+                    className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                {/* Chunk Size */}
+                <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                      Paket Boyutu (Batch Chars)
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {options.chunkSize} chr
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="800"
+                    max="3000"
+                    step="200"
+                    value={options.chunkSize}
+                    onChange={(e) =>
+                      onOptionsChange({ ...options, chunkSize: parseInt(e.target.value, 10) })
+                    }
+                    className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Collapsible System Prompt */}
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
                 <button
                   type="button"
-                  onClick={() =>
-                    onOptionsChange({ ...options, customPrompt: TURKISH_OCR_SYSTEM_PROMPT })
-                  }
-                  className="text-[11px] text-zinc-500 hover:text-emerald-500 underline cursor-pointer"
+                  onClick={() => setShowPromptEditor(!showPromptEditor)}
+                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                 >
-                  Varsayılan Prompt&apos;a Sıfırla
+                  <span className="flex items-center gap-2">
+                    <Code className="w-4 h-4 text-emerald-500" />
+                    Özel Sistem Talimatı (System Prompt)
+                  </span>
+                  <span className="text-zinc-400">{showPromptEditor ? 'Gizle' : 'Göster'}</span>
                 </button>
+                {showPromptEditor && (
+                  <div className="p-4 bg-white dark:bg-zinc-900 space-y-2">
+                    <textarea
+                      value={options.customPrompt || TURKISH_OCR_SYSTEM_PROMPT}
+                      onChange={(e) =>
+                        onOptionsChange({ ...options, customPrompt: e.target.value })
+                      }
+                      rows={8}
+                      className="w-full font-mono text-[11px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOptionsChange({ ...options, customPrompt: TURKISH_OCR_SYSTEM_PROMPT })
+                      }
+                      className="text-[11px] text-zinc-500 hover:text-emerald-500 underline cursor-pointer"
+                    >
+                      Varsayılan Prompt&apos;a Sıfırla
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -23,19 +23,20 @@ import { parseEpub, packageEpub } from '@/lib/epub-engine';
 import { parsePdf } from '@/lib/pdf-engine';
 import { processEpubChapters } from '@/lib/processor';
 import { POPULAR_FREE_MODELS } from '@/lib/openrouter';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Zap, Sparkles, Cpu } from 'lucide-react';
 
 const DEFAULT_OPTIONS: ProcessingOptions = {
   provider: 'antigravity',
   apiKey: '',
   geminiApiKey: '',
-  model: 'gemini-3.5-flash',
+  model: 'gemini-3.7-flash',
   concurrency: 1,
   chunkSize: 3000,
   useRegexPreClean: true,
   useLlm: true,
   scanMode: 'smart',
   temperature: 0.1,
+  isDevMode: false,
 };
 
 const INITIAL_STATS: ProcessingStats = {
@@ -59,6 +60,9 @@ export default function Home() {
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
 
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [isDarkTheme, setIsDarkTheme] = useState(true);
+
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -68,19 +72,44 @@ export default function Home() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load API key and settings from localStorage on mount
+  const applyTheme = (targetTheme: 'light' | 'dark' | 'system') => {
+    if (typeof window === 'undefined') return;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = targetTheme === 'dark' || (targetTheme === 'system' && prefersDark);
+    setIsDarkTheme(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
+  };
+
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setCurrentTheme(newTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ekitap_theme', newTheme);
+    }
+    applyTheme(newTheme);
+  };
+
+  const handleToggleTheme = () => {
+    const nextTheme = isDarkTheme ? 'light' : 'dark';
+    handleThemeChange(nextTheme);
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedTheme = (localStorage.getItem('ekitap_theme') as 'light' | 'dark' | 'system') || 'system';
+      setCurrentTheme(savedTheme);
+      applyTheme(savedTheme);
+
       const storedKey = localStorage.getItem('epub_ocr_api_key') || '';
       const storedGeminiKey = localStorage.getItem('epub_ocr_gemini_api_key') || '';
       const storedProvider = (localStorage.getItem('epub_ocr_provider') as LlmProvider) || 'antigravity';
       const storedModel = localStorage.getItem('epub_ocr_model') || (
         storedProvider === 'antigravity'
-          ? 'gemini-3.5-flash'
+          ? 'gemini-3.7-flash'
           : storedProvider === 'gemini_api'
           ? 'gemini-2.0-flash'
           : 'google/gemini-2.0-flash-exp:free'
       );
+      const storedDevMode = localStorage.getItem('epub_ocr_dev_mode') === 'true';
       const storedAuth = localStorage.getItem('epub_ocr_antigravity_auth');
       let antigravityAuth: AntigravityAuthData | undefined = undefined;
       if (storedAuth) {
@@ -95,6 +124,7 @@ export default function Home() {
         geminiApiKey: storedGeminiKey,
         antigravityAuth,
         model: storedModel,
+        isDevMode: storedDevMode,
       }));
     }
   }, []);
@@ -111,6 +141,7 @@ export default function Home() {
         localStorage.removeItem('epub_ocr_antigravity_auth');
       }
       localStorage.setItem('epub_ocr_model', newOptions.model);
+      localStorage.setItem('epub_ocr_dev_mode', String(Boolean(newOptions.isDevMode)));
     }
   };
 
@@ -382,8 +413,7 @@ export default function Home() {
   const selectedCount = chapters.filter((c) => c.isSelected).length;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 flex flex-col font-sans">
-      {/* Navbar Header */}
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         options={options}
@@ -393,11 +423,12 @@ export default function Home() {
         onToggleDebugOpen={() => setIsDebugOpen(!isDebugOpen)}
         logCount={debugLogs.length}
         isDebugMode={Boolean(options.debugMode)}
+        isDevMode={Boolean(options.isDevMode)}
+        isDarkTheme={isDarkTheme}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Error Alert */}
         {errorMessage && (
           <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 p-4 rounded-2xl flex items-start gap-3 text-xs shadow-sm">
             <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
@@ -414,7 +445,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Upload or Book Info Card */}
         <UploadSection
           onFileLoaded={handleFileLoaded}
           onLoadDemo={handleLoadDemo}
@@ -429,10 +459,89 @@ export default function Home() {
           onReset={handleResetFile}
         />
 
-        {/* If Book is loaded, show Controls & Workspace */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="font-bold text-xs text-zinc-900 dark:text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-emerald-500" />
+              İşleme ve Hız Modu
+            </label>
+            <span className="text-[11px] text-zinc-500">İhtiyacınıza uygun çalışma modunu seçin</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => handleOptionsChange({ ...options, scanMode: 'smart', useLlm: true, useRegexPreClean: true })}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                (options.scanMode || 'smart') === 'smart'
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 text-emerald-950 dark:text-emerald-200 shadow-xs ring-1 ring-emerald-500/30'
+                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Akıllı Hibrit
+                </span>
+                <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
+                  Önerilen
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                Kural temizliği + şüpheli kelimelere yapay zeka desteği. Hızlı ve dengeli.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOptionsChange({ ...options, scanMode: 'rules_only', useLlm: false, useRegexPreClean: true })}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                options.scanMode === 'rules_only'
+                  ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-200 shadow-xs ring-1 ring-amber-500/30'
+                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-xs flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  Yıldırım Hızı (Regex)
+                </span>
+                <span className="text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded">
+                  0 Saniye
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                Yalnızca morfolojik kural motoru. API anahtarı gerektirmez, anında biter.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOptionsChange({ ...options, scanMode: 'deep_llm', useLlm: true, useRegexPreClean: true })}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                options.scanMode === 'deep_llm'
+                  ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs ring-1 ring-purple-500/30'
+                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-xs flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-purple-500" />
+                  Tam Derin Tarama
+                </span>
+                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded">
+                  Tüm Metin
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                Her paragraf istisnasız seçili yapay zeka ile taranır ve düzeltilir.
+              </p>
+            </button>
+          </div>
+        </div>
+
         {metadata && (
           <>
-            {/* Stats & Action Bar */}
             <StatsBar
               stats={stats}
               isProcessing={isProcessing}
@@ -447,9 +556,7 @@ export default function Home() {
               selectedCount={selectedCount}
             />
 
-            {/* Split Workspace: Left Chapter List | Right Live Diff Viewer */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Chapters (4 cols) */}
               <div className="lg:col-span-4 h-[640px]">
                 <ChapterList
                   chapters={chapters}
@@ -460,7 +567,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Right Column: Live Diff Viewer (8 cols) */}
               <div className="lg:col-span-8 h-[640px]">
                 <DiffViewer chapter={selectedChapter} />
               </div>
@@ -468,73 +574,92 @@ export default function Home() {
           </>
         )}
 
-        {/* Empty State Features Info */}
         {!metadata && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                 1
               </div>
               <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                Karakter Birleşme &amp; OCR Onarımı
+                PDF &amp; EPUB Karakter Birleşme Onarımı
               </h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                PDF&apos;ten dönüştürürken birleşen <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-emerald-600">rn &rarr; m</code> (<span className="italic">yarm &rarr; yarın, kamı &rarr; karnı, öğmeci &rarr; öğrenci</span>) ve <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-emerald-600">cl &rarr; d</code> gibi Türkçe hataları cümle bağlamına göre onarır.
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                PDF ve OCR kaynaklı harf birleşme ve bölünme hatalarını Türkçe dilbilgisi kuralları ve bağlamsal yapay zeka ile onarır.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm space-y-2">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                 2
               </div>
               <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                EPUB Yapısını &amp; Formatını Koruma
+                Orijinal Format ve Başlık Koruma
               </h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                HTML etiketlerini (<code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">&lt;p&gt;</code>, <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">&lt;span&gt;</code>, <code className="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">&lt;em&gt;</code>), dipnotları, görsel ve bölüm sırasını bozmadan doğrudan metin düğümlerini günceller.
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Kitap içindeki HTML etiketlerini, dipnotları, bölüm başlıklarını ve içindekiler tablosunu bozmadan korur ve iki yana yaslar.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm space-y-2">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                 3
               </div>
               <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                OpenRouter Ücretsiz Modeller
+                Hızlı ve Yerel İşleme
               </h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral gibi ücretsiz modeller ile sıfır maliyetle çalışır. Rate limit korumalı akıllı kuyruk yönetimi içerir.
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Tüm dönüştürme ve paketleme işlemleri doğrudan tarayıcınızda gerçekleşir. Kalıcı IndexedDB önbelleği ile token tasarrufu sağlar.
               </p>
             </div>
           </div>
         )}
       </main>
 
-      {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         options={options}
         onOptionsChange={handleOptionsChange}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
       />
 
-      {/* Debug Console Drawer */}
-      <DebugConsole
-        isOpen={isDebugOpen}
-        onClose={() => setIsDebugOpen(false)}
-        logs={debugLogs}
-        onClearLogs={() => setDebugLogs([])}
-        isDebugMode={Boolean(options.debugMode)}
-        onToggleDebugMode={(enabled) =>
-          handleOptionsChange({ ...options, debugMode: enabled })
-        }
-      />
+      {options.isDevMode && (
+        <DebugConsole
+          isOpen={isDebugOpen}
+          onClose={() => setIsDebugOpen(false)}
+          logs={debugLogs}
+          onClearLogs={() => setDebugLogs([])}
+          isDebugMode={Boolean(options.debugMode)}
+          onToggleDebugMode={(enabled) =>
+            handleOptionsChange({ ...options, debugMode: enabled })
+          }
+        />
+      )}
 
       {/* Footer */}
-      <footer className="border-t border-zinc-200 dark:border-zinc-800/80 py-4 text-center text-xs text-zinc-400">
-        <p>
-          EPUB Türkçe OCR Düzeltici &bull; Vercel &amp; Cloudflare Uyumlu İstemci Tarafı Web Uygulaması
-        </p>
+      <footer className="border-t border-zinc-200 dark:border-zinc-800/80 py-5 text-center text-xs text-zinc-500 dark:text-zinc-400 bg-white/50 dark:bg-zinc-900/50 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">eKitap Araçları</span>
+            <span className="text-zinc-300 dark:text-zinc-700">&bull;</span>
+            <span>Açık Kaynaklı Web Uygulaması</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <a
+              href="https://github.com/halilozdgn/ekitap-araclari"
+              target="_blank"
+              rel="noreferrer"
+              className="text-zinc-700 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium inline-flex items-center gap-1.5 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 fill-currentColor" viewBox="0 0 24 24">
+                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+              </svg>
+              <span>GitHub Kaynak Kodu</span>
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -1,36 +1,176 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# 📚 eKitap Araçları (eBook Tools)
 
-First, run the development server:
+**Akıllı EPUB & PDF Düzenleyici, OCR Onarıcı ve Format Dönüştürücü**
 
+%100 Tarayıcı Üzerinde Çalışan, Gizlilik Odaklı, Türkçe Dilbilgisi ve Yapay Zeka Destekli eKitap Araç Seti.
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.8-blue?style=flat&logo=react)](https://react.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=flat&logo=tailwindcss)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Tests: 23 Passed](https://img.shields.io/badge/Tests-23%2F23%20Passed-success)](scripts/verify-fixes.mjs)
+
+[Özellikler](#-özellikler) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Kurulum](#-hızlı-başlangıç) • [Mimari](#-teknik-mimari) • [Lisans](#-lisans)
+
+</div>
+
+---
+
+## 🌟 Neden eKitap Araçları?
+
+PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitapları okurken sıkça karşılaşılan:
+- **Karakter Birleşmeleri**: `rn → m` (*yarm → yarın*, *kamı → karnı*, *öğmeci → öğrenci*), `cl → d`, `vv → w`
+- **Satır Sonu Bölünmeleri**: `yapı- lamaz → yapılamaz`, `baş- ladı → başladı`, `geliş- tirme → geliştirme`
+- **Parantez İçi ve Ara Söz Tireleri**: Ara sözlerdeki (`- ... -` veya `— ... —`) ve diyalog tirelerinin yanlışlıkla silinmesi
+- **Bölük Pörçük Başlıklar**: Normal metinlerin başlık sanılması, gerçek bölüm başlıklarının kaybolması
+- **Sunucu Yükleme Limitleri**: Vercel veya sunucu taraflı 4.5MB payload sınırları ve zaman aşımı sorunları
+
+**eKitap Araçları**, tüm bu sorunları **%100 istemci tarafında (tarayıcıda)** çözen modern, açık kaynaklı bir web uygulamasıdır. Kitap dosyanız hiçbir sunucuya yüklenmez.
+
+---
+
+## 🚀 Özellikler
+
+### 1. 📖 İstemci Taraflı PDF ➔ EPUB Dönüştürücü
+- `pdfjs-dist` ve `jszip` kütüphaneleriyle doğrudan tarayıcınızda çalışır.
+- Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, gereksiz kelime içi boşlukları engeller.
+- Sayfa üst/alt bilgi (header/footer) ve sayfa numaralarını otomatik temizler.
+- İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini akıllıca ayırır.
+
+### 2. 🔍 Türkçe Morfoloji & Kural Tabanlı OCR Motoru
+- Sabit kelime listelerine bağlı kalmadan Türkçe ek ve kök kurallarına dayalı morfolojik regex motoru içerir.
+- Cümle içi ara söz tirelerini (`- ... -`) ve diyalog çizgilerini korur.
+- İki yana yaslı (`text-align: justify`) temiz CSS ile e-okuyucu ve Kindle uyumlu EPUB üretir.
+
+### 3. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
+- **Google Hesabı (Antigravity OAuth)**: Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
+- **Google AI Studio (Gemini Key)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı.
+- **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral modelleriyle sıfır maliyetli kullanım.
+
+### 4. ⚡ İşleme ve Hız Modları
+Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
+- ⚡ **Akıllı Hibrit (Önerilen)**: Kural tabanlı ön temizlik yapılır; sadece şüpheli ve belirsiz kelimeler yapay zekaya gönderilir (~1-2 dk, sıfır rate limit).
+- 🚀 **Yıldırım Hızı (Regex)**: Yalnızca kural motoru çalışır. API anahtarı gerekmez, 0 saniyede tamamlanır.
+- 🧠 **Tam Derin Tarama**: Tüm paragraflar istisnasız seçili yapay zeka ile taranır.
+
+### 5. 💾 Kalıcı IndexedDB Önbelleği
+- İşlem durdurulduğunda veya sayfa yenilendiğinde tamamlanan paragraflar tarayıcı IndexedDB deposunda saklanır.
+- Aynı kitap tekrar işlendiğinde daha önce taranan bloklar için tekrar token harcanmaz.
+
+### 6. 🛠️ Geliştirici (Developer) Modu
+- Ayarlardan tek tıkla açılıp kapatılabilen sade / gelişmiş görünüm.
+- Canlı regex ve LLM değişiklik günlüğü (*Diff Console*), JSON dışa aktarma.
+- Özel Sistem Talimatı (*System Prompt*) düzenleyici, eşzamanlılık (*concurrency*) ve paket boyutu ayarı.
+
+### 7. 🌓 Karanlık ve Aydınlık Tema
+- Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
+
+---
+
+## 🛠️ Hızlı Başlangıç
+
+### Gereksinimler
+- **Node.js**: v18.18+ veya v20+
+- **npm**, **pnpm**, **yarn** veya **bun**
+
+### 1. Repoyu Klonlayın
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/halilozdgn/ekitap-araclari.git
+cd ekitap-araclari
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Bağımlılıkları Yükleyin
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Geliştirme Sunucusunu Başlatın
+```bash
+npm run dev
+```
+Tarayıcınızda [http://localhost:3000](http://localhost:3000) adresini açın.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Testleri Çalıştırın
+```bash
+npm test
+```
 
-## Learn More
+### 5. Üretim Derlemesi (Build)
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🏗️ Teknik Mimari
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── antigravity/      # Google OAuth proxy ve chat endpoints
+│   │   └── auth/google/      # Google OAuth PKCE token exchange
+│   ├── globals.css           # Tailwind CSS v4 & theme variables
+│   ├── layout.tsx            # Metadata, fonts & theme flash prevention
+│   └── page.tsx              # Ana sayfa ve işleme paneli
+├── components/
+│   ├── ChapterList.tsx       # Kitap bölümleri ve durum göstergesi
+│   ├── DebugConsole.tsx      # Geliştirici değişiklik günlüğü çekmecesi
+│   ├── DiffViewer.tsx        # Yan yana ve satır içi canlı diff önizleme
+│   ├── Header.tsx            # Logo, marka, tema değiştirici ve durum
+│   ├── SettingsModal.tsx     # Sağlayıcı, API key, önbellek & dev ayarları
+│   ├── StatsBar.tsx          # İlerleme çubuğu, sayaçlar ve indirme
+│   └── UploadSection.tsx     # EPUB & PDF sürükle-bırak yükleme alanı
+└── lib/
+    ├── antigravity.ts        # Google OAuth PKCE ve model tanımları
+    ├── cache.ts              # IndexedDB kalıcı blok önbellek motoru
+    ├── epub-engine.ts        # EPUB ayrıştırma, DOM onarımı & JSZip paketleme
+    ├── openrouter.ts         # OpenRouter API client ve kuyruk yönetimi
+    ├── pdf-engine.ts         # Client-side PDF-to-EPUB ayrıştırma motoru
+    ├── processor.ts          # Blok paketleme, dinamik başlık ve LLM yöneticisi
+    ├── turkish-ocr-rules.ts  # Türkçe morfoloji regex ve tire koruma kuralları
+    └── types.ts              # TypeScript arayüz ve tip tanımları
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 Test Kapsamı
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Projede yer alan 23 adet Türkçe morfolojik birim testi:
+- Ara söz tirelerinin korunması (`- ... -`)
+- Cümle başı/sonu tireleme hatalarının onarılması
+- Satır sonu hece bölmelerinin birleştirilmesi
+- Çoklu nokta (`...`) ve OCR boşluk anomalilerinin düzeltilmesi
+- Gerçek dünya kitap tarama örneklerinin doğrulanması
+
+Testleri çalıştırmak için:
+```bash
+npm test
+```
+
+---
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı memnuniyetle kabul ediyoruz!
+
+1. Bu depoyu Fork edin (`fork`)
+2. Yeni bir özellik dalı oluşturun (`git checkout -b feat/harika-ozellik`)
+3. Değişikliklerinizi commit edin (`git commit -m 'feat: harika ozellik eklendi'`)
+4. Dalınıza push edin (`git push origin feat/harika-ozellik`)
+5. Bir **Pull Request** açın
+
+---
+
+## 📄 Lisans
+
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır. Dilediğiniz gibi kullanabilir, değiştirebilir ve dağıtabilirsiniz.
+
+---
+
+<div align="center">
+Geliştirici: <b>Halil Özdoğan</b> • <a href="https://github.com/halilozdgn">GitHub Profili</a>
+</div>
