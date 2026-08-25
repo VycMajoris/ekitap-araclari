@@ -1,8 +1,8 @@
-import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, Lock, Eye, Database, Globe } from 'lucide-react';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Gizlilik Politikası | eKitap Araçları',
   description: 'eKitap Araçları web uygulaması Gizlilik Politikası ve Google Kullanıcı Verileri Bildirimi',
 };

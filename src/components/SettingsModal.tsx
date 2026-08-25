@@ -206,7 +206,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       const { verifier, challenge } = await generatePkce();
       const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-      const authUrl = getAntigravityAuthUrl(redirectUri, challenge, verifier);
+
+      let effectiveClientId: string | undefined = undefined;
+      try {
+        const cfgRes = await fetch('/api/auth/google/config');
+        if (cfgRes.ok) {
+          const cfgData = await cfgRes.json();
+          if (cfgData.clientId) {
+            effectiveClientId = cfgData.clientId;
+          }
+        }
+      } catch (e) {
+        console.warn('Google auth config check warning:', e);
+      }
+
+      const authUrl = getAntigravityAuthUrl(redirectUri, challenge, verifier, effectiveClientId);
 
       const width = 500;
       const height = 650;
@@ -499,27 +513,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <p className="font-semibold">{authError}</p>
                       {authError.includes('redirect_uri') || authError.includes('mismatch') ? (
                         <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                          Vercel üzerinde doğrudan <strong>Google AI Studio (Gemini Key)</strong> sekmesini kullanarak ücretsiz API anahtarınızla Gemini 2.0 / 2.5 modellerini sıfır konfigürasyonla kullanabilirsiniz.
+                          Özel alan adınızda veya Cloudflare üzerinde doğrudan <strong>AI Studio (Gemini)</strong> sekmesini kullanarak ücretsiz API anahtarınızla Gemini 2.0 / 2.5 / 3.7 modellerini sıfır OAuth konfigürasyonuyla hemen kullanabilirsiniz.
                         </p>
                       ) : null}
-                    </div>
-                  )}
-
-                  {typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1') && (
-                    <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3 text-left space-y-1.5">
-                      <span className="font-bold text-xs text-amber-900 dark:text-amber-200 block">
-                        Vercel / Canlı Dağıtım İpucu:
-                      </span>
-                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                        Google OAuth istemcisi yerel geliştirme (localhost) için kayıtlıdır. Vercel üzerinde Gemini modellerini kullanmak için <strong>Google AI Studio (Gemini Key)</strong> sekmesi önerilir.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTab('gemini_api')}
-                        className="text-xs font-bold text-amber-700 dark:text-amber-300 hover:underline cursor-pointer inline-flex items-center gap-1"
-                      >
-                        AI Studio (Gemini Key) Sekmesine Geç &rarr;
-                      </button>
                     </div>
                   )}
 

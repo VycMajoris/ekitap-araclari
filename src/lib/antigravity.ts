@@ -62,10 +62,16 @@ export async function generatePkce(): Promise<{ verifier: string; challenge: str
   return { verifier, challenge };
 }
 
-export function getAntigravityAuthUrl(redirectUri: string, challenge: string, verifier: string): string {
+export function getAntigravityAuthUrl(
+  redirectUri: string,
+  challenge: string,
+  verifier: string,
+  customClientId?: string
+): string {
   void verifier;
+  const clientId = customClientId || ANTIGRAVITY_CLIENT_ID;
   const params = new URLSearchParams({
-    client_id: ANTIGRAVITY_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: ANTIGRAVITY_SCOPES.join(' '),
