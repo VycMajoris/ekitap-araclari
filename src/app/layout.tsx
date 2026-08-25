@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://ekitap.halilozdgn.com'),
   title: "eKitap Araçları",
   description: "Akıllı EPUB ve PDF Düzenleyici, OCR Onarıcı ve Dönüştürücü",
   icons: {
