@@ -557,12 +557,20 @@ export async function processEpubChapters(
   signal?: AbortSignal,
   bookTitle?: string
 ): Promise<void> {
+  const isTranslation = options.taskType === 'translate';
+  const requiresAi = options.useLlm || isTranslation || options.scanMode === 'smart' || options.scanMode === 'deep_llm';
+
+  if (requiresAi && !isProviderReady(options)) {
+    throw new Error(
+      'Yapay Zekâ (AI) işlemi için API anahtarı veya Google girişi gereklidir. Lütfen Ayarlar panelinden giriş yapın veya "Yıldırım Hızı (Regex)" modunu seçin.'
+    );
+  }
+
   await refineChapterTitlesWithAi(chapters, options, callbacks, signal);
 
   const selectedChapters = chapters.filter((c) => c.isSelected);
   const totalBlocks = selectedChapters.reduce((acc, c) => acc + c.blocks.length, 0);
   const scanMode = options.scanMode || 'smart';
-  const isTranslation = options.taskType === 'translate';
   const cachePrefix = isTranslation
     ? `trans_${options.sourceLanguage || 'auto'}_${options.targetLanguage || 'tr'}`
     : undefined;

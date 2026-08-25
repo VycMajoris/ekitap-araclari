@@ -314,6 +314,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               provider: 'antigravity',
               antigravityAuth: authData,
               model: targetModel,
+              scanMode: options.scanMode === 'rules_only' ? 'smart' : options.scanMode,
+              useLlm: true,
             };
 
             onOptionsChange(newOptions);
@@ -321,6 +323,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               localStorage.setItem('epub_ocr_provider', 'antigravity');
               localStorage.setItem('epub_ocr_antigravity_auth', JSON.stringify(authData));
               localStorage.setItem('epub_ocr_model', targetModel);
+              if (options.scanMode === 'rules_only') {
+                localStorage.setItem('epub_ocr_scan_mode', 'smart');
+              }
             }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Google girişi sırasında hata oluştu.';

@@ -58,8 +58,8 @@ const DEFAULT_OPTIONS: ProcessingOptions = {
   concurrency: 1,
   chunkSize: 3000,
   useRegexPreClean: true,
-  useLlm: true,
-  scanMode: 'smart',
+  useLlm: false,
+  scanMode: 'rules_only',
   temperature: 0.1,
   isDevMode: false,
 };
@@ -161,6 +161,25 @@ export default function Home() {
           antigravityAuth = JSON.parse(storedAuth);
         } catch {}
       }
+
+      const hasConfiguredAi = Boolean(
+        antigravityAuth?.accessToken ||
+        storedGeminiKey.trim() ||
+        storedKey.trim() ||
+        storedOpenAiKey.trim() ||
+        (storedOpenAiBaseUrl && (storedOpenAiBaseUrl.includes('localhost') || storedOpenAiBaseUrl.includes('127.0.0.1')))
+      );
+
+      const storedScanMode = localStorage.getItem('epub_ocr_scan_mode') as
+        | 'smart'
+        | 'rules_only'
+        | 'deep_llm'
+        | null;
+
+      const effectiveScanMode: 'smart' | 'rules_only' | 'deep_llm' =
+        storedScanMode || (hasConfiguredAi ? 'smart' : 'rules_only');
+      const effectiveUseLlm = effectiveScanMode !== 'rules_only';
+
       setOptions((prev) => ({
         ...prev,
         taskType: storedTaskType,
@@ -177,6 +196,8 @@ export default function Home() {
         customOpenAiModel: storedOpenAiModel,
         antigravityAuth,
         model: storedModel,
+        scanMode: effectiveScanMode,
+        useLlm: effectiveUseLlm,
         isDevMode: storedDevMode,
       }));
     }
@@ -189,6 +210,7 @@ export default function Home() {
       if (newOptions.sourceLanguage) localStorage.setItem('ekitap_source_lang', newOptions.sourceLanguage);
       if (newOptions.targetLanguage) localStorage.setItem('ekitap_target_lang', newOptions.targetLanguage);
       if (newOptions.translationStyle) localStorage.setItem('ekitap_trans_style', newOptions.translationStyle);
+      if (newOptions.scanMode) localStorage.setItem('epub_ocr_scan_mode', newOptions.scanMode);
       if (newOptions.enableRollingContext !== undefined) {
         localStorage.setItem('ekitap_rolling_ctx', String(newOptions.enableRollingContext));
       }
@@ -356,7 +378,16 @@ export default function Home() {
       (options.provider === 'custom_openai' && Boolean(options.customOpenAiKey?.trim() || options.customOpenAiBaseUrl?.includes('localhost') || options.customOpenAiBaseUrl?.includes('127.0.0.1'))) ||
       (options.provider === 'openrouter' && Boolean(options.apiKey?.trim()));
 
-    if (options.useLlm && !isConfigured) {
+    const requiresAi =
+      options.taskType === 'translate' ||
+      options.scanMode === 'smart' ||
+      options.scanMode === 'deep_llm' ||
+      options.useLlm;
+
+    if (requiresAi && !isConfigured) {
+      setErrorMessage(
+        'Yapay Zekâ (AI) moduyla işlem yapabilmek için lütfen Google Hesabınızla giriş yapın veya Ayarlar panelinden geçerli bir API anahtarı (Google AI Studio, OpenRouter vb.) tanımlayın. API kullanmadan devam etmek için "Yıldırım Hızı (Regex)" modunu seçebilirsiniz.'
+      );
       setIsSettingsOpen(true);
       return;
     }
