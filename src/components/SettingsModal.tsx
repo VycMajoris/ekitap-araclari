@@ -477,6 +477,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GoogleGIcon className="w-4 h-4" />
                     <span>{isLoggingIn ? 'Giriş Yapılıyor...' : 'Google ile Giriş Yap (Antigravity OAuth)'}</span>
                   </button>
+
+                  <div className="bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left space-y-1 text-[11px] text-zinc-500">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
+                      💡 Giriş Ekranı İpucu:
+                    </span>
+                    <p className="leading-relaxed">
+                      Giriş yaparken <em>&quot;Google bu uygulamayı doğrulamadı&quot;</em> uyarısı görürseniz, penceredeki <strong>Gelişmiş &gt; ... sitesine ilerle (güvenli değil)</strong> seçeneğine tıklayarak yetkilendirmeyi tamamlayabilirsiniz.
+                    </p>
+                  </div>
                 </div>
               )}
 
