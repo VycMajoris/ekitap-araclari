@@ -48,6 +48,7 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 ### 3. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
 - **Google Hesabı (Antigravity OAuth)**: Gemini 3.7 Flash, Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
 - **Google AI Studio (Gemini Key)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı.
+- **OpenAI Uyumlu API (Özel)**: OpenAI (GPT-4o / mini), DeepSeek (deepseek-chat), Groq (Llama 3.3 70B), Ollama (Lokal) ve herhangi bir özel LLM uç noktası desteği.
 - **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral modelleriyle sıfır maliyetli kullanım.
 
 ### 4. ⚡ İşleme ve Hız Modları

@@ -18,6 +18,7 @@ import {
   Moon,
   Monitor,
   Wrench,
+  Server,
 } from 'lucide-react';
 import {
   OpenRouterModel,
@@ -69,6 +70,44 @@ const GoogleGIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }
   </svg>
 );
 
+export const OPENAI_PRESETS = [
+  {
+    id: 'openai',
+    name: 'OpenAI (ChatGPT)',
+    url: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-4o-mini',
+    models: ['gpt-4o-mini', 'gpt-4o', 'o3-mini', 'gpt-4.5-preview'],
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    url: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+  },
+  {
+    id: 'groq',
+    name: 'Groq (Süper Hızlı)',
+    url: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b-versatile',
+    models: ['llama-3.3-70b-versatile', 'qwen-2.5-32b', 'mixtral-8x7b-32768'],
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (Lokal / PC)',
+    url: 'http://localhost:11434/v1',
+    defaultModel: 'llama3.2',
+    models: ['llama3.2', 'qwen2.5', 'mistral', 'deepseek-r1'],
+  },
+  {
+    id: 'custom',
+    name: 'Özel Sunucu / Diğer',
+    url: '',
+    defaultModel: '',
+    models: [],
+  },
+];
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
@@ -80,6 +119,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [showKey, setShowKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>(POPULAR_FREE_MODELS);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
@@ -138,6 +178,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       if (!models.some((m) => m.id === options.model)) {
         nextModel = models[0]?.id || POPULAR_FREE_MODELS[0].id;
       }
+    } else if (tab === 'custom_openai') {
+      nextModel = options.customOpenAiModel || 'gpt-4o-mini';
     }
 
     const newOptions: ProcessingOptions = {
@@ -350,11 +392,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300">
               Yapay Zeka Sağlayıcısı
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => handleSelectTab('antigravity')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`px-2.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'antigravity'
                     ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -367,27 +409,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => handleSelectTab('gemini_api')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`px-2.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'gemini_api'
                     ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Key className="w-3.5 h-3.5 text-amber-500" />
-                <span className="truncate">AI Studio (Gemini)</span>
+                <span className="truncate">AI Studio</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSelectTab('openrouter')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`px-2.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'openrouter'
                     ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Cpu className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="truncate">OpenRouter Free</span>
+                <span className="truncate">OpenRouter</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTab('custom_openai')}
+                className={`px-2.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'custom_openai'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Server className="w-3.5 h-3.5 text-purple-500" />
+                <span className="truncate">OpenAI / Özel</span>
               </button>
             </div>
           </div>
@@ -478,12 +533,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span>{isLoggingIn ? 'Giriş Yapılıyor...' : 'Google ile Giriş Yap (Antigravity OAuth)'}</span>
                   </button>
 
-                  <div className="bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left space-y-1 text-[11px] text-zinc-500">
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
-                      💡 Giriş Ekranı İpucu:
+                  <div className="bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 text-left space-y-1.5 text-[11px] text-zinc-500">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                      🔒 Güvenlik &amp; Giriş Ekranı Bilgilendirmesi:
                     </span>
                     <p className="leading-relaxed">
-                      Giriş yaparken <em>&quot;Google bu uygulamayı doğrulamadı&quot;</em> uyarısı görürseniz, penceredeki <strong>Gelişmiş &gt; ... sitesine ilerle (güvenli değil)</strong> seçeneğine tıklayarak yetkilendirmeyi tamamlayabilirsiniz.
+                      Proje bağımsız ve açık kaynaklı olduğundan Google kurumsal doğrulama rozeti yerine standart <em>&quot;Google bu uygulamayı doğrulamadı&quot;</em> uyarısı görüntüler.
+                    </p>
+                    <p className="leading-relaxed">
+                      Uygulama %100 istemci taraflı (client-side) çalışır; e-posta ve kitap verileriniz hiçbir harici sunucuda toplanmaz. Penceredeki <strong>Gelişmiş (Advanced) &gt; ... sitesine ilerle (güvenli değil)</strong> adımına tıklayarak güvenle giriş yapabilirsiniz.
                     </p>
                   </div>
                 </div>
@@ -683,6 +741,118 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {models.find((m) => m.id === options.model)?.description}
                   </p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'custom_openai' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
+                  Hızlı Sağlayıcı Şablonu (Presets)
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {OPENAI_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        const newUrl = preset.url || options.customOpenAiBaseUrl || '';
+                        const newModel = preset.defaultModel || options.customOpenAiModel || 'gpt-4o-mini';
+                        onOptionsChange({
+                          ...options,
+                          customOpenAiBaseUrl: newUrl,
+                          customOpenAiModel: newModel,
+                          model: newModel,
+                        });
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('epub_ocr_openai_base_url', newUrl);
+                          localStorage.setItem('epub_ocr_openai_model', newModel);
+                          localStorage.setItem('epub_ocr_model', newModel);
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-zinc-700 dark:text-zinc-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <Server className="w-4 h-4 text-purple-500" />
+                  API Base URL (Endpoint)
+                </label>
+                <input
+                  type="text"
+                  value={options.customOpenAiBaseUrl || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onOptionsChange({ ...options, customOpenAiBaseUrl: val });
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('epub_ocr_openai_base_url', val);
+                    }
+                  }}
+                  placeholder="https://api.openai.com/v1"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                />
+                <p className="text-[11px] text-zinc-500">
+                  OpenAI, DeepSeek, Groq, Ollama (örn: <code>http://localhost:11434/v1</code>) veya herhangi bir OpenAI uyumlu API uç noktası.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-purple-500" />
+                  API Anahtarı (API Key)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showOpenAiKey ? 'text' : 'password'}
+                    value={options.customOpenAiKey || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onOptionsChange({ ...options, customOpenAiKey: val });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('epub_ocr_openai_key', val);
+                      }
+                    }}
+                    placeholder="sk-..."
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 pr-10 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    {showOpenAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Lokal Ollama sunucuları için API anahtarı boş bırakılabilir.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-purple-500" />
+                  Model Adı
+                </label>
+                <input
+                  type="text"
+                  value={options.customOpenAiModel || options.model || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onOptionsChange({ ...options, customOpenAiModel: val, model: val });
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('epub_ocr_openai_model', val);
+                      localStorage.setItem('epub_ocr_model', val);
+                    }
+                  }}
+                  placeholder="gpt-4o-mini veya deepseek-chat"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                />
               </div>
             </div>
           )}

@@ -104,12 +104,17 @@ export default function Home() {
 
       const storedKey = localStorage.getItem('epub_ocr_api_key') || '';
       const storedGeminiKey = localStorage.getItem('epub_ocr_gemini_api_key') || '';
+      const storedOpenAiKey = localStorage.getItem('epub_ocr_openai_key') || '';
+      const storedOpenAiBaseUrl = localStorage.getItem('epub_ocr_openai_base_url') || 'https://api.openai.com/v1';
+      const storedOpenAiModel = localStorage.getItem('epub_ocr_openai_model') || 'gpt-4o-mini';
       const storedProvider = (localStorage.getItem('epub_ocr_provider') as LlmProvider) || 'antigravity';
       const storedModel = localStorage.getItem('epub_ocr_model') || (
         storedProvider === 'antigravity'
           ? 'gemini-3.7-flash'
           : storedProvider === 'gemini_api'
           ? 'gemini-2.0-flash'
+          : storedProvider === 'custom_openai'
+          ? storedOpenAiModel
           : 'google/gemini-2.0-flash-exp:free'
       );
       const storedDevMode = localStorage.getItem('epub_ocr_dev_mode') === 'true';
@@ -125,6 +130,9 @@ export default function Home() {
         provider: storedProvider,
         apiKey: storedKey,
         geminiApiKey: storedGeminiKey,
+        customOpenAiKey: storedOpenAiKey,
+        customOpenAiBaseUrl: storedOpenAiBaseUrl,
+        customOpenAiModel: storedOpenAiModel,
         antigravityAuth,
         model: storedModel,
         isDevMode: storedDevMode,
@@ -138,6 +146,9 @@ export default function Home() {
       if (newOptions.provider) localStorage.setItem('epub_ocr_provider', newOptions.provider);
       localStorage.setItem('epub_ocr_api_key', newOptions.apiKey);
       if (newOptions.geminiApiKey !== undefined) localStorage.setItem('epub_ocr_gemini_api_key', newOptions.geminiApiKey);
+      if (newOptions.customOpenAiKey !== undefined) localStorage.setItem('epub_ocr_openai_key', newOptions.customOpenAiKey);
+      if (newOptions.customOpenAiBaseUrl !== undefined) localStorage.setItem('epub_ocr_openai_base_url', newOptions.customOpenAiBaseUrl);
+      if (newOptions.customOpenAiModel !== undefined) localStorage.setItem('epub_ocr_openai_model', newOptions.customOpenAiModel);
       if (newOptions.antigravityAuth) {
         localStorage.setItem('epub_ocr_antigravity_auth', JSON.stringify(newOptions.antigravityAuth));
       } else {
@@ -290,6 +301,7 @@ export default function Home() {
     const isConfigured =
       (options.provider === 'antigravity' && Boolean(options.antigravityAuth?.accessToken)) ||
       (options.provider === 'gemini_api' && Boolean(options.geminiApiKey?.trim())) ||
+      (options.provider === 'custom_openai' && Boolean(options.customOpenAiKey?.trim() || options.customOpenAiBaseUrl?.includes('localhost') || options.customOpenAiBaseUrl?.includes('127.0.0.1'))) ||
       (options.provider === 'openrouter' && Boolean(options.apiKey?.trim()));
 
     if (options.useLlm && !isConfigured) {

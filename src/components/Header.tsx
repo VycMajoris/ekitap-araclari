@@ -58,6 +58,13 @@ export const Header: React.FC<HeaderProps> = ({
     if (activeProvider === 'gemini_api') {
       return Boolean(options?.geminiApiKey?.trim());
     }
+    if (activeProvider === 'custom_openai') {
+      return Boolean(
+        options?.customOpenAiKey?.trim() ||
+        options?.customOpenAiBaseUrl?.includes('localhost') ||
+        options?.customOpenAiBaseUrl?.includes('127.0.0.1')
+      );
+    }
     return Boolean(options ? options.apiKey?.trim() : apiKeyConfigured);
   })();
 
@@ -72,7 +79,10 @@ export const Header: React.FC<HeaderProps> = ({
       const shortId = model ? model.id : activeModelId || 'gemini-2.0-flash';
       return `AI Studio (${shortId})`;
     }
-    // openrouter
+    if (activeProvider === 'custom_openai') {
+      const customModel = options?.customOpenAiModel || 'gpt-4o-mini';
+      return `OpenAI API (${customModel})`;
+    }
     if (activeModelId?.includes('llama-3.3') || modelName?.includes('Llama 3.3')) {
       return 'OpenRouter (Llama 3.3)';
     }
@@ -90,6 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
   const providerBadge = (() => {
     if (activeProvider === 'antigravity') return 'Google Antigravity';
     if (activeProvider === 'gemini_api') return 'Google AI Studio';
+    if (activeProvider === 'custom_openai') return 'OpenAI Uyumlu API';
     return 'OpenRouter Free';
   })();
 

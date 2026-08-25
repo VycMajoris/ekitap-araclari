@@ -49,7 +49,7 @@ export interface OpenRouterModel {
   isFree?: boolean;
 }
 
-export type LlmProvider = 'antigravity' | 'gemini_api' | 'openrouter';
+export type LlmProvider = 'antigravity' | 'gemini_api' | 'openrouter' | 'custom_openai';
 
 export interface AntigravityAuthData {
   accessToken: string;
@@ -63,6 +63,9 @@ export interface ProcessingOptions {
   provider?: LlmProvider;
   apiKey: string;
   geminiApiKey?: string;
+  customOpenAiKey?: string;
+  customOpenAiBaseUrl?: string;
+  customOpenAiModel?: string;
   antigravityAuth?: AntigravityAuthData;
   model: string;
   concurrency: number;

@@ -1,8 +1,103 @@
 import { EpubChapter, TextBlock, ProcessingOptions, ProcessingStats, DebugLogEntry } from './types';
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, computeTextDiff, hasOcrAnomaly } from './turkish-ocr-rules';
-import { callOpenRouterCorrection } from './openrouter';
+import { callOpenRouterCorrection, TURKISH_OCR_SYSTEM_PROMPT } from './openrouter';
 import { callAntigravityCorrection, callGeminiApiCorrection } from './antigravity';
 import { getCachedCorrection, saveBatchCachedCorrections } from './cache';
+
+export async function callOpenAiCustomCorrection({
+  baseUrl,
+  apiKey,
+  model,
+  content,
+  temperature = 0.1,
+  signal,
+  customPrompt,
+}: {
+  baseUrl?: string;
+  apiKey?: string;
+  model: string;
+  content: string;
+  temperature?: number;
+  signal?: AbortSignal;
+  customPrompt?: string;
+}): Promise<string> {
+  const systemMessage = customPrompt || TURKISH_OCR_SYSTEM_PROMPT;
+  const cleanBaseUrl = (baseUrl || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+  const endpoint = `${cleanBaseUrl}/chat/completions`;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey?.trim()) {
+    headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+  }
+
+  const maxRetries = 4;
+  let delay = 2000;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (signal?.aborted) {
+      throw new DOMException('İşlem kullanıcı tarafından durduruldu.', 'AbortError');
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: model.trim() || 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content },
+          ],
+          temperature,
+        }),
+        signal,
+      });
+
+      if (response.status === 429) {
+        if (attempt === maxRetries) {
+          throw new Error('API istek limiti (Rate Limit / 429) aşıldı.');
+        }
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * 1.8, 15000);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData?.error?.message || errorData?.message || `API hatası (${response.status} ${response.statusText})`
+        );
+      }
+
+      const data = await response.json();
+      let result = data.choices?.[0]?.message?.content || '';
+
+      result = result.trim();
+      if (result.startsWith('```html')) {
+        result = result.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
+      } else if (result.startsWith('```xml')) {
+        result = result.replace(/^```xml\s*/i, '').replace(/```\s*$/i, '');
+      } else if (result.startsWith('```')) {
+        result = result.replace(/^```\s*/i, '').replace(/```\s*$/i, '');
+      }
+
+      return result.trim();
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw err;
+      }
+      if (attempt === maxRetries) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * 1.8, 15000);
+    }
+  }
+
+  throw new Error('API isteği başarısız oldu.');
+}
 
 export interface ProcessorCallbacks {
   onBlockUpdated?: (chapterId: string, block: TextBlock) => void;
@@ -72,6 +167,13 @@ function isProviderReady(options: ProcessingOptions): boolean {
   if (options.provider === 'gemini_api') {
     return Boolean(options.geminiApiKey?.trim());
   }
+  if (options.provider === 'custom_openai') {
+    return Boolean(
+      options.customOpenAiKey?.trim() ||
+      options.customOpenAiBaseUrl?.includes('localhost') ||
+      options.customOpenAiBaseUrl?.includes('127.0.0.1')
+    );
+  }
   return Boolean(options.apiKey?.trim());
 }
 
@@ -84,6 +186,17 @@ async function callLlmCorrection({
   content: string;
   signal?: AbortSignal;
 }): Promise<string> {
+  if (options.provider === 'custom_openai') {
+    return callOpenAiCustomCorrection({
+      baseUrl: options.customOpenAiBaseUrl,
+      apiKey: options.customOpenAiKey,
+      model: options.customOpenAiModel || options.model || 'gpt-4o-mini',
+      content,
+      temperature: options.temperature,
+      signal,
+      customPrompt: options.customPrompt,
+    });
+  }
   if (options.provider === 'antigravity' && options.antigravityAuth?.accessToken) {
     return callAntigravityCorrection({
       auth: options.antigravityAuth,
