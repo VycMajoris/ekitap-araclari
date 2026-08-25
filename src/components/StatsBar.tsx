@@ -3,11 +3,11 @@ import {
   Play,
   Square,
   Download,
-  CheckCircle2,
   Clock,
   Sparkles,
   RotateCcw,
   Loader2,
+  Send,
 } from 'lucide-react';
 import { ProcessingStats } from '../lib/types';
 
@@ -19,6 +19,7 @@ interface StatsBarProps {
   onStart: () => void;
   onStop: () => void;
   onDownload: () => void;
+  onSendToDevice?: () => void;
   onResetProgress: () => void;
   selectedCount: number;
 }
@@ -31,6 +32,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   onStart,
   onStop,
   onDownload,
+  onSendToDevice,
   onResetProgress,
   selectedCount,
 }) => {
@@ -49,9 +51,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        {/* Metric Badges */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
-          {/* Progress */}
           <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
             <span className="text-[11px] font-medium text-zinc-500 block">İlerleme</span>
             <div className="flex items-baseline gap-1 mt-0.5">
@@ -64,7 +64,6 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          {/* Fixed Words */}
           <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-3">
             <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <Sparkles className="w-3 h-3" /> Düzeltilen Kelime
@@ -77,7 +76,6 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          {/* Chapters */}
           <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
             <span className="text-[11px] font-medium text-zinc-500 block">Bölüm Durumu</span>
             <div className="flex items-baseline gap-1 mt-0.5">
@@ -88,7 +86,6 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          {/* Time Remaining */}
           <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
             <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
               <Clock className="w-3 h-3 text-zinc-400" />
@@ -102,12 +99,11 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
           {stats.processedBlocks > 0 && !isProcessing && (
             <button
               onClick={onResetProgress}
-              className="p-2.5 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-zinc-800"
+              className="p-2.5 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-zinc-800 cursor-pointer"
               title="İlerlemeyi Sıfırla"
             >
               <RotateCcw className="w-4 h-4" />
@@ -138,7 +134,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           <button
             onClick={onDownload}
             disabled={stats.processedBlocks === 0 || isProcessing || isPacking}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all cursor-pointer"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all cursor-pointer"
           >
             {isPacking ? (
               <>
@@ -152,10 +148,21 @@ export const StatsBar: React.FC<StatsBarProps> = ({
               </>
             )}
           </button>
+
+          {onSendToDevice && (
+            <button
+              onClick={onSendToDevice}
+              disabled={stats.processedBlocks === 0 || isProcessing || isPacking}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              title="Kindle veya KOReader cihazınıza kablosuz gönderin"
+            >
+              <Send className="w-4 h-4" />
+              <span>Cihaza Gönder</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Progress Track */}
       <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden relative">
         <div
           className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-300 relative overflow-hidden"

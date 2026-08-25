@@ -67,6 +67,11 @@ Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
 ### 7. 🌓 Karanlık ve Aydınlık Tema
 - Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
 
+### 8. 📱 Send-to-Kindle & KOReader E-Okuyucu Aktarımı
+- **Kindle E-Posta Gönderimi**: Amazon `@kindle.com` adresinize Gmail / Özel SMTP veya Resend API ile doğrudan tek tıkla EPUB gönderin.
+- **KOReader Wi-Fi Aktarımı**: E-okuyucunuzda (Kindle, Kobo, reMarkable) KOReader açıkken yerel IP adresi üzerinden kablosuz olarak doğrudan cihaza aktarın.
+- **Yerel Ağda İndirme & QR Kod**: E-okuyucunuzun veya telefonunuzun tarayıcısından yerel ağ üzerinden anında indirin.
+
 ---
 
 ## 🛠️ Hızlı Başlangıç

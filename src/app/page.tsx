@@ -5,6 +5,7 @@ import JSZip from 'jszip';
 import { Header } from '@/components/Header';
 import { UploadSection } from '@/components/UploadSection';
 import { SettingsModal } from '@/components/SettingsModal';
+import { SendToDeviceModal } from '@/components/SendToDeviceModal';
 import { DebugConsole } from '@/components/DebugConsole';
 import { StatsBar } from '@/components/StatsBar';
 import { ChapterList } from '@/components/ChapterList';
@@ -68,6 +69,7 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPacking, setIsPacking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSendToDeviceOpen, setIsSendToDeviceOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -385,6 +387,11 @@ export default function Home() {
     });
   };
 
+  const handleGetEpubBlob = async (): Promise<Blob | null> => {
+    if (!zip || chapters.length === 0) return null;
+    return await packageEpub(zip, chapters);
+  };
+
   const handleDownload = async () => {
     if (!zip || chapters.length === 0) return;
     setIsPacking(true);
@@ -552,6 +559,7 @@ export default function Home() {
               onStart={handleStartProcessing}
               onStop={handleStopProcessing}
               onDownload={handleDownload}
+              onSendToDevice={() => setIsSendToDeviceOpen(true)}
               onResetProgress={handleResetProgress}
               selectedCount={selectedCount}
             />
@@ -622,6 +630,13 @@ export default function Home() {
         onOptionsChange={handleOptionsChange}
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
+      />
+
+      <SendToDeviceModal
+        isOpen={isSendToDeviceOpen}
+        onClose={() => setIsSendToDeviceOpen(false)}
+        getEpubBlob={handleGetEpubBlob}
+        fileName={file?.name || 'kitap.epub'}
       />
 
       {options.isDevMode && (
