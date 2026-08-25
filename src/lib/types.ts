@@ -5,7 +5,7 @@ export interface EpubMetadata {
   identifier?: string;
   publisher?: string;
   coverImage?: string;
-  format?: 'epub' | 'pdf';
+  format?: 'epub' | 'pdf' | 'mobi';
   pageCount?: number;
 }
 

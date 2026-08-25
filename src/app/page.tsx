@@ -22,6 +22,7 @@ import {
 } from '@/lib/types';
 import { parseEpub, packageEpub } from '@/lib/epub-engine';
 import { parsePdf } from '@/lib/pdf-engine';
+import { parseMobi, packageMobi } from '@/lib/mobi-engine';
 import { processEpubChapters } from '@/lib/processor';
 import { POPULAR_FREE_MODELS } from '@/lib/openrouter';
 import { AlertTriangle, Zap, Sparkles, Cpu } from 'lucide-react';
@@ -156,12 +157,21 @@ export default function Home() {
       const isPdf =
         uploadedFile.name.toLowerCase().endsWith('.pdf') ||
         uploadedFile.type === 'application/pdf';
+      const isMobi =
+        uploadedFile.name.toLowerCase().endsWith('.mobi') ||
+        uploadedFile.type === 'application/x-mobipocket-ebook';
 
       let loadedZip: JSZip;
       let loadedMeta: EpubMetadata;
       let loadedChapters: EpubChapter[];
 
-      if (isPdf) {
+      if (isMobi) {
+        setLoadingMessage('MOBI dosyası okunuyor ve ayrıştırılıyor...');
+        const result = await parseMobi(uploadedFile);
+        loadedZip = result.zip;
+        loadedMeta = result.metadata;
+        loadedChapters = result.chapters;
+      } else if (isPdf) {
         setLoadingMessage('PDF sayfaları ayrıştırılıyor ve EPUB yapısına dönüştürülüyor...');
         const result = await parsePdf(uploadedFile, {
           onProgress: (p) => {
@@ -400,7 +410,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const baseName = file?.name?.replace(/\.(epub|pdf)$/i, '') || 'kitap';
+      const baseName = file?.name?.replace(/\.(epub|pdf|mobi)$/i, '') || 'kitap';
       a.download = `${baseName}_duzeltilmis.epub`;
       document.body.appendChild(a);
       a.click();
@@ -409,6 +419,28 @@ export default function Home() {
     } catch (err: unknown) {
       console.error('EPUB paketleme hatası:', err);
       alert('Düzeltilmiş EPUB dosyası paketlenirken hata oluştu.');
+    } finally {
+      setIsPacking(false);
+    }
+  };
+
+  const handleDownloadMobi = async () => {
+    if (chapters.length === 0) return;
+    setIsPacking(true);
+    try {
+      const blob = await packageMobi(chapters, metadata);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const baseName = file?.name?.replace(/\.(epub|pdf|mobi)$/i, '') || 'kitap';
+      a.download = `${baseName}_duzeltilmis.mobi`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      console.error('MOBI paketleme hatası:', err);
+      alert('Düzeltilmiş MOBI dosyası paketlenirken hata oluştu.');
     } finally {
       setIsPacking(false);
     }
@@ -559,6 +591,7 @@ export default function Home() {
               onStart={handleStartProcessing}
               onStop={handleStopProcessing}
               onDownload={handleDownload}
+              onDownloadMobi={handleDownloadMobi}
               onSendToDevice={() => setIsSendToDeviceOpen(true)}
               onResetProgress={handleResetProgress}
               selectedCount={selectedCount}

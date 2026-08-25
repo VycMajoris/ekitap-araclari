@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ProcessingStats } from '../lib/types';
 
-interface StatsBarProps {
+export interface StatsBarProps {
   stats: ProcessingStats;
   isProcessing: boolean;
   isCompleted: boolean;
@@ -19,6 +19,7 @@ interface StatsBarProps {
   onStart: () => void;
   onStop: () => void;
   onDownload: () => void;
+  onDownloadMobi?: () => void;
   onSendToDevice?: () => void;
   onResetProgress: () => void;
   selectedCount: number;
@@ -32,6 +33,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   onStart,
   onStop,
   onDownload,
+  onDownloadMobi,
   onSendToDevice,
   onResetProgress,
   selectedCount,
@@ -148,6 +150,18 @@ export const StatsBar: React.FC<StatsBarProps> = ({
               </>
             )}
           </button>
+
+          {onDownloadMobi && (
+            <button
+              onClick={onDownloadMobi}
+              disabled={stats.processedBlocks === 0 || isProcessing || isPacking}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3.5 py-3 rounded-2xl text-xs font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              title="Eski Kindle modelleri için MOBI formatında kaydet"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>MOBI</span>
+            </button>
+          )}
 
           {onSendToDevice && (
             <button

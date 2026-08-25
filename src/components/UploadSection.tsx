@@ -47,10 +47,10 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const name = files[0].name.toLowerCase();
-      if (name.endsWith('.epub') || name.endsWith('.pdf')) {
+      if (name.endsWith('.epub') || name.endsWith('.pdf') || name.endsWith('.mobi')) {
         onFileLoaded(files[0]);
       } else {
-        alert('Lütfen geçerli bir .epub veya .pdf dosyası seçin.');
+        alert('Lütfen geçerli bir .epub, .pdf veya .mobi dosyası seçin.');
       }
     }
   };
@@ -91,6 +91,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 
   if (metadata) {
     const isPdf = metadata.format === 'pdf' || fileName?.toLowerCase().endsWith('.pdf');
+    const isMobi = metadata.format === 'mobi' || fileName?.toLowerCase().endsWith('.mobi');
 
     return (
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
@@ -99,6 +100,8 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
             <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${
               isPdf
                 ? 'bg-rose-100 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400'
+                : isMobi
+                ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-600 dark:text-amber-400'
                 : 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400'
             }`}>
               {isPdf ? <FileCode className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
@@ -111,10 +114,12 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
                 <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                   isPdf
                     ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                    : isMobi
+                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
                     : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                 }`}>
                   <CheckCircle2 className="w-3 h-3" />
-                  {isPdf ? 'PDF Dönüştürüldü' : 'EPUB Yüklendi'}
+                  {isPdf ? 'PDF Dönüştürüldü' : isMobi ? 'MOBI Yüklendi' : 'EPUB Yüklendi'}
                 </span>
               </div>
 
@@ -171,7 +176,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".epub,.pdf,application/epub+zip,application/pdf"
+        accept=".epub,.pdf,.mobi,application/epub+zip,application/pdf,application/x-mobipocket-ebook"
         onChange={handleFileInput}
         className="hidden"
       />
@@ -189,17 +194,21 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           <span className="text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
             PDF
           </span>
+          <span className="text-zinc-400 font-bold">&bull;</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            MOBI
+          </span>
         </div>
 
         <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
-          EPUB veya PDF Kitap Dosyasını Sürükleyip Bırakın
+          EPUB, PDF veya MOBI Kitap Dosyasını Sürükleyip Bırakın
         </h3>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
           veya cihazınızdan seçmek için buraya tıklayın
         </p>
 
         <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800/50 mb-3">
-          <span>%100 Tarayıcıda Doğrudan EPUB&apos;a Dönüştürülür ve Düzeltilir</span>
+          <span>%100 Tarayıcıda Doğrudan EPUB &amp; MOBI Olarak İşlenir</span>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

@@ -33,8 +33,9 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 
 ## 🚀 Özellikler
 
-### 1. 📖 İstemci Taraflı PDF ➔ EPUB Dönüştürücü
-- `pdfjs-dist` ve `jszip` kütüphaneleriyle doğrudan tarayıcınızda çalışır.
+### 1. 📖 İstemci Taraflı PDF & MOBI ➔ EPUB / MOBI Dönüştürücü
+- `pdfjs-dist` ve yerel PalmDOC/MOBI ikili motoruyla doğrudan tarayıcınızda çalışır.
+- EPUB, PDF ve **MOBI** formatındaki kitapları açabilir, onarabilir ve hem **EPUB** hem de eski Kindle cihazları için **MOBI** olarak dışa aktarabilir.
 - Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, gereksiz kelime içi boşlukları engeller.
 - Sayfa üst/alt bilgi (header/footer) ve sayfa numaralarını otomatik temizler.
 - İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini akıllıca ayırır.
