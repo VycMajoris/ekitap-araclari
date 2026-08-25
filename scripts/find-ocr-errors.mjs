@@ -4,7 +4,8 @@ import path from 'node:path';
 import * as cheerio from 'cheerio';
 
 async function main() {
-  const epubPath = path.resolve('dunyalarinsavasi.epub');
+  const targetFile = process.argv[2] || 'public/ornek-bozuk-turkce.epub';
+  const epubPath = path.resolve(targetFile);
   if (!fs.existsSync(epubPath)) {
     console.error(`EPUB file not found at ${epubPath}`);
     process.exit(1);

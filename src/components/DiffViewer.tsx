@@ -9,15 +9,25 @@ import {
   Search,
   Copy,
   Check,
+  Languages,
 } from 'lucide-react';
-import { EpubChapter, TextBlock } from '../lib/types';
+import { EpubChapter, TextBlock, TaskType } from '../lib/types';
 import { computeTextDiff } from '../lib/turkish-ocr-rules';
+import { getLanguageName } from '../lib/openrouter';
 
 interface DiffViewerProps {
   chapter: EpubChapter | null;
+  taskType?: TaskType;
+  sourceLang?: string;
+  targetLang?: string;
 }
 
-export const DiffViewer: React.FC<DiffViewerProps> = ({ chapter }) => {
+export const DiffViewer: React.FC<DiffViewerProps> = ({
+  chapter,
+  taskType = 'ocr_fix',
+  sourceLang = 'auto',
+  targetLang = 'tr',
+}) => {
   const [onlyDiffs, setOnlyDiffs] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,11 +41,13 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ chapter }) => {
           Önizleme İçin Bölüm Seçin
         </h3>
         <p className="text-xs text-zinc-400 mt-1 max-w-sm">
-          Sol listeden bir bölüme tıklayarak orijinal ve düzeltilmiş metinleri canlı olarak karşılaştırabilirsiniz.
+          Sol listeden bir bölüme tıklayarak orijinal ve işlenmiş metinleri canlı olarak karşılaştırabilirsiniz.
         </p>
       </div>
     );
   }
+
+  const isTranslation = taskType === 'translate';
 
   const filteredBlocks = chapter.blocks.filter((b) => {
     if (onlyDiffs && b.diffCount === 0 && b.originalText === b.correctedText) {
@@ -65,9 +77,24 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ chapter }) => {
           <h3 className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
             <span>{chapter.title}</span>
             {chapter.stats.fixedWords > 0 && (
-              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                {chapter.stats.fixedWords} Kelime Düzeltildi
+              <span
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  isTranslation
+                    ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950'
+                    : 'text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950'
+                }`}
+              >
+                {isTranslation ? (
+                  <>
+                    <Languages className="w-3 h-3" />
+                    {chapter.stats.fixedWords} Kelime Çevrildi
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3" />
+                    {chapter.stats.fixedWords} Kelime Düzeltildi
+                  </>
+                )}
               </span>
             )}
           </h3>
@@ -136,7 +163,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ chapter }) => {
         {filteredBlocks.length === 0 ? (
           <div className="text-center py-12 text-zinc-400 text-xs">
             {onlyDiffs
-              ? 'Bu bölümde henüz düzeltme yapılan bir paragraf bulunmuyor.'
+              ? isTranslation
+                ? 'Bu bölümde henüz çevirisi yapılan bir paragraf bulunmuyor.'
+                : 'Bu bölümde henüz düzeltme yapılan bir paragraf bulunmuyor.'
               : 'Eşleşen paragraf bulunamadı.'}
           </div>
         ) : (
@@ -146,6 +175,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ chapter }) => {
               block={block}
               index={idx + 1}
               viewMode={viewMode}
+              isTranslation={isTranslation}
+              sourceLangName={getLanguageName(sourceLang)}
+              targetLangName={getLanguageName(targetLang)}
               isCopied={copiedBlockId === block.id}
               onCopy={() => handleCopyText(block.id, block.correctedText)}
             />
@@ -160,6 +192,9 @@ interface BlockItemProps {
   block: TextBlock;
   index: number;
   viewMode: 'split' | 'unified';
+  isTranslation?: boolean;
+  sourceLangName?: string;
+  targetLangName?: string;
   isCopied: boolean;
   onCopy: () => void;
 }
@@ -168,6 +203,9 @@ const BlockItem: React.FC<BlockItemProps> = ({
   block,
   index,
   viewMode,
+  isTranslation = false,
+  sourceLangName = 'Kaynak',
+  targetLangName = 'Türkçe',
   isCopied,
   onCopy,
 }) => {
@@ -178,7 +216,9 @@ const BlockItem: React.FC<BlockItemProps> = ({
     <div
       className={`rounded-2xl border p-3.5 text-xs transition-all ${
         isChanged
-          ? 'bg-white dark:bg-zinc-950/80 border-emerald-300/80 dark:border-emerald-800/80 shadow-xs'
+          ? isTranslation
+            ? 'bg-white dark:bg-zinc-950/80 border-blue-300/80 dark:border-blue-800/80 shadow-xs'
+            : 'bg-white dark:bg-zinc-950/80 border-emerald-300/80 dark:border-emerald-800/80 shadow-xs'
           : 'bg-zinc-50/50 dark:bg-zinc-950/30 border-zinc-200/70 dark:border-zinc-800/70'
       }`}
     >
@@ -189,18 +229,25 @@ const BlockItem: React.FC<BlockItemProps> = ({
             #{index} &lt;{block.elementTag}&gt;
           </span>
           {isChanged ? (
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> {block.diffCount} Düzeltme
+            <span
+              className={`font-semibold flex items-center gap-1 ${
+                isTranslation
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              {isTranslation ? 'Çevrildi' : `${block.diffCount} Düzeltme`}
             </span>
           ) : (
-            <span>Değişiklik Yok</span>
+            <span>İşlenmedi</span>
           )}
         </div>
 
         <button
           onClick={onCopy}
           className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center gap-1 transition-colors cursor-pointer"
-          title="Düzeltilmiş metni kopyala"
+          title="İşlenmiş metni kopyala"
         >
           {isCopied ? (
             <>
@@ -220,81 +267,124 @@ const BlockItem: React.FC<BlockItemProps> = ({
       {viewMode === 'split' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 leading-relaxed">
           {/* Left: Original */}
-          <div className="bg-rose-50/40 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 rounded-xl p-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600/70 dark:text-rose-400/70 block mb-1">
-              Orijinal (OCR Bozuk)
+          <div
+            className={`border rounded-xl p-3 ${
+              isTranslation
+                ? 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200/80 dark:border-zinc-800/80'
+                : 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/40'
+            }`}
+          >
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                isTranslation
+                  ? 'text-zinc-500 dark:text-zinc-400'
+                  : 'text-rose-600/70 dark:text-rose-400/70'
+              }`}
+            >
+              {isTranslation ? `Orijinal (${sourceLangName})` : 'Orijinal (OCR Bozuk)'}
             </span>
             <div className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-              {diffs.map((part, i) => {
-                if (part.type === 'removed') {
-                  return (
-                    <span
-                      key={i}
-                      className="bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 font-medium line-through px-0.5 rounded"
-                    >
-                      {part.value}
-                    </span>
-                  );
-                }
-                if (part.type === 'equal') {
-                  return <span key={i}>{part.value}</span>;
-                }
-                return null;
-              })}
+              {isTranslation ? (
+                block.originalText
+              ) : (
+                diffs.map((part, i) => {
+                  if (part.type === 'removed') {
+                    return (
+                      <span
+                        key={i}
+                        className="bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 font-medium line-through px-0.5 rounded"
+                      >
+                        {part.value}
+                      </span>
+                    );
+                  }
+                  if (part.type === 'equal') {
+                    return <span key={i}>{part.value}</span>;
+                  }
+                  return null;
+                })
+              )}
             </div>
           </div>
 
-          {/* Right: Corrected */}
-          <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/70 block mb-1">
-              Düzeltilmiş (Onarılmış)
+          {/* Right: Corrected / Translated */}
+          <div
+            className={`border rounded-xl p-3 ${
+              isTranslation
+                ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/40'
+                : 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40'
+            }`}
+          >
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                isTranslation
+                  ? 'text-blue-600/80 dark:text-blue-400/80'
+                  : 'text-emerald-600/70 dark:text-emerald-400/70'
+              }`}
+            >
+              {isTranslation ? `Çeviri (${targetLangName})` : 'Düzeltilmiş (Onarılmış)'}
             </span>
-            <div className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-              {diffs.map((part, i) => {
-                if (part.type === 'added') {
-                  return (
-                    <span
-                      key={i}
-                      className="bg-emerald-200 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 font-bold px-0.5 rounded shadow-xs"
-                    >
-                      {part.value}
-                    </span>
-                  );
-                }
-                if (part.type === 'equal') {
-                  return <span key={i}>{part.value}</span>;
-                }
-                return null;
-              })}
+            <div className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap font-sans">
+              {isTranslation ? (
+                block.correctedText
+              ) : (
+                diffs.map((part, i) => {
+                  if (part.type === 'added') {
+                    return (
+                      <span
+                        key={i}
+                        className="bg-emerald-200 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 font-bold px-0.5 rounded shadow-xs"
+                      >
+                        {part.value}
+                      </span>
+                    );
+                  }
+                  if (part.type === 'equal') {
+                    return <span key={i}>{part.value}</span>;
+                  }
+                  return null;
+                })
+              )}
             </div>
           </div>
         </div>
       ) : (
         /* Unified Inline Diff */
         <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 leading-relaxed whitespace-pre-wrap">
-          {diffs.map((part, i) => {
-            if (part.type === 'removed') {
-              return (
-                <span
-                  key={i}
-                  className="bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 font-medium line-through px-0.5 rounded mx-0.5"
-                >
-                  {part.value}
-                </span>
-              );
-            }
-            if (part.type === 'added') {
-              return (
-                <span
-                  key={i}
-                  className="bg-emerald-200 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 font-bold px-0.5 rounded mx-0.5"
-                >
-                  {part.value}
-                </span>
-              );
-            }
-            return <span key={i}>{part.value}</span>;
-          })}
+          {isTranslation ? (
+            <div className="space-y-2">
+              <div className="text-zinc-500 dark:text-zinc-400 text-[11px] pb-1 border-b border-zinc-200/50 dark:border-zinc-800/50">
+                {block.originalText}
+              </div>
+              <div className="text-zinc-900 dark:text-white font-medium">
+                {block.correctedText}
+              </div>
+            </div>
+          ) : (
+            diffs.map((part, i) => {
+              if (part.type === 'removed') {
+                return (
+                  <span
+                    key={i}
+                    className="bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 font-medium line-through px-0.5 rounded mx-0.5"
+                  >
+                    {part.value}
+                  </span>
+                );
+              }
+              if (part.type === 'added') {
+                return (
+                  <span
+                    key={i}
+                    className="bg-emerald-200 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 font-bold px-0.5 rounded mx-0.5"
+                  >
+                    {part.value}
+                  </span>
+                );
+              }
+              return <span key={i}>{part.value}</span>;
+            })
+          )}
         </div>
       )}
     </div>

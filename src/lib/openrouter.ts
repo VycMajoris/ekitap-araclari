@@ -1,4 +1,162 @@
-import { OpenRouterModel } from './types';
+import { OpenRouterModel, TranslationStyle } from './types';
+
+export interface LanguageOption {
+  code: string;
+  name: string;
+  nativeName: string;
+}
+
+export const SUPPORTED_SOURCE_LANGUAGES: LanguageOption[] = [
+  { code: 'auto', name: 'Otomatik Algıla (Auto-Detect)', nativeName: 'Auto' },
+  { code: 'en', name: 'İngilizce', nativeName: 'English' },
+  { code: 'de', name: 'Almanca', nativeName: 'Deutsch' },
+  { code: 'fr', name: 'Fransızca', nativeName: 'Français' },
+  { code: 'es', name: 'İspanyolca', nativeName: 'Español' },
+  { code: 'it', name: 'İtalyanca', nativeName: 'Italiano' },
+  { code: 'ru', name: 'Rusça', nativeName: 'Русский' },
+  { code: 'ja', name: 'Japonca', nativeName: '日本語' },
+  { code: 'zh', name: 'Çince', nativeName: '中文' },
+  { code: 'ar', name: 'Arapça', nativeName: 'العربية' },
+  { code: 'pt', name: 'Portekizce', nativeName: 'Português' },
+  { code: 'nl', name: 'Felemenkçe', nativeName: 'Nederlands' },
+  { code: 'la', name: 'Latince', nativeName: 'Latina' },
+  { code: 'tr', name: 'Türkçe', nativeName: 'Türkçe' },
+];
+
+export const SUPPORTED_TARGET_LANGUAGES: LanguageOption[] = [
+  { code: 'tr', name: 'Türkçe', nativeName: 'Türkçe' },
+  { code: 'en', name: 'İngilizce', nativeName: 'English' },
+  { code: 'de', name: 'Almanca', nativeName: 'Deutsch' },
+  { code: 'fr', name: 'Fransızca', nativeName: 'Français' },
+  { code: 'es', name: 'İspanyolca', nativeName: 'Español' },
+  { code: 'it', name: 'İtalyanca', nativeName: 'Italiano' },
+  { code: 'ru', name: 'Rusça', nativeName: 'Русский' },
+  { code: 'ja', name: 'Japonca', nativeName: '日本語' },
+  { code: 'zh', name: 'Çince', nativeName: '中文' },
+  { code: 'ar', name: 'Arapça', nativeName: 'العربية' },
+  { code: 'pt', name: 'Portekizce', nativeName: 'Português' },
+  { code: 'nl', name: 'Felemenkçe', nativeName: 'Nederlands' },
+];
+
+export const TRANSLATION_STYLES: { id: TranslationStyle; name: string; description: string }[] = [
+  {
+    id: 'literary',
+    name: 'Edebi & Akıcı Roman',
+    description: 'Diyalog doğallığı, karakter tonu ve edebi zenginliği koruyan akıcı çeviri.',
+  },
+  {
+    id: 'academic',
+    name: 'Akademik & Bilimsel',
+    description: 'Terminolojik hassasiyet, nesnel anlatım ve kaynak doğruluğu odaklı çeviri.',
+  },
+  {
+    id: 'casual',
+    name: 'Sade & Günlük Dil',
+    description: 'Açık, anlaşılır, yalın ve doğrudan ifadeye dayalı çeviri.',
+  },
+];
+
+export const BOOK_TRANSLATION_SYSTEM_PROMPT = `Sen dünyaca ünlü edebiyat ve akademik eserleri hedef dile çeviren ödüllü bir edebi çevirmen ve metin editörüsün.
+Görevin: Verilen e-kitap metin bloklarını kaynak dilden hedef dile, bağlamı, karakter ilişkilerini, anlatıcı tonunu ve atmosferi eksiksiz koruyarak çevirmektir.
+
+KİTAP ÇEVİRİSİ TEMEL İLKELERİ VE KAÇINILACAK 7 HATA:
+1. KELİME KELİME (HARFİYEN) ÇEVİRİ TUZAĞINDAN KAÇIN:
+   - Asla mekanik, kelimesi kelimesine çeviri yapma. Kaynak dildeki cümleyi hedef dilin doğal sözdizimi, zenginliği ve edebi akıcılığı ile yeniden canlandır.
+   - Türkçede eğreti duran yapay çeviri kalıplarından ('tarafından yapıldı', 'yapılmaktadır', 'o bir...') kaçın.
+2. YAZARIN SES TONU VE ÜSLUBUNU KORU:
+   - Yazarın anlatım ritmini, mizahını, hüznünü, gerilimini veya felsefi derinliğini hedef dile aynı duyguyla aktar.
+   - Eserin türüne uygun yaklaşım sergile: Romanlarda duygusal akıcılık ve canlı betimlemeler, akademik eserlerde kavramsal netlik.
+3. KÜLTÜREL UYARLAMA VE DEYİM YERELLEŞTİRMESİ:
+   - Deyimleri ve mecazları kelime kelimesine çevirme; hedef dildeki en güçlü edebi ve kültürel karşılıklarıyla aktar.
+   - Kültürel esprileri ve referansları hedef okuyucunun aynı hissi alacağı doğallıkta uyarla.
+4. DİYALOG DOĞALLIĞI VE KARAKTER SESLERİ:
+   - Karakterlerin yaş, statü ve kişiliklerine özgü konuşma tarzlarını koru.
+   - Karakterler arası hitap şekillerini ('sen' / 'siz'), önceki bağlamdaki (Previous Context) samimiyet derecesine sadık kalarak sürdür.
+   - Satır başındaki konuşma çizgilerini (— veya -) asla silme veya bozma.
+5. ZAMİR VE KARAKTER/TERİM TUTARLILIĞI:
+   - Önceki bağlamda ve sözlükte (Glossary) belirtilen özel isimleri, mekân adlarını ve kurgusal terimleri kitap boyunca %100 tutarlı çevir.
+   - Farklı dillerdeki cinsiyet zamirlerini hikâyenin akışına göre doğru şahsa bağla.
+6. BİÇİMLENDİRME VE HTML ETİKET KORUMASI:
+   - Verilen HTML etiketlerini (örn: <p>, <h1>, <h2>, <h3>, <blockquote>, <em>, <strong>, <b>, <i>, <span>, <a> vb.) AYNEN OLDUĞU GİBİ KORU.
+   - İtalik (<em>/<i>) veya kalın (<strong>/<b>) vurgulu ifadelerin çevirisini de aynı etiket içine yerleştir.
+7. METİN BÜTÜNLÜĞÜ VE SIFIR HALÜSİNASYON:
+   - Hiçbir cümleyi, paragrafı veya düşünceyi atlama, özetleme veya kesme.
+   - Metne kendi yorumunu, dipnot veya gereksiz eklemeler katma.
+
+ÇIKTI FORMATI:
+- Sana [BLOCK_0]...[/BLOCK_0] etiketleri arasında iletilen her bir paragrafı, yine [BLOCK_0]...[/BLOCK_0] etiketleri içerisinde ve sırasını değiştirmeden ver.
+- Başında veya sonunda selamlama, açıklama veya markdown kod bloğu (\`\`\`) ASLA kullanma.`;
+
+export function getLanguageName(code: string): string {
+  const found =
+    SUPPORTED_SOURCE_LANGUAGES.find((l) => l.code === code) ||
+    SUPPORTED_TARGET_LANGUAGES.find((l) => l.code === code);
+  return found ? found.name : code;
+}
+
+export function buildTranslationUserPrompt({
+  sourceLang = 'auto',
+  targetLang = 'tr',
+  style = 'literary',
+  bookTitle,
+  chapterTitle,
+  rollingContext,
+  glossary,
+  content,
+}: {
+  sourceLang?: string;
+  targetLang?: string;
+  style?: TranslationStyle;
+  bookTitle?: string;
+  chapterTitle?: string;
+  rollingContext?: { source: string; translated: string }[];
+  glossary?: Record<string, string>;
+  content: string;
+}): string {
+  const sourceName = getLanguageName(sourceLang);
+  const targetName = getLanguageName(targetLang);
+  const styleObj = TRANSLATION_STYLES.find((s) => s.id === style) || TRANSLATION_STYLES[0];
+
+  const sections: string[] = [];
+
+  sections.push(`[GÖREV VE HEDEF]
+Kaynak Dil: ${sourceName} (${sourceLang})
+Hedef Dil: ${targetName} (${targetLang})
+Çeviri Üslubu: ${styleObj.name} - ${styleObj.description}`);
+
+  if (bookTitle || chapterTitle) {
+    sections.push(`[ESER BAĞLAMI]
+${bookTitle ? `Kitap Başlığı: ${bookTitle}` : ''}
+${chapterTitle ? `Bölüm Başlığı: ${chapterTitle}` : ''}`.trim());
+  }
+
+  if (glossary && Object.keys(glossary).length > 0) {
+    const glossaryItems = Object.entries(glossary)
+      .map(([term, trans]) => `• ${term} -> ${trans}`)
+      .join('\n');
+    sections.push(`[ÖZEL TERİM VE KARAKTER SÖZLÜĞÜ (Bu karşılıklara kesinlikle uy)]
+${glossaryItems}`);
+  }
+
+  if (rollingContext && rollingContext.length > 0) {
+    const ctxItems = rollingContext
+      .slice(-3) // last 3 blocks max
+      .map(
+        (c, idx) =>
+          `[Önceki Paragraf ${idx + 1}]\nKaynak: ${c.source.slice(0, 300)}\nÇeviri: ${c.translated.slice(0, 300)}`
+      )
+      .join('\n\n');
+    sections.push(`[AKICILIK VE ZAMİR BAĞLAMI (Önceki Paragraflar - Yalnızca tutarlılık referansı içindir, tekrar çevirme)]
+${ctxItems}`);
+  }
+
+  sections.push(`[ÇEVRİLECEK METİN BLOKLARI]
+Lütfen aşağıdaki blokları yukarıdaki bağlam ve kurallara göre ${targetName} diline çevir. Her bloğu [BLOCK_X]...[/BLOCK_X] etiketleri içinde iade et:
+
+${content}`);
+
+  return sections.join('\n\n');
+}
 
 export const POPULAR_FREE_MODELS: OpenRouterModel[] = [
   {

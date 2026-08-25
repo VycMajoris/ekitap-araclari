@@ -23,10 +23,11 @@ function hashString(str: string): string {
   return (hash >>> 0).toString(16);
 }
 
-export function generateCacheKey(model: string, text: string): string {
+export function generateCacheKey(model: string, text: string, prefix?: string): string {
   const normalizedText = text.replace(/\s+/g, ' ').trim();
   const textHash = hashString(normalizedText);
-  return `${model || 'default'}_${textHash}_${normalizedText.length}`;
+  const prefixPart = prefix ? `${prefix}_` : '';
+  return `${prefixPart}${model || 'default'}_${textHash}_${normalizedText.length}`;
 }
 
 export async function getDb(): Promise<IDBDatabase | null> {
@@ -69,12 +70,13 @@ export async function getDb(): Promise<IDBDatabase | null> {
 
 export async function getCachedCorrection(
   model: string,
-  originalText: string
+  originalText: string,
+  cachePrefix?: string
 ): Promise<CachedCorrection | null> {
   const db = await getDb();
   if (!db) return null;
 
-  const key = generateCacheKey(model, originalText);
+  const key = generateCacheKey(model, originalText, cachePrefix);
 
   return new Promise((resolve) => {
     try {
@@ -95,11 +97,14 @@ export async function getCachedCorrection(
   });
 }
 
-export async function saveCachedCorrection(correction: Omit<CachedCorrection, 'key' | 'timestamp'>): Promise<void> {
+export async function saveCachedCorrection(
+  correction: Omit<CachedCorrection, 'key' | 'timestamp'>,
+  cachePrefix?: string
+): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  const key = generateCacheKey(correction.model, correction.originalText);
+  const key = generateCacheKey(correction.model, correction.originalText, cachePrefix);
   const entry: CachedCorrection = {
     ...correction,
     key,
@@ -121,7 +126,8 @@ export async function saveCachedCorrection(correction: Omit<CachedCorrection, 'k
 }
 
 export async function saveBatchCachedCorrections(
-  corrections: Omit<CachedCorrection, 'key' | 'timestamp'>[]
+  corrections: Omit<CachedCorrection, 'key' | 'timestamp'>[],
+  cachePrefix?: string
 ): Promise<void> {
   if (corrections.length === 0) return;
   const db = await getDb();
@@ -133,7 +139,7 @@ export async function saveBatchCachedCorrections(
       const store = transaction.objectStore(STORE_NAME);
 
       for (const item of corrections) {
-        const key = generateCacheKey(item.model, item.originalText);
+        const key = generateCacheKey(item.model, item.originalText, cachePrefix);
         store.put({
           ...item,
           key,

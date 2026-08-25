@@ -19,17 +19,26 @@ import {
   Monitor,
   Wrench,
   Server,
+  Languages,
+  BookOpen,
+  Plus,
+  Trash,
 } from 'lucide-react';
 import {
   OpenRouterModel,
   ProcessingOptions,
   LlmProvider,
   AntigravityAuthData,
+  TranslationStyle,
 } from '@/lib/types';
 import {
   POPULAR_FREE_MODELS,
   fetchOpenRouterModels,
   TURKISH_OCR_SYSTEM_PROMPT,
+  BOOK_TRANSLATION_SYSTEM_PROMPT,
+  SUPPORTED_SOURCE_LANGUAGES,
+  SUPPORTED_TARGET_LANGUAGES,
+  TRANSLATION_STYLES,
 } from '@/lib/openrouter';
 import {
   ANTIGRAVITY_MODELS,
@@ -127,9 +136,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<{ count: number; estimatedSizeKb: number }>({ count: 0, estimatedSizeKb: 0 });
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const [newTermKey, setNewTermKey] = useState('');
+  const [newTermVal, setNewTermVal] = useState('');
 
   const activeTab: LlmProvider = options.provider || 'openrouter';
   const isDevMode = Boolean(options.isDevMode);
+
+  const handleAddGlossaryTerm = () => {
+    if (!newTermKey.trim()) return;
+    const currentGlossary = { ...(options.glossary || {}) };
+    currentGlossary[newTermKey.trim()] = newTermVal.trim();
+    onOptionsChange({ ...options, glossary: currentGlossary });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ekitap_glossary', JSON.stringify(currentGlossary));
+    }
+    setNewTermKey('');
+    setNewTermVal('');
+  };
+
+  const handleRemoveGlossaryTerm = (key: string) => {
+    const currentGlossary = { ...(options.glossary || {}) };
+    delete currentGlossary[key];
+    onOptionsChange({ ...options, glossary: currentGlossary });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ekitap_glossary', JSON.stringify(currentGlossary));
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -852,6 +884,175 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Book Translation Settings */}
+          <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Languages className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-zinc-900 dark:text-white">
+                  Akıllı Kitap Çevirisi Tercihleri
+                </h4>
+                <p className="text-[11px] text-zinc-500">
+                  Bağlam korumalı edebi kitap çevirisi için dil, üslup ve özel terim ayarları.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Kaynak Dil
+                </label>
+                <select
+                  value={options.sourceLanguage || 'auto'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onOptionsChange({ ...options, sourceLanguage: val });
+                    if (typeof window !== 'undefined') localStorage.setItem('ekitap_source_lang', val);
+                  }}
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  {SUPPORTED_SOURCE_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Hedef Dil
+                </label>
+                <select
+                  value={options.targetLanguage || 'tr'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onOptionsChange({ ...options, targetLanguage: val });
+                    if (typeof window !== 'undefined') localStorage.setItem('ekitap_target_lang', val);
+                  }}
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  {SUPPORTED_TARGET_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Çeviri Üslubu ve Ton
+              </label>
+              <select
+                value={options.translationStyle || 'literary'}
+                onChange={(e) => {
+                  const val = e.target.value as TranslationStyle;
+                  onOptionsChange({ ...options, translationStyle: val });
+                  if (typeof window !== 'undefined') localStorage.setItem('ekitap_trans_style', val);
+                }}
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                {TRANSLATION_STYLES.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.description})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-zinc-200/60 dark:border-zinc-800/60">
+              <div>
+                <span className="font-semibold text-xs text-zinc-900 dark:text-white block">
+                  Kayan Bağlam Hafızası (Rolling Context Memory)
+                </span>
+                <p className="text-[11px] text-zinc-500">
+                  Önceki paragrafları sonraki isteklerde referans vererek zamir ve karakter tutarlılığını korur.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={options.enableRollingContext !== false}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  onOptionsChange({ ...options, enableRollingContext: val });
+                  if (typeof window !== 'undefined') localStorage.setItem('ekitap_rolling_ctx', String(val));
+                }}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 cursor-pointer"
+              />
+            </div>
+
+            {/* Custom Glossary */}
+            <div className="space-y-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                <span>Özel Karakter &amp; Terim Sözlüğü (Glossary)</span>
+                <span className="text-[10px] text-zinc-400 font-normal">İsteğe Bağlı</span>
+              </label>
+              <p className="text-[11px] text-zinc-500">
+                Kitapta geçen özel isimlerin, mekânların veya terimlerin tam olarak nasıl çevrilmesini istediğinizi tanımlayın.
+              </p>
+
+              {options.glossary && Object.keys(options.glossary).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {Object.entries(options.glossary).map(([term, trans]) => (
+                    <span
+                      key={term}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs text-zinc-800 dark:text-zinc-200 shadow-2xs"
+                    >
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">{term}</span>
+                      <span className="text-zinc-400">&rarr;</span>
+                      <span>{trans}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGlossaryTerm(term)}
+                        className="text-zinc-400 hover:text-rose-500 ml-1 transition-colors cursor-pointer"
+                        title="Terimi Sil"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Orijinal Terim (Örn: Hogwarts)"
+                  value={newTermKey}
+                  onChange={(e) => setNewTermKey(e.target.value)}
+                  className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Hedef Çeviri (Örn: Hogwarts)"
+                  value={newTermVal}
+                  onChange={(e) => setNewTermVal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddGlossaryTerm();
+                    }
+                  }}
+                  className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddGlossaryTerm}
+                  disabled={!newTermKey.trim()}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ekle</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Persistent Cache Management */}
           <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">

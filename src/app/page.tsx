@@ -20,15 +20,37 @@ import {
   DebugLogEntry,
   LlmProvider,
   AntigravityAuthData,
+  TaskType,
+  TranslationStyle,
 } from '@/lib/types';
 import { parseEpub, packageEpub } from '@/lib/epub-engine';
 import { parsePdf } from '@/lib/pdf-engine';
 import { parseMobi, packageMobi } from '@/lib/mobi-engine';
 import { processEpubChapters } from '@/lib/processor';
-import { POPULAR_FREE_MODELS } from '@/lib/openrouter';
-import { AlertTriangle, Zap, Sparkles, Cpu } from 'lucide-react';
+import {
+  POPULAR_FREE_MODELS,
+  SUPPORTED_SOURCE_LANGUAGES,
+  SUPPORTED_TARGET_LANGUAGES,
+  TRANSLATION_STYLES,
+} from '@/lib/openrouter';
+import {
+  AlertTriangle,
+  Zap,
+  Sparkles,
+  Cpu,
+  Languages,
+  BookOpen,
+  ArrowRight,
+  ShieldCheck,
+  Info,
+} from 'lucide-react';
 
 const DEFAULT_OPTIONS: ProcessingOptions = {
+  taskType: 'ocr_fix',
+  sourceLanguage: 'auto',
+  targetLanguage: 'tr',
+  translationStyle: 'literary',
+  enableRollingContext: true,
   provider: 'antigravity',
   apiKey: '',
   geminiApiKey: '',
@@ -119,6 +141,19 @@ export default function Home() {
           : 'google/gemini-2.0-flash-exp:free'
       );
       const storedDevMode = localStorage.getItem('epub_ocr_dev_mode') === 'true';
+      const storedTaskType = (localStorage.getItem('ekitap_task_type') as TaskType) || 'ocr_fix';
+      const storedSourceLang = localStorage.getItem('ekitap_source_lang') || 'auto';
+      const storedTargetLang = localStorage.getItem('ekitap_target_lang') || 'tr';
+      const storedTransStyle = (localStorage.getItem('ekitap_trans_style') as TranslationStyle) || 'literary';
+      const storedRollingCtx = localStorage.getItem('ekitap_rolling_ctx') !== 'false';
+      const storedGlossaryStr = localStorage.getItem('ekitap_glossary');
+      let storedGlossary: Record<string, string> | undefined = undefined;
+      if (storedGlossaryStr) {
+        try {
+          storedGlossary = JSON.parse(storedGlossaryStr);
+        } catch {}
+      }
+
       const storedAuth = localStorage.getItem('epub_ocr_antigravity_auth');
       let antigravityAuth: AntigravityAuthData | undefined = undefined;
       if (storedAuth) {
@@ -128,6 +163,12 @@ export default function Home() {
       }
       setOptions((prev) => ({
         ...prev,
+        taskType: storedTaskType,
+        sourceLanguage: storedSourceLang,
+        targetLanguage: storedTargetLang,
+        translationStyle: storedTransStyle,
+        enableRollingContext: storedRollingCtx,
+        glossary: storedGlossary,
         provider: storedProvider,
         apiKey: storedKey,
         geminiApiKey: storedGeminiKey,
@@ -144,6 +185,16 @@ export default function Home() {
   const handleOptionsChange = (newOptions: ProcessingOptions) => {
     setOptions(newOptions);
     if (typeof window !== 'undefined') {
+      if (newOptions.taskType) localStorage.setItem('ekitap_task_type', newOptions.taskType);
+      if (newOptions.sourceLanguage) localStorage.setItem('ekitap_source_lang', newOptions.sourceLanguage);
+      if (newOptions.targetLanguage) localStorage.setItem('ekitap_target_lang', newOptions.targetLanguage);
+      if (newOptions.translationStyle) localStorage.setItem('ekitap_trans_style', newOptions.translationStyle);
+      if (newOptions.enableRollingContext !== undefined) {
+        localStorage.setItem('ekitap_rolling_ctx', String(newOptions.enableRollingContext));
+      }
+      if (newOptions.glossary) {
+        localStorage.setItem('ekitap_glossary', JSON.stringify(newOptions.glossary));
+      }
       if (newOptions.provider) localStorage.setItem('epub_ocr_provider', newOptions.provider);
       localStorage.setItem('epub_ocr_api_key', newOptions.apiKey);
       if (newOptions.geminiApiKey !== undefined) localStorage.setItem('epub_ocr_gemini_api_key', newOptions.geminiApiKey);
@@ -354,7 +405,8 @@ export default function Home() {
             console.error(`Bölüm hatası (${chapterId}):`, error);
           },
         },
-        controller.signal
+        controller.signal,
+        metadata?.title
       );
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -424,7 +476,11 @@ export default function Home() {
       const a = document.createElement('a');
       a.href = url;
       const baseName = file?.name?.replace(/\.(epub|pdf|mobi)$/i, '') || 'kitap';
-      a.download = `${baseName}_duzeltilmis.epub`;
+      const suffix =
+        options.taskType === 'translate'
+          ? `_${options.targetLanguage || 'tr'}_cevrilmis`
+          : '_duzeltilmis';
+      a.download = `${baseName}${suffix}.epub`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -441,12 +497,20 @@ export default function Home() {
     if (chapters.length === 0) return;
     setIsPacking(true);
     try {
-      const blob = await packageMobi(chapters, metadata);
+      const exportMeta = metadata ? { ...metadata } : undefined;
+      if (exportMeta && options.taskType === 'translate' && options.targetLanguage) {
+        exportMeta.language = options.targetLanguage;
+      }
+      const blob = await packageMobi(chapters, exportMeta);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       const baseName = file?.name?.replace(/\.(epub|pdf|mobi)$/i, '') || 'kitap';
-      a.download = `${baseName}_duzeltilmis.mobi`;
+      const suffix =
+        options.taskType === 'translate'
+          ? `_${options.targetLanguage || 'tr'}_cevrilmis`
+          : '_duzeltilmis';
+      a.download = `${baseName}${suffix}.mobi`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -511,85 +575,298 @@ export default function Home() {
           onReset={handleResetFile}
         />
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="font-bold text-xs text-zinc-900 dark:text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-500" />
-              İşleme ve Hız Modu
-            </label>
-            <span className="text-[11px] text-zinc-500">İhtiyacınıza uygun çalışma modunu seçin</span>
+        {/* Task Type Switcher & Processing Mode */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div>
+              <label className="font-bold text-xs text-zinc-900 dark:text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-emerald-500" />
+                İşlem ve Çalışma Modu
+              </label>
+              <span className="text-[11px] text-zinc-500">
+                Yapmak istediğiniz işlemi (OCR Onarım veya Akıllı Çeviri) seçin
+              </span>
+            </div>
+
+            {/* Task Type Pill Tabs */}
+            <div className="flex items-center bg-zinc-100 dark:bg-zinc-950 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    taskType: 'ocr_fix',
+                    useRegexPreClean: true,
+                    useLlm: true,
+                    scanMode: 'smart',
+                  })
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  (options.taskType || 'ocr_fix') === 'ocr_fix'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Türkçe OCR Onarımı</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    taskType: 'translate',
+                    useLlm: true,
+                    useRegexPreClean: false,
+                    scanMode: 'deep_llm',
+                  })
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  options.taskType === 'translate'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Languages className="w-3.5 h-3.5 text-blue-500" />
+                <span>Akıllı Kitap Çevirisi (AI)</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => handleOptionsChange({ ...options, scanMode: 'smart', useLlm: true, useRegexPreClean: true })}
-              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                (options.scanMode || 'smart') === 'smart'
-                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 text-emerald-950 dark:text-emerald-200 shadow-xs ring-1 ring-emerald-500/30'
-                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-xs flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  Akıllı Hibrit
-                </span>
-                <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                  Önerilen
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                Kural temizliği + şüpheli kelimelere yapay zeka desteği. Hızlı ve dengeli.
-              </p>
-            </button>
+          {/* Translation Options Sub-bar */}
+          {options.taskType === 'translate' && (
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 space-y-3 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Diller:</span>
+                  <select
+                    value={options.sourceLanguage || 'auto'}
+                    onChange={(e) =>
+                      handleOptionsChange({ ...options, sourceLanguage: e.target.value })
+                    }
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+                  >
+                    {SUPPORTED_SOURCE_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
 
-            <button
-              type="button"
-              onClick={() => handleOptionsChange({ ...options, scanMode: 'rules_only', useLlm: false, useRegexPreClean: true })}
-              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                options.scanMode === 'rules_only'
-                  ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-200 shadow-xs ring-1 ring-amber-500/30'
-                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-xs flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  Yıldırım Hızı (Regex)
-                </span>
-                <span className="text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded">
-                  0 Saniye
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                Yalnızca morfolojik kural motoru. API anahtarı gerektirmez, anında biter.
-              </p>
-            </button>
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
 
-            <button
-              type="button"
-              onClick={() => handleOptionsChange({ ...options, scanMode: 'deep_llm', useLlm: true, useRegexPreClean: true })}
-              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                options.scanMode === 'deep_llm'
-                  ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs ring-1 ring-purple-500/30'
-                  : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-xs flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-purple-500" />
-                  Tam Derin Tarama
-                </span>
-                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded">
-                  Tüm Metin
-                </span>
+                  <select
+                    value={options.targetLanguage || 'tr'}
+                    onChange={(e) =>
+                      handleOptionsChange({ ...options, targetLanguage: e.target.value })
+                    }
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+                  >
+                    {SUPPORTED_TARGET_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="text-zinc-300 dark:text-zinc-700 hidden sm:inline">&bull;</span>
+
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Üslup:</span>
+                  <select
+                    value={options.translationStyle || 'literary'}
+                    onChange={(e) =>
+                      handleOptionsChange({
+                        ...options,
+                        translationStyle: e.target.value as TranslationStyle,
+                      })
+                    }
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+                  >
+                    {TRANSLATION_STYLES.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-blue-700 dark:text-blue-300 font-semibold bg-blue-100/80 dark:bg-blue-900/40 px-2.5 py-1 rounded-xl shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Kayan Bağlam Hafızası Aktif</span>
+                </div>
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                Her paragraf istisnasız seçili yapay zeka ile taranır ve düzeltilir.
-              </p>
-            </button>
-          </div>
+
+              <div className="bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90">
+                  <p>
+                    <strong className="font-semibold text-amber-950 dark:text-amber-100">Yapay Zekâ Çeviri Bilgilendirmesi:</strong> Bu özellik, büyük dil modelleri ve kayan bağlam belleği kullanarak yabancı dildeki eserleri hedef dile edebi akıcılıkla çevirir.
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Yapay zekâ çevirisi; karakter ses tonu, diyalog ritmi, deyim yerelleştirmesi ve bağlam tutarlılığını en üst düzeyde korumayı hedefler ancak profesyonel bir insan edebiyat çevirmeninin veya yazarın özgün üslubunu %100 kusursuz koruma garantisi vermez. Kişisel okuma ve ön taslak hazırlığı için tavsiye edilir.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode Selection Cards */}
+          {options.taskType === 'translate' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    enableRollingContext: true,
+                    scanMode: 'deep_llm',
+                    useLlm: true,
+                  })
+                }
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  options.enableRollingContext !== false
+                    ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-500 text-blue-950 dark:text-blue-200 shadow-xs ring-1 ring-blue-500/30'
+                    : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    Bağlam Korumalı Edebi Çeviri
+                  </span>
+                  <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded">
+                    Önerilen
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                  Önceki paragrafların tonunu, anlatıcı dilini ve karakter zamirlerini koruyarak akıcı çeviri yapar.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    enableRollingContext: false,
+                    scanMode: 'deep_llm',
+                    useLlm: true,
+                  })
+                }
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  options.enableRollingContext === false
+                    ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs ring-1 ring-purple-500/30'
+                    : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-purple-500" />
+                    Bağımsız Blok Çevirisi
+                  </span>
+                  <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-1.5 py-0.5 rounded">
+                    Standart
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                  Paragrafları bağımsız bloklar halinde çevirir. Teknik ve kısa metinler için uygundur.
+                </p>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    scanMode: 'smart',
+                    useLlm: true,
+                    useRegexPreClean: true,
+                  })
+                }
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  (options.scanMode || 'smart') === 'smart'
+                    ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 text-emerald-950 dark:text-emerald-200 shadow-xs ring-1 ring-emerald-500/30'
+                    : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Akıllı Hibrit
+                  </span>
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
+                    Önerilen
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                  Kural temizliği + şüpheli kelimelere yapay zeka desteği. Hızlı ve dengeli.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    scanMode: 'rules_only',
+                    useLlm: false,
+                    useRegexPreClean: true,
+                  })
+                }
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  options.scanMode === 'rules_only'
+                    ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 text-amber-950 dark:text-amber-200 shadow-xs ring-1 ring-amber-500/30'
+                    : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    Yıldırım Hızı (Regex)
+                  </span>
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded">
+                    0 Saniye
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                  Yalnızca morfolojik kural motoru. API anahtarı gerektirmez, anında biter.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleOptionsChange({
+                    ...options,
+                    scanMode: 'deep_llm',
+                    useLlm: true,
+                    useRegexPreClean: true,
+                  })
+                }
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  options.scanMode === 'deep_llm'
+                    ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs ring-1 ring-purple-500/30'
+                    : 'bg-zinc-50/60 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-purple-500" />
+                    Tam Derin Tarama
+                  </span>
+                  <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded">
+                    Tüm Metin
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                  Her paragraf istisnasız seçili yapay zeka ile taranır ve düzeltilir.
+                </p>
+              </button>
+            </div>
+          )}
         </div>
 
         {metadata && (
@@ -608,6 +885,7 @@ export default function Home() {
               onSendToDevice={() => setIsSendToDeviceOpen(true)}
               onResetProgress={handleResetProgress}
               selectedCount={selectedCount}
+              taskType={options.taskType}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -622,7 +900,12 @@ export default function Home() {
               </div>
 
               <div className="lg:col-span-8 h-[640px]">
-                <DiffViewer chapter={selectedChapter} />
+                <DiffViewer
+                  chapter={selectedChapter}
+                  taskType={options.taskType}
+                  sourceLang={options.sourceLanguage}
+                  targetLang={options.targetLanguage}
+                />
               </div>
             </div>
           </>

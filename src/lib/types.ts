@@ -51,6 +51,10 @@ export interface OpenRouterModel {
 
 export type LlmProvider = 'antigravity' | 'gemini_api' | 'openrouter' | 'custom_openai';
 
+export type TaskType = 'ocr_fix' | 'translate';
+
+export type TranslationStyle = 'literary' | 'academic' | 'casual';
+
 export interface AntigravityAuthData {
   accessToken: string;
   refreshToken: string;
@@ -60,6 +64,12 @@ export interface AntigravityAuthData {
 }
 
 export interface ProcessingOptions {
+  taskType?: TaskType;
+  sourceLanguage?: string;
+  targetLanguage?: string;
+  translationStyle?: TranslationStyle;
+  enableRollingContext?: boolean;
+  glossary?: Record<string, string>;
   provider?: LlmProvider;
   apiKey: string;
   geminiApiKey?: string;

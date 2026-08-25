@@ -1,4 +1,9 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs } from '../src/lib/turkish-ocr-rules.ts';
+import {
+  buildTranslationUserPrompt,
+  getLanguageName,
+  BOOK_TRANSLATION_SYSTEM_PROMPT,
+} from '../src/lib/openrouter.ts';
 import assert from 'node:assert';
 
 console.log('Running verification tests for Turkish OCR fixes...');
@@ -209,5 +214,46 @@ for (const log of logs) {
     assert(typeof change.after === 'string', "Change after must be string");
   }
 }
+
+// 3. Test Translation Prompt Generator & Context Preservation
+console.log('Testing Translation Prompt Generator...');
+
+assert(BOOK_TRANSLATION_SYSTEM_PROMPT.includes('7 HATA'), 'Must include 7 translation errors/principles');
+assert(BOOK_TRANSLATION_SYSTEM_PROMPT.includes('KELİME KELİME'), 'Must caution against word-for-word translation');
+assert(BOOK_TRANSLATION_SYSTEM_PROMPT.includes('YAZARIN SES TONU'), 'Must emphasize author voice & tone');
+
+const promptSample = buildTranslationUserPrompt({
+  sourceLang: 'en',
+  targetLang: 'tr',
+  style: 'literary',
+  bookTitle: 'Harry Potter and the Sorcerer\'s Stone',
+  chapterTitle: 'Chapter 1: The Boy Who Lived',
+  rollingContext: [
+    {
+      source: "Mr. Dursley was the director of a firm called Grunnings.",
+      translated: "Bay Dursley, Grunnings adında bir firmanın yöneticisiydi."
+    }
+  ],
+  glossary: {
+    'Muggle': 'Muggle',
+    'Privet Drive': 'Privet Drive'
+  },
+  content: '[BLOCK_0]\n<p>He was a big, beefy man with hardly any neck.</p>\n[/BLOCK_0]'
+});
+
+console.log('Sample Translation Prompt Output:\n', promptSample);
+
+assert(promptSample.includes('İngilizce'), 'Must resolve English language name');
+assert(promptSample.includes('Türkçe'), 'Must resolve Turkish target language name');
+assert(promptSample.includes('Harry Potter and the Sorcerer\'s Stone'), 'Must include book title');
+assert(promptSample.includes('Chapter 1: The Boy Who Lived'), 'Must include chapter title');
+assert(promptSample.includes('Bay Dursley, Grunnings adında'), 'Must include rolling context');
+assert(promptSample.includes('Muggle -> Muggle'), 'Must include glossary mapping');
+assert(promptSample.includes('[BLOCK_0]'), 'Must include formatted input block');
+
+assert.strictEqual(getLanguageName('en'), 'İngilizce');
+assert.strictEqual(getLanguageName('de'), 'Almanca');
+assert.strictEqual(getLanguageName('tr'), 'Türkçe');
+assert.strictEqual(getLanguageName('auto'), 'Otomatik Algıla (Auto-Detect)');
 
 console.log('All unit assertions passed successfully!');

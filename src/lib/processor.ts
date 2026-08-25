@@ -1,6 +1,12 @@
 import { EpubChapter, TextBlock, ProcessingOptions, ProcessingStats, DebugLogEntry } from './types';
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, computeTextDiff, hasOcrAnomaly } from './turkish-ocr-rules';
-import { callOpenRouterCorrection, TURKISH_OCR_SYSTEM_PROMPT } from './openrouter';
+import {
+  callOpenRouterCorrection,
+  TURKISH_OCR_SYSTEM_PROMPT,
+  BOOK_TRANSLATION_SYSTEM_PROMPT,
+  buildTranslationUserPrompt,
+  getLanguageName,
+} from './openrouter';
 import { callAntigravityCorrection, callGeminiApiCorrection } from './antigravity';
 import { getCachedCorrection, saveBatchCachedCorrections } from './cache';
 
@@ -12,6 +18,7 @@ export async function callOpenAiCustomCorrection({
   temperature = 0.1,
   signal,
   customPrompt,
+  taskType,
 }: {
   baseUrl?: string;
   apiKey?: string;
@@ -20,8 +27,11 @@ export async function callOpenAiCustomCorrection({
   temperature?: number;
   signal?: AbortSignal;
   customPrompt?: string;
+  taskType?: 'ocr_fix' | 'translate';
 }): Promise<string> {
-  const systemMessage = customPrompt || TURKISH_OCR_SYSTEM_PROMPT;
+  const defaultSystem =
+    taskType === 'translate' ? BOOK_TRANSLATION_SYSTEM_PROMPT : TURKISH_OCR_SYSTEM_PROMPT;
+  const systemMessage = customPrompt || defaultSystem;
   const cleanBaseUrl = (baseUrl || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
   const endpoint = `${cleanBaseUrl}/chat/completions`;
 
@@ -186,6 +196,12 @@ async function callLlmCorrection({
   content: string;
   signal?: AbortSignal;
 }): Promise<string> {
+  const defaultSystem =
+    options.taskType === 'translate'
+      ? BOOK_TRANSLATION_SYSTEM_PROMPT
+      : TURKISH_OCR_SYSTEM_PROMPT;
+  const customPrompt = options.customPrompt || defaultSystem;
+
   if (options.provider === 'custom_openai') {
     return callOpenAiCustomCorrection({
       baseUrl: options.customOpenAiBaseUrl,
@@ -194,7 +210,8 @@ async function callLlmCorrection({
       content,
       temperature: options.temperature,
       signal,
-      customPrompt: options.customPrompt,
+      customPrompt,
+      taskType: options.taskType,
     });
   }
   if (options.provider === 'antigravity' && options.antigravityAuth?.accessToken) {
@@ -204,7 +221,7 @@ async function callLlmCorrection({
       content,
       temperature: options.temperature,
       signal,
-      customPrompt: options.customPrompt,
+      customPrompt,
     });
   }
   if (options.provider === 'gemini_api' && options.geminiApiKey?.trim()) {
@@ -214,7 +231,7 @@ async function callLlmCorrection({
       content,
       temperature: options.temperature,
       signal,
-      customPrompt: options.customPrompt,
+      customPrompt,
     });
   }
   return callOpenRouterCorrection({
@@ -223,7 +240,7 @@ async function callLlmCorrection({
     content,
     temperature: options.temperature,
     signal,
-    customPrompt: options.customPrompt,
+    customPrompt,
   });
 }
 
@@ -260,33 +277,77 @@ async function processLlmBatch(
   options: ProcessingOptions,
   chapterId: string,
   chapterTitle: string,
+  bookTitle: string | undefined,
+  rollingContext: { source: string; translated: string }[],
   callbacks: ProcessorCallbacks,
   signal?: AbortSignal
 ): Promise<void> {
   if (!isProviderReady(options)) return;
 
+  const isTranslation = options.taskType === 'translate';
+  const cachePrefix = isTranslation
+    ? `trans_${options.sourceLanguage || 'auto'}_${options.targetLanguage || 'tr'}`
+    : undefined;
+
   if (batch.length === 1) {
     const singleBlock = batch[0];
     const textBeforeLlm = singleBlock.correctedText;
+
+    let userPrompt = `<${singleBlock.elementTag}>${singleBlock.correctedHtml}</${singleBlock.elementTag}>`;
+    if (isTranslation) {
+      userPrompt = buildTranslationUserPrompt({
+        sourceLang: options.sourceLanguage || 'auto',
+        targetLang: options.targetLanguage || 'tr',
+        style: options.translationStyle || 'literary',
+        bookTitle,
+        chapterTitle,
+        rollingContext: options.enableRollingContext !== false ? rollingContext : undefined,
+        glossary: options.glossary,
+        content: `[BLOCK_0]\n<${singleBlock.elementTag}>${singleBlock.originalHtml}</${singleBlock.elementTag}>\n[/BLOCK_0]`,
+      });
+    }
+
     try {
       const corrected = await callLlmCorrection({
         options,
-        content: `<${singleBlock.elementTag}>${singleBlock.correctedHtml}</${singleBlock.elementTag}>`,
+        content: userPrompt,
         signal,
       });
 
       if (corrected && corrected.length > 0) {
-        const { tag, innerHtml, text } = parseBlockTagAndContent(corrected, singleBlock.elementTag);
+        let finalContent = corrected;
+        if (isTranslation) {
+          const parsed = parseBatchResponse(corrected, 1);
+          if (parsed[0] && parsed[0].length > 0) {
+            finalContent = parsed[0];
+          }
+        }
+
+        const { tag, innerHtml, text } = parseBlockTagAndContent(finalContent, singleBlock.elementTag);
         singleBlock.elementTag = tag;
         singleBlock.correctedHtml = innerHtml;
         singleBlock.correctedText = text;
 
+        if (isTranslation) {
+          rollingContext.push({
+            source: singleBlock.originalText,
+            translated: singleBlock.correctedText,
+          });
+          if (rollingContext.length > 5) {
+            rollingContext.shift();
+          }
+        }
+
         if (singleBlock.correctedText !== textBeforeLlm) {
+          const ruleLabel = isTranslation
+            ? `AI Çeviri (${getLanguageName(options.targetLanguage || 'tr')})`
+            : `LLM (${options.model})`;
+
           const llmLog: DebugLogEntry = {
             id: `llm-${singleBlock.id}-${Date.now()}`,
             timestamp: new Date().toLocaleTimeString('tr-TR'),
             source: 'llm',
-            ruleName: `LLM (${options.model})`,
+            ruleName: ruleLabel,
             chapterId,
             chapterTitle,
             blockId: singleBlock.id,
@@ -307,13 +368,31 @@ async function processLlmBatch(
   } else {
     const textsBeforeLlm = batch.map((b) => b.correctedText);
     const formattedInput = batch
-      .map((b, idx) => `[BLOCK_${idx}]\n<${b.elementTag}>${b.correctedHtml}</${b.elementTag}>\n[/BLOCK_${idx}]`)
+      .map(
+        (b, idx) =>
+          `[BLOCK_${idx}]\n<${b.elementTag}>${isTranslation ? b.originalHtml : b.correctedHtml}</${b.elementTag}>\n[/BLOCK_${idx}]`
+      )
       .join('\n\n');
+
+    let batchPrompt = `Lütfen aşağıdaki ${batch.length} adet metin bloğundaki Türkçe OCR ve dönüştürme hatalarını düzelt. Gerçek başlıkları <h2>Başlık</h2>, normal paragrafları <p>Cümle...</p> olarak etiketle. Her bloğu [BLOCK_X]...[/BLOCK_X] etiketleri arasında aynen iade et:\n\n${formattedInput}`;
+
+    if (isTranslation) {
+      batchPrompt = buildTranslationUserPrompt({
+        sourceLang: options.sourceLanguage || 'auto',
+        targetLang: options.targetLanguage || 'tr',
+        style: options.translationStyle || 'literary',
+        bookTitle,
+        chapterTitle,
+        rollingContext: options.enableRollingContext !== false ? rollingContext : undefined,
+        glossary: options.glossary,
+        content: formattedInput,
+      });
+    }
 
     try {
       const response = await callLlmCorrection({
         options,
-        content: `Lütfen aşağıdaki ${batch.length} adet metin bloğundaki Türkçe OCR ve dönüştürme hatalarını düzelt. Gerçek başlıkları <h2>Başlık</h2>, normal paragrafları <p>Cümle...</p> olarak etiketle. Her bloğu [BLOCK_X]...[/BLOCK_X] etiketleri arasında aynen iade et:\n\n${formattedInput}`,
+        content: batchPrompt,
         signal,
       });
 
@@ -327,12 +406,26 @@ async function processLlmBatch(
           block.correctedHtml = innerHtml;
           block.correctedText = text;
 
+          if (isTranslation) {
+            rollingContext.push({
+              source: block.originalText,
+              translated: block.correctedText,
+            });
+            if (rollingContext.length > 5) {
+              rollingContext.shift();
+            }
+          }
+
           if (block.correctedText !== textBeforeLlm) {
+            const ruleLabel = isTranslation
+              ? `AI Çeviri (${getLanguageName(options.targetLanguage || 'tr')})`
+              : `LLM (${options.model})`;
+
             const llmLog: DebugLogEntry = {
               id: `llm-${block.id}-${Date.now()}`,
               timestamp: new Date().toLocaleTimeString('tr-TR'),
               source: 'llm',
-              ruleName: `LLM (${options.model})`,
+              ruleName: ruleLabel,
               chapterId,
               chapterTitle,
               blockId: block.id,
@@ -357,21 +450,23 @@ async function processLlmBatch(
 
   for (const block of batch) {
     const { fixedWordCount } = computeTextDiff(block.originalText, block.correctedText);
-    block.diffCount = fixedWordCount;
+    block.diffCount = isTranslation
+      ? block.correctedText.split(/\s+/).filter(Boolean).length
+      : fixedWordCount;
     block.status = 'completed';
 
     cacheEntries.push({
       originalText: block.originalText,
       correctedHtml: block.correctedHtml,
       correctedText: block.correctedText,
-      diffCount: fixedWordCount,
+      diffCount: block.diffCount,
       model: options.model,
       provider: options.provider || 'default',
     });
   }
 
   if (cacheEntries.length > 0) {
-    saveBatchCachedCorrections(cacheEntries).catch((e) =>
+    saveBatchCachedCorrections(cacheEntries, cachePrefix).catch((e) =>
       console.warn('Önbellek kaydetme uyarısı:', e)
     );
   }
@@ -383,9 +478,13 @@ export async function refineChapterTitlesWithAi(
   callbacks?: ProcessorCallbacks,
   signal?: AbortSignal
 ): Promise<void> {
-  for (const ch of chapters) {
-    ch.title = applyTurkishRegexPreClean(ch.title);
-    callbacks?.onChapterUpdated?.(ch);
+  const isTranslation = options.taskType === 'translate';
+
+  if (!isTranslation) {
+    for (const ch of chapters) {
+      ch.title = applyTurkishRegexPreClean(ch.title);
+      callbacks?.onChapterUpdated?.(ch);
+    }
   }
 
   if (!options.useLlm || !isProviderReady(options) || chapters.length === 0) {
@@ -396,7 +495,11 @@ export async function refineChapterTitlesWithAi(
     .map((ch, idx) => `[TITLE_${idx}] ${ch.title}`)
     .join('\n');
 
-  const prompt = `Aşağıda bir kitabın bölümlerine ait başlık listesi yer almaktadır. Lütfen bu başlıklardaki OCR, harf birleşme (rn->m, cl->d, l< -> k vb.) ve bozuk karakter hatalarını aslına uygun düzgün Türkçe başlıklar olarak düzelt. Her başlığı [TITLE_X] Düzeltilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`;
+  const targetName = getLanguageName(options.targetLanguage || 'tr');
+
+  const prompt = isTranslation
+    ? `Aşağıda bir kitabın bölümlerine ait orijinal başlık listesi yer almaktadır. Lütfen bu başlıkları bağlamı koruyarak ve doğal bir edebi dille ${targetName} diline çevir. Her başlığı [TITLE_X] Çevrilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`
+    : `Aşağıda bir kitabın bölümlerine ait başlık listesi yer almaktadır. Lütfen bu başlıklardaki OCR, harf birleşme (rn->m, cl->d, l< -> k vb.) ve bozuk karakter hatalarını aslına uygun düzgün Türkçe başlıklar olarak düzelt. Her başlığı [TITLE_X] Düzeltilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`;
 
   try {
     const response = await callLlmCorrection({
@@ -429,13 +532,18 @@ export async function processEpubChapters(
   chapters: EpubChapter[],
   options: ProcessingOptions,
   callbacks: ProcessorCallbacks,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  bookTitle?: string
 ): Promise<void> {
   await refineChapterTitlesWithAi(chapters, options, callbacks, signal);
 
   const selectedChapters = chapters.filter((c) => c.isSelected);
   const totalBlocks = selectedChapters.reduce((acc, c) => acc + c.blocks.length, 0);
   const scanMode = options.scanMode || 'smart';
+  const isTranslation = options.taskType === 'translate';
+  const cachePrefix = isTranslation
+    ? `trans_${options.sourceLanguage || 'auto'}_${options.targetLanguage || 'tr'}`
+    : undefined;
 
   const stats: ProcessingStats = {
     totalChapters: selectedChapters.length,
@@ -448,6 +556,9 @@ export async function processEpubChapters(
   };
 
   callbacks.onStatsUpdated?.({ ...stats });
+
+  // Shared rolling context buffer across the chapter/book
+  const rollingContext: { source: string; translated: string }[] = [];
 
   for (const chapter of selectedChapters) {
     if (signal?.aborted) break;
@@ -462,7 +573,7 @@ export async function processEpubChapters(
       // 1. First Pass: Cache Lookup & Regex Pre-Cleaning
       for (const block of chapter.blocks) {
         if (options.useLlm) {
-          const cached = await getCachedCorrection(options.model, block.originalText);
+          const cached = await getCachedCorrection(options.model, block.originalText, cachePrefix);
           if (cached) {
             block.correctedHtml = cached.correctedHtml;
             block.correctedText = cached.correctedText;
@@ -473,6 +584,15 @@ export async function processEpubChapters(
             chapter.stats.processedBlocks++;
             chapter.stats.fixedWords += block.diffCount;
             callbacks.onBlockUpdated?.(chapter.id, block);
+
+            if (isTranslation) {
+              rollingContext.push({
+                source: block.originalText,
+                translated: block.correctedText,
+              });
+              if (rollingContext.length > 5) rollingContext.shift();
+            }
+
             callbacks.onDebugLog?.({
               id: `cache-${block.id}-${Date.now()}`,
               timestamp: new Date().toLocaleTimeString('tr-TR'),
@@ -490,7 +610,7 @@ export async function processEpubChapters(
         }
 
         let text = block.originalHtml;
-        if (options.useRegexPreClean) {
+        if (!isTranslation && options.useRegexPreClean) {
           const { cleaned, logs } = applyTurkishRegexWithLogs(
             text,
             block.id,
@@ -526,7 +646,16 @@ export async function processEpubChapters(
         const { fixedWordCount } = computeTextDiff(block.originalText, block.correctedText);
         block.diffCount = fixedWordCount;
 
-        if (scanMode === 'rules_only') {
+        if (isTranslation) {
+          // In translation mode, all text blocks are queued for LLM translation
+          if (options.useLlm && isProviderReady(options)) {
+            suspiciousBlocks.push(block);
+          } else {
+            block.status = 'completed';
+            stats.processedBlocks++;
+            callbacks.onBlockUpdated?.(chapter.id, block);
+          }
+        } else if (scanMode === 'rules_only') {
           // Instant completion without LLM
           block.status = 'completed';
           stats.processedBlocks++;
@@ -568,7 +697,7 @@ export async function processEpubChapters(
       // 2. Second Pass: LLM on suspicious / target blocks only
       if (suspiciousBlocks.length > 0 && options.useLlm && isProviderReady(options)) {
         const batches = createBlockBatches(suspiciousBlocks, options.chunkSize || 3000);
-        const concurrency = Math.max(1, Math.min(options.concurrency || 1, 2));
+        const concurrency = isTranslation ? 1 : Math.max(1, Math.min(options.concurrency || 1, 2));
 
         for (let i = 0; i < batches.length; i += concurrency) {
           if (signal?.aborted) break;
@@ -581,6 +710,8 @@ export async function processEpubChapters(
                 options,
                 chapter.id,
                 chapter.title,
+                bookTitle,
+                rollingContext,
                 callbacks,
                 signal
               );
@@ -597,7 +728,7 @@ export async function processEpubChapters(
 
           // Polite throttle delay between LLM batches to respect OpenRouter rate limits
           if (i + concurrency < batches.length && !signal?.aborted) {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await new Promise((resolve) => setTimeout(resolve, isTranslation ? 1000 : 1500));
           }
 
           stats.elapsedSeconds = Math.round((Date.now() - (stats.startTime || Date.now())) / 1000);

@@ -40,7 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local notes & progress
+# local test files
+/*.epub
+/*.pdf
+/*.mobi
+!public/
+*.log
+*.txt
 progress.md
-.gitignore
-reddit-post.txt

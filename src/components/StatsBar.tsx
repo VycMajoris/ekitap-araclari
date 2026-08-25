@@ -8,8 +8,9 @@ import {
   RotateCcw,
   Loader2,
   Send,
+  Languages,
 } from 'lucide-react';
-import { ProcessingStats } from '../lib/types';
+import { ProcessingStats, TaskType } from '../lib/types';
 
 export interface StatsBarProps {
   stats: ProcessingStats;
@@ -23,6 +24,7 @@ export interface StatsBarProps {
   onSendToDevice?: () => void;
   onResetProgress: () => void;
   selectedCount: number;
+  taskType?: TaskType;
 }
 
 export const StatsBar: React.FC<StatsBarProps> = ({
@@ -37,11 +39,14 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   onSendToDevice,
   onResetProgress,
   selectedCount,
+  taskType = 'ocr_fix',
 }) => {
   const percent =
     stats.totalBlocks > 0
       ? Math.min(100, Math.round((stats.processedBlocks / stats.totalBlocks) * 100))
       : 0;
+
+  const isTranslation = taskType === 'translate';
 
   const formatSeconds = (sec?: number) => {
     if (sec === undefined || isNaN(sec) || sec < 0) return 'Hesaplanıyor...';
@@ -66,15 +71,49 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-3">
-            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> Düzeltilen Kelime
+          <div
+            className={`border rounded-2xl p-3 ${
+              isTranslation
+                ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-800/40'
+                : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
+            }`}
+          >
+            <span
+              className={`text-[11px] font-medium flex items-center gap-1 ${
+                isTranslation
+                  ? 'text-blue-700 dark:text-blue-400'
+                  : 'text-emerald-700 dark:text-emerald-400'
+              }`}
+            >
+              {isTranslation ? (
+                <>
+                  <Languages className="w-3 h-3" /> Çevrilen Kelime
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3 h-3" /> Düzeltilen Kelime
+                </>
+              )}
             </span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+              <span
+                className={`text-lg font-extrabold ${
+                  isTranslation
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
                 {stats.totalFixedWords.toLocaleString('tr-TR')}
               </span>
-              <span className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">adet</span>
+              <span
+                className={`text-[11px] ${
+                  isTranslation
+                    ? 'text-blue-600/70 dark:text-blue-400/70'
+                    : 'text-emerald-600/70 dark:text-emerald-400/70'
+                }`}
+              >
+                adet
+              </span>
             </div>
           </div>
 
@@ -116,11 +155,21 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             <button
               onClick={onStart}
               disabled={selectedCount === 0}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer ${
+                isTranslation
+                  ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+              }`}
             >
               <Play className="w-4 h-4 fill-white" />
               <span>
-                {stats.processedBlocks > 0 ? 'Düzeltmeye Devam Et' : 'Düzeltmeyi Başlat'}
+                {isTranslation
+                  ? stats.processedBlocks > 0
+                    ? 'Çeviriye Devam Et'
+                    : 'Çeviriyi Başlat'
+                  : stats.processedBlocks > 0
+                  ? 'Düzeltmeye Devam Et'
+                  : 'Düzeltmeyi Başlat'}
               </span>
             </button>
           ) : (
@@ -179,7 +228,11 @@ export const StatsBar: React.FC<StatsBarProps> = ({
 
       <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden relative">
         <div
-          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-300 relative overflow-hidden"
+          className={`h-full rounded-full transition-all duration-300 relative overflow-hidden ${
+            isTranslation
+              ? 'bg-gradient-to-r from-blue-500 to-indigo-400'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+          }`}
           style={{ width: `${percent}%` }}
         >
           {isProcessing && (
