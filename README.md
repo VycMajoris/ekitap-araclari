@@ -131,6 +131,32 @@ npm start
 
 ---
 
+## 🐳 Docker ile Çalıştırma (Self-Host & Homelab)
+
+Node.js ortamı kurmadan doğrudan Docker veya Docker Compose ile tek komutla ayağa kaldırabilirsiniz:
+
+### Seçenek A: Docker Compose ile (Önerilen)
+```bash
+# Arka planda başlatın
+docker compose up -d
+
+# Logları takip edin
+docker compose logs -f
+```
+
+### Seçenek B: Docker CLI ile
+```bash
+# İmajı derleyin
+docker build -t ekitap-araclari .
+
+# Konteyneri başlatın
+docker run -d -p 3000:3000 --name ekitap-araclari --restart unless-stopped ekitap-araclari
+```
+
+Konteyner başladıktan sonra tarayıcınızdan `http://localhost:3000` (veya ev sunucunuzun yerel IP'si: `http://192.168.x.x:3000`) adresine erişebilirsiniz.
+
+---
+
 ## 🏗️ Teknik Mimari
 
 ```

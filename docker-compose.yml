@@ -1,0 +1,13 @@
+services:
+  ekitap-araclari:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ekitap-araclari
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
