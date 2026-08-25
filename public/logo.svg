@@ -1,35 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    
+    <linearGradient id="primaryGrad" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#059669" />
-      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#06b6d4" />
       <stop offset="100%" stop-color="#10b981" />
     </linearGradient>
-    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#f0fdf4" />
+
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02" />
     </linearGradient>
-    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#064e3b" flood-opacity="0.3" />
+
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6" />
     </filter>
   </defs>
 
-  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect width="512" height="512" rx="128" fill="url(#bg)" stroke="#1e293b" stroke-width="2" />
 
-  <g filter="url(#dropShadow)">
-    <path d="M120 380 V 150 C 120 130, 140 120, 170 120 H 392 V 350 H 170 C 140 350, 120 360, 120 380 Z" fill="url(#pageGrad)" />
-    <path d="M150 120 V 350 C 150 355, 154 360, 160 360 H 392 V 120 H 170 C 160 120, 150 120, 150 120 Z" fill="#ffffff" opacity="0.95" />
-    <path d="M150 120 V 350" stroke="#10b981" stroke-width="6" stroke-linecap="round" />
-    <path d="M120 380 H 392" stroke="#047857" stroke-width="12" stroke-linecap="round" />
+  <g filter="url(#subtleShadow)">
+    <path d="M120 370 C 180 340, 230 360, 256 385 C 282 360, 332 340, 392 370 V 160 C 332 130, 282 150, 256 175 C 230 150, 180 130, 120 160 Z" fill="url(#primaryGrad)" fill-opacity="0.15" stroke="url(#primaryGrad)" stroke-width="6" stroke-linejoin="round" />
+
+    <path d="M136 345 C 190 318, 234 336, 256 358 V 175 C 234 153, 190 135, 136 162 Z" fill="url(#primaryGrad)" filter="url(#neonGlow)" opacity="0.95" />
+
+    <path d="M376 345 C 322 318, 278 336, 256 358 V 175 C 278 153, 322 135, 376 162 Z" fill="url(#accentGrad)" opacity="0.9" />
+
+    <path d="M256 175 V 385" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+
+    <path d="M136 162 C 190 135, 234 153, 256 175 C 278 153, 322 135, 376 162 L 350 250 C 310 230, 275 240, 256 255 C 237 240, 202 230, 162 250 Z" fill="url(#glassGrad)" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.4" />
   </g>
 
-  <g transform="translate(260, 190) scale(1.6)">
-    <path d="M24 0 L29 16 L45 21 L31 29 L34 46 L21 34 L7 44 L13 27 L0 18 L16 16 Z" fill="#fbbf24" opacity="0.95" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.15))" />
-    <circle cx="23" cy="23" r="6" fill="#ffffff" />
-  </g>
-
-  <g opacity="0.25">
-    <line x1="200" y1="280" x2="350" y2="280" stroke="#065f46" stroke-width="8" stroke-linecap="round" />
-    <line x1="200" y1="310" x2="320" y2="310" stroke="#065f46" stroke-width="8" stroke-linecap="round" />
+  <g transform="translate(256, 120)">
+    <circle cx="0" cy="0" r="16" fill="#38bdf8" filter="url(#neonGlow)" />
+    <path d="M0 -24 L5 -7 L22 0 L5 7 L0 24 L-5 7 L-22 0 L-5 -7 Z" fill="#ffffff" />
+    <circle cx="0" cy="0" r="4" fill="#022c22" />
   </g>
 </svg>

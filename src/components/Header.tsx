@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Settings as SettingsIcon, Terminal, Sun, Moon, Wrench } from 'lucide-react';
+import { Settings as SettingsIcon, Terminal, Sun, Moon, Wrench } from 'lucide-react';
 import { LlmProvider, ProcessingOptions } from '@/lib/types';
 import { POPULAR_FREE_MODELS } from '@/lib/openrouter';
 import { ANTIGRAVITY_MODELS, GEMINI_API_MODELS } from '@/lib/antigravity';
@@ -20,17 +20,12 @@ export interface HeaderProps {
 }
 
 export const BrandLogo: React.FC<{ className?: string }> = ({ className = 'w-10 h-10' }) => (
-  <div className={`${className} relative rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0 select-none overflow-hidden group`}>
-    {/* Subtle geometric background overlay */}
-    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-    <svg className="w-5 h-5 drop-shadow-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      {/* Book base */}
-      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
-      {/* Bookmark / Page crease */}
-      <path d="M6 2v17.5c0 .3.2.5.5.5H20" opacity="0.6" strokeWidth="1.5" />
-      {/* Digital smart spark */}
-      <path d="M12 7l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" fill="currentColor" stroke="none" />
-    </svg>
+  <div className={`${className} relative flex items-center justify-center shrink-0 select-none transition-transform hover:scale-105`}>
+    <img
+      src="/logo.svg"
+      alt="eKitap Araçları Logo"
+      className="w-full h-full object-contain rounded-xl drop-shadow-md"
+    />
   </div>
 );
 
@@ -97,13 +92,6 @@ export const Header: React.FC<HeaderProps> = ({
     return `OpenRouter (${activeModelId || 'Llama 3.3'})`;
   })();
 
-  const providerBadge = (() => {
-    if (activeProvider === 'antigravity') return 'Google Antigravity';
-    if (activeProvider === 'gemini_api') return 'Google AI Studio';
-    if (activeProvider === 'custom_openai') return 'OpenAI Uyumlu API';
-    return 'OpenRouter Free';
-  })();
-
   const buttonText = isReady
     ? 'Ayarlar'
     : activeProvider === 'antigravity'
@@ -113,7 +101,6 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md sticky top-0 z-30 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand */}
         <div className="flex items-center gap-3">
           <BrandLogo />
           <div>
@@ -121,10 +108,6 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="font-bold text-lg text-zinc-900 dark:text-white tracking-tight">
                 eKitap Araçları
               </h1>
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-full px-2 py-0.5">
-                <Sparkles className="w-3 h-3 text-emerald-500" />
-                {providerBadge}
-              </span>
               {isDevMode && (
                 <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 px-1.5 py-0.2 rounded-md">
                   <Wrench className="w-2.5 h-2.5" />

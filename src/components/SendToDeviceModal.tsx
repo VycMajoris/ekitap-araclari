@@ -14,6 +14,7 @@ import {
   QrCode,
   ExternalLink,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface SendToDeviceModalProps {
   isOpen: boolean;
@@ -497,21 +498,26 @@ export const SendToDeviceModal: React.FC<SendToDeviceModalProps> = ({
 
           {activeTab === 'browser' && (
             <div className="space-y-4">
-              <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto">
-                  <QrCode className="w-6 h-6" />
+              <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 text-center">
+                <div className="bg-white p-3 rounded-2xl inline-block shadow-md border border-zinc-200">
+                  <QRCodeSVG
+                    value={typeof window !== 'undefined' ? window.location.origin : 'https://ekitap.halilozdgn.com'}
+                    size={160}
+                    level="M"
+                  />
                 </div>
+
                 <div>
                   <h4 className="font-bold text-xs text-zinc-900 dark:text-white">
-                    E-Okuyucu veya Telefondan Doğrudan İndirme
+                    Telefon veya E-Okuyucudan QR Kodu Tarayın
                   </h4>
-                  <p className="text-[11px] text-zinc-500 mt-1 max-w-sm mx-auto">
-                    Aynı Wi-Fi ağına bağlıyken Kindle veya Kobo&apos;nuzun web tarayıcısını açıp bilgisayarınızın yerel IP adresine bağlanarak düzeltilmiş kitapları anında indirebilirsiniz.
+                  <p className="text-[11px] text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                    Telefonunuzun kamerasıyla veya e-okuyucunuzla QR kodu tarayarak siteyi cihazınızda anında açabilir, düzeltilmiş kitabınızı tek tıkla cihazınıza indirebilirsiniz.
                   </p>
                 </div>
 
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 inline-flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold select-all">
-                  <span>{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</span>
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-2.5 inline-flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold select-all">
+                  <span>{typeof window !== 'undefined' ? window.location.origin : 'https://ekitap.halilozdgn.com'}</span>
                   <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
                 </div>
               </div>
