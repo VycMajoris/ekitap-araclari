@@ -29,9 +29,10 @@ export const ANTIGRAVITY_MODELS: AntigravityModelInfo[] = [
 ];
 
 export const GEMINI_API_MODELS: AntigravityModelInfo[] = [
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (AI Studio Key)' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Önerilen & Çok Hızlı)' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (En Yeni)' },
   { id: 'gemini-2.0-flash-thinking-exp', name: 'Gemini 2.0 Flash Thinking Exp' },
-  { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Exp 02-05' },
+  { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Exp' },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
 ];
