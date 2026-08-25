@@ -149,7 +149,7 @@ function createBlockBatches(blocks: TextBlock[], maxCharsPerBatch: number = 3000
  */
 function parseBatchResponse(response: string, expectedCount: number): string[] {
   const results: string[] = [];
-  const regex = /\[BLOCK_(\d+)\]([\s\S]*?)\[\/BLOCK_\1\]/g;
+  const regex = /\[BLOCK_(\d+)\]([\s\S]*?)\[\/BLOCK_\1\]/gi;
   let match;
   const blockMap = new Map<number, string>();
 
@@ -157,6 +157,20 @@ function parseBatchResponse(response: string, expectedCount: number): string[] {
     const index = parseInt(match[1], 10);
     const content = match[2].trim();
     blockMap.set(index, content);
+  }
+
+  // Fallback 1: If expected 1 block and model returned text without [BLOCK_0] wrapper
+  if (expectedCount === 1 && blockMap.size === 0 && response.trim().length > 0) {
+    return [response.trim()];
+  }
+
+  // Fallback 2: Check if model used 1-based indexing [BLOCK_1]... instead of 0-based
+  if (blockMap.size > 0 && !blockMap.has(0) && blockMap.has(1)) {
+    for (let i = 1; i <= expectedCount; i++) {
+      if (blockMap.has(i)) {
+        blockMap.set(i - 1, blockMap.get(i)!);
+      }
+    }
   }
 
   for (let i = 0; i < expectedCount; i++) {
@@ -288,6 +302,7 @@ async function processLlmBatch(
   const cachePrefix = isTranslation
     ? `trans_${options.sourceLanguage || 'auto'}_${options.targetLanguage || 'tr'}`
     : undefined;
+  const cacheEntries: Omit<Parameters<typeof saveBatchCachedCorrections>[0][0], 'key' | 'timestamp'>[] = [];
 
   if (batch.length === 1) {
     const singleBlock = batch[0];
@@ -327,6 +342,10 @@ async function processLlmBatch(
         singleBlock.elementTag = tag;
         singleBlock.correctedHtml = innerHtml;
         singleBlock.correctedText = text;
+        singleBlock.status = 'completed';
+        singleBlock.diffCount = isTranslation
+          ? singleBlock.correctedText.split(/\s+/).filter(Boolean).length
+          : computeTextDiff(singleBlock.originalText, singleBlock.correctedText).fixedWordCount;
 
         if (isTranslation) {
           rollingContext.push({
@@ -337,6 +356,15 @@ async function processLlmBatch(
             rollingContext.shift();
           }
         }
+
+        cacheEntries.push({
+          originalText: singleBlock.originalText,
+          correctedHtml: singleBlock.correctedHtml,
+          correctedText: singleBlock.correctedText,
+          diffCount: singleBlock.diffCount,
+          model: options.model,
+          provider: options.provider || 'default',
+        });
 
         if (singleBlock.correctedText !== textBeforeLlm) {
           const ruleLabel = isTranslation
@@ -405,6 +433,10 @@ async function processLlmBatch(
           block.elementTag = tag;
           block.correctedHtml = innerHtml;
           block.correctedText = text;
+          block.status = 'completed';
+          block.diffCount = isTranslation
+            ? block.correctedText.split(/\s+/).filter(Boolean).length
+            : computeTextDiff(block.originalText, block.correctedText).fixedWordCount;
 
           if (isTranslation) {
             rollingContext.push({
@@ -415,6 +447,15 @@ async function processLlmBatch(
               rollingContext.shift();
             }
           }
+
+          cacheEntries.push({
+            originalText: block.originalText,
+            correctedHtml: block.correctedHtml,
+            correctedText: block.correctedText,
+            diffCount: block.diffCount,
+            model: options.model,
+            provider: options.provider || 'default',
+          });
 
           if (block.correctedText !== textBeforeLlm) {
             const ruleLabel = isTranslation
@@ -444,25 +485,6 @@ async function processLlmBatch(
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
       console.warn('Toplu blok LLM uyarısı:', err);
     }
-  }
-
-  const cacheEntries: Omit<Parameters<typeof saveBatchCachedCorrections>[0][0], 'key' | 'timestamp'>[] = [];
-
-  for (const block of batch) {
-    const { fixedWordCount } = computeTextDiff(block.originalText, block.correctedText);
-    block.diffCount = isTranslation
-      ? block.correctedText.split(/\s+/).filter(Boolean).length
-      : fixedWordCount;
-    block.status = 'completed';
-
-    cacheEntries.push({
-      originalText: block.originalText,
-      correctedHtml: block.correctedHtml,
-      correctedText: block.correctedText,
-      diffCount: block.diffCount,
-      model: options.model,
-      provider: options.provider || 'default',
-    });
   }
 
   if (cacheEntries.length > 0) {
@@ -570,8 +592,27 @@ export async function processEpubChapters(
     try {
       const suspiciousBlocks: TextBlock[] = [];
 
-      // 1. First Pass: Cache Lookup & Regex Pre-Cleaning
+      // 1. First Pass: Cache Lookup & Pre-Processing
       for (const block of chapter.blocks) {
+        if (
+          block.status === 'completed' &&
+          block.correctedText &&
+          block.correctedText !== block.originalText
+        ) {
+          stats.processedBlocks++;
+          stats.totalFixedWords += block.diffCount;
+          chapter.stats.processedBlocks++;
+          chapter.stats.fixedWords += block.diffCount;
+          if (isTranslation) {
+            rollingContext.push({
+              source: block.originalText,
+              translated: block.correctedText,
+            });
+            if (rollingContext.length > 5) rollingContext.shift();
+          }
+          continue;
+        }
+
         if (options.useLlm) {
           const cached = await getCachedCorrection(options.model, block.originalText, cachePrefix);
           if (cached) {

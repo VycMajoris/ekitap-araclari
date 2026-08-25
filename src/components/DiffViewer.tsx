@@ -228,7 +228,7 @@ const BlockItem: React.FC<BlockItemProps> = ({
           <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md text-zinc-600 dark:text-zinc-300">
             #{index} &lt;{block.elementTag}&gt;
           </span>
-          {isChanged ? (
+          {block.status === 'completed' ? (
             <span
               className={`font-semibold flex items-center gap-1 ${
                 isTranslation
@@ -239,8 +239,14 @@ const BlockItem: React.FC<BlockItemProps> = ({
               <CheckCircle2 className="w-3 h-3" />
               {isTranslation ? 'Çevrildi' : `${block.diffCount} Düzeltme`}
             </span>
+          ) : block.status === 'processing' ? (
+            <span className="text-blue-500 font-medium animate-pulse flex items-center gap-1">
+              İşleniyor...
+            </span>
+          ) : block.status === 'error' ? (
+            <span className="text-rose-500 font-medium">Hata Oluştu</span>
           ) : (
-            <span>İşlenmedi</span>
+            <span className="text-zinc-400">İşlenmedi</span>
           )}
         </div>
 
@@ -326,7 +332,17 @@ const BlockItem: React.FC<BlockItemProps> = ({
             </span>
             <div className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap font-sans">
               {isTranslation ? (
-                block.correctedText
+                block.status === 'completed' ? (
+                  block.correctedText
+                ) : block.status === 'processing' ? (
+                  <span className="italic text-blue-500 animate-pulse">Çevriliyor...</span>
+                ) : block.status === 'error' ? (
+                  <span className="italic text-rose-500">Çeviri sırasında hata oluştu. Yeniden denenebilir.</span>
+                ) : (
+                  <span className="italic text-zinc-400 dark:text-zinc-500">
+                    Henüz çevrilmedi (Sırada bekliyor...)
+                  </span>
+                )
               ) : (
                 diffs.map((part, i) => {
                   if (part.type === 'added') {
@@ -357,7 +373,17 @@ const BlockItem: React.FC<BlockItemProps> = ({
                 {block.originalText}
               </div>
               <div className="text-zinc-900 dark:text-white font-medium">
-                {block.correctedText}
+                {block.status === 'completed' ? (
+                  block.correctedText
+                ) : block.status === 'processing' ? (
+                  <span className="italic text-blue-500 animate-pulse font-normal">Çevriliyor...</span>
+                ) : block.status === 'error' ? (
+                  <span className="italic text-rose-500 font-normal">Çeviri sırasında hata oluştu.</span>
+                ) : (
+                  <span className="italic text-zinc-400 dark:text-zinc-500 font-normal">
+                    Henüz çevrilmedi (Sırada bekliyor...)
+                  </span>
+                )}
               </div>
             </div>
           ) : (
