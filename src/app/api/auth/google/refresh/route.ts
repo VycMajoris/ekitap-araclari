@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     }
 
     const params = new URLSearchParams({
-      client_id: ANTIGRAVITY_CLIENT_ID,
-      client_secret: ANTIGRAVITY_CLIENT_SECRET,
+      client_id: process.env.GOOGLE_CLIENT_ID || ANTIGRAVITY_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET || ANTIGRAVITY_CLIENT_SECRET,
       refresh_token,
       grant_type: 'refresh_token',
     });

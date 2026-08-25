@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
 
     const params = new URLSearchParams({
       code,
-      client_id: ANTIGRAVITY_CLIENT_ID,
-      client_secret: ANTIGRAVITY_CLIENT_SECRET,
+      client_id: process.env.GOOGLE_CLIENT_ID || ANTIGRAVITY_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET || ANTIGRAVITY_CLIENT_SECRET,
       redirect_uri: redirect_uri || 'http://localhost:3000/api/auth/google/callback',
       grant_type: 'authorization_code',
     });
