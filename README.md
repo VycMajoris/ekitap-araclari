@@ -12,7 +12,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 23 Passed](https://img.shields.io/badge/Tests-23%2F23%20Passed-success)](scripts/verify-fixes.mjs)
 
-[Özellikler](#-özellikler) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Kurulum](#-hızlı-başlangıç) • [Mimari](#-teknik-mimari) • [Lisans](#-lisans)
+[Özellikler](#-özellikler) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Kurulum](#-hızlı-başlangıç) • [Mimari](#-teknik-mimari) • [Lisans](#-lisans)
 
 </div>
 
@@ -45,7 +45,7 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 - İki yana yaslı (`text-align: justify`) temiz CSS ile e-okuyucu ve Kindle uyumlu EPUB üretir.
 
 ### 3. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
-- **Google Hesabı (Antigravity OAuth)**: Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
+- **Google Hesabı (Antigravity OAuth)**: Gemini 3.7 Flash, Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
 - **Google AI Studio (Gemini Key)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı.
 - **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral modelleriyle sıfır maliyetli kullanım.
 
@@ -55,22 +55,41 @@ Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
 - 🚀 **Yıldırım Hızı (Regex)**: Yalnızca kural motoru çalışır. API anahtarı gerekmez, 0 saniyede tamamlanır.
 - 🧠 **Tam Derin Tarama**: Tüm paragraflar istisnasız seçili yapay zeka ile taranır.
 
-### 5. 💾 Kalıcı IndexedDB Önbelleği
+### 5. 📱 Cihaza Gönder (Send-to-Kindle & KOReader Wi-Fi)
+- **Send to Kindle**: `@kindle.com` adresinize Gmail/SMTP veya Resend ile doğrudan tek tıkla e-posta gönderimi.
+- **KOReader Wi-Fi Aktarımı**: Yerel ağ üzerinden KOReader yüklü e-okuyucunuza (Kindle, Kobo, PocketBook, reMarkable) kablosuz dosya yükleme.
+- **QR Kod & Yerel İndirme**: E-okuyucunun web tarayıcısından tek tıkla indirme imkanı.
+
+### 6. 💾 Kalıcı IndexedDB Önbelleği
 - İşlem durdurulduğunda veya sayfa yenilendiğinde tamamlanan paragraflar tarayıcı IndexedDB deposunda saklanır.
 - Aynı kitap tekrar işlendiğinde daha önce taranan bloklar için tekrar token harcanmaz.
 
-### 6. 🛠️ Geliştirici (Developer) Modu
+### 7. 🛠️ Geliştirici (Developer) Modu
 - Ayarlardan tek tıkla açılıp kapatılabilen sade / gelişmiş görünüm.
 - Canlı regex ve LLM değişiklik günlüğü (*Diff Console*), JSON dışa aktarma.
 - Özel Sistem Talimatı (*System Prompt*) düzenleyici, eşzamanlılık (*concurrency*) ve paket boyutu ayarı.
 
-### 7. 🌓 Karanlık ve Aydınlık Tema
+### 8. 🌓 Karanlık ve Aydınlık Tema
 - Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
 
-### 8. 📱 Send-to-Kindle & KOReader E-Okuyucu Aktarımı
-- **Kindle E-Posta Gönderimi**: Amazon `@kindle.com` adresinize Gmail / Özel SMTP veya Resend API ile doğrudan tek tıkla EPUB gönderin.
-- **KOReader Wi-Fi Aktarımı**: E-okuyucunuzda (Kindle, Kobo, reMarkable) KOReader açıkken yerel IP adresi üzerinden kablosuz olarak doğrudan cihaza aktarın.
-- **Yerel Ağda İndirme & QR Kod**: E-okuyucunuzun veya telefonunuzun tarayıcısından yerel ağ üzerinden anında indirin.
+---
+
+## 📱 Cihaza Gönder Rehberi (Kindle & KOReader)
+
+### A. Send to Kindle (E-Posta ile Gönderim)
+1. **Amazon Onaylı Liste Ayarı (Tek Seferlik):**
+   - Amazon web sitesinde **İçerik ve Cihazlar (Manage Your Content and Devices) > Tercihler (Preferences) > Kişisel Belge Ayarları (Personal Document Settings)** sayfasına gidin.
+   - **Onaylı Kişisel Belge E-posta Listesi (Approved Personal Document E-mail List)** alanına göndereceğiniz e-posta adresinizi (örnek: Gmail adresiniz) ekleyin.
+2. **Uygulamadan Gönderme:**
+   - Kitap onarımı tamamlandıktan sonra **Cihaza Gönder** butonuna tıklayın.
+   - Kindle e-posta adresinizi (`adiniz@kindle.com`) ve Gmail Uygulama Şifrenizi (*App Password*) girin.
+   - **Kindle'a Gönder** butonuna basın. Birkaç dakika içinde kitabınız kablosuz olarak Kindle'ınızda görünecektir.
+
+### B. KOReader (Wi-Fi ile Doğrudan Aktarım)
+1. E-Okuyucunuzda (Kindle, Kobo, reMarkable vb.) KOReader uygulamasını açın.
+2. **Üst Menü > Ağ > Wi-Fi Dosya Aktarımı (Web Server)** seçeneğini başlatın.
+3. Ekranda görüntülenen yerel IP adresini (örn: `http://192.168.1.50:8080`) uygulamadaki KOReader kutusuna girin.
+4. **KOReader'a Aktar** butonuna tıklayın. Dosya doğrudan cihaz hafızasına yüklenecektir.
 
 ---
 
@@ -117,7 +136,9 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── antigravity/      # Google OAuth proxy ve chat endpoints
-│   │   └── auth/google/      # Google OAuth PKCE token exchange
+│   │   ├── auth/google/      # Google OAuth PKCE token exchange
+│   │   ├── kindle/send/      # Send to Kindle SMTP & Resend API
+│   │   └── koreader/upload/  # KOReader Wi-Fi yükleme proxy
 │   ├── globals.css           # Tailwind CSS v4 & theme variables
 │   ├── layout.tsx            # Metadata, fonts & theme flash prevention
 │   └── page.tsx              # Ana sayfa ve işleme paneli
@@ -126,6 +147,7 @@ src/
 │   ├── DebugConsole.tsx      # Geliştirici değişiklik günlüğü çekmecesi
 │   ├── DiffViewer.tsx        # Yan yana ve satır içi canlı diff önizleme
 │   ├── Header.tsx            # Logo, marka, tema değiştirici ve durum
+│   ├── SendToDeviceModal.tsx # Kindle & KOReader cihaz aktarım modalı
 │   ├── SettingsModal.tsx     # Sağlayıcı, API key, önbellek & dev ayarları
 │   ├── StatsBar.tsx          # İlerleme çubuğu, sayaçlar ve indirme
 │   └── UploadSection.tsx     # EPUB & PDF sürükle-bırak yükleme alanı
