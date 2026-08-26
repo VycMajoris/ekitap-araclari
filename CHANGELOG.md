@@ -5,6 +5,16 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.2.1] - 2026-08-26
+
+### 🛠️ Düzeltmeler (Fixed)
+* **📖 Calibre & Eski EPUB `<div>` Paragraf Desteği:** `<p>` etiketi içermeyen ancak metin barındıran `<div>`, `<section>`, `<article>` etiketli EPUB'ların (örneğin Calibre ile dönüştürülmüş Küçük Prens vb. e-kitaplar) ayrıştırılamama ve çevrilememe sorunu giderildi; 800+ metin bloğu eksiksiz ayrıştırılıp yeniden oluşturulabilir hale getirildi.
+* **🌐 Canlı Ortam (Serverless) Zaman Aşımı Optimizasyonu:** Cloudflare Pages ve Vercel fonksiyon zaman aşımı (timeout) sınırları için AI çeviri paket boyutu 4.500 karaktere optimize edildi; isteklerin 2-5 saniye içinde tamamlanması sağlandı.
+* **📊 Canlı Çeviri İstatistikleri ve Kelime Sayacı:** Çeviri modunda her blok işlendiğinde çevrilen kelime sayısının (`totalFixedWords`) anlık olarak arayüzde ve bölüm kartlarında güncellenmesi sağlandı.
+* **⚠️ Hata Görünürlüğü:** AI paket işleme hatalarının sessizce yutulması engellendi; hata durumunda arayüzde doğrudan kırmızı uyarı gösterilmesi sağlandı.
+
+---
+
 ## [0.2.0] - 2026-08-26
 
 ### 🚀 Yeni Özellikler (Added)

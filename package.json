@@ -1,6 +1,6 @@
 {
   "name": "ekitap-araclari",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -27,12 +27,14 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/diff": "^7.0.2",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
+    "jsdom": "^30.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

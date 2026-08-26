@@ -1,12 +1,17 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
+import { extractBlocksFromHtml, reconstructChapterHtml } from '../src/lib/epub-engine.ts';
+import { JSDOM } from 'jsdom';
 import {
   buildTranslationUserPrompt,
   getLanguageName,
   BOOK_TRANSLATION_SYSTEM_PROMPT,
 } from '../src/lib/openrouter.ts';
 import assert from 'node:assert';
+
+global.DOMParser = new JSDOM().window.DOMParser;
+global.XMLSerializer = new JSDOM().window.XMLSerializer;
 
 console.log('Running verification tests for Turkish OCR fixes...');
 await TdkDictionary.getInstance().init();
@@ -495,4 +500,39 @@ assert.strictEqual(hasOcrAnomaly("krtklm buraya gelemez"), true, "4+ consonants 
 
 console.log('All hasOcrAnomaly tests passed successfully!');
 
-console.log('All parseBatchResponse tests passed successfully!');
+// 6. Test EPUB Block Extraction with Div-based containers (e.g. Calibre generated EPUBs)
+console.log('Testing extractBlocksFromHtml and reconstructChapterHtml for div containers...');
+const divHtmlSample = `<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Test Book</title></head>
+  <body>
+    <div class="header"><h1>Chapter 1</h1></div>
+    <div class="empty"><p></p></div>
+    <div class="text-block"><span>First sentence in a div without p tag.</span></div>
+    <div class="text-block"><span>Second sentence in another div.</span></div>
+  </body>
+</html>`;
+
+const { title: extractedTitle, blocks: extractedBlocks } = extractBlocksFromHtml(divHtmlSample, 1);
+assert.strictEqual(extractedTitle, 'Test Book');
+assert.strictEqual(extractedBlocks.length, 3);
+assert.strictEqual(extractedBlocks[0].originalText, 'Chapter 1');
+assert.strictEqual(extractedBlocks[1].originalText, 'First sentence in a div without p tag.');
+assert.strictEqual(extractedBlocks[2].originalText, 'Second sentence in another div.');
+
+// Test reconstruction
+extractedBlocks[1].correctedHtml = '<span>First corrected sentence.</span>';
+extractedBlocks[1].correctedText = 'First corrected sentence.';
+const reconstructedHtml = reconstructChapterHtml({
+  id: 'ch-1',
+  href: 'ch1.xhtml',
+  title: 'Chapter 1',
+  rawContent: divHtmlSample,
+  blocks: extractedBlocks,
+  isSelected: true,
+  status: 'completed',
+  stats: { totalBlocks: 3, processedBlocks: 3, fixedWords: 1 }
+});
+
+assert(reconstructedHtml.includes('First corrected sentence.'), 'Reconstructed HTML must include corrected text in div container');
+console.log('All EPUB div-container tests passed successfully!');

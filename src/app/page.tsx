@@ -436,7 +436,14 @@ export default function Home() {
                 const newBlocks = ch.blocks.map((b) =>
                   b.id === updatedBlock.id ? { ...updatedBlock } : b
                 );
-                return { ...ch, blocks: newBlocks };
+                return {
+                  ...ch,
+                  blocks: newBlocks,
+                  stats: {
+                    ...ch.stats,
+                    fixedWords: ch.stats.fixedWords + (updatedBlock.diffCount || 0),
+                  },
+                };
               })
             );
           },

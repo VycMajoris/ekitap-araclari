@@ -433,9 +433,12 @@ async function processLlmBatch(
           }
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
-      console.warn('Tekil blok LLM uyarısı:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('Tekil blok LLM hatası:', err);
+      callbacks.onError?.(item.chapterId, `AI İstek Hatası: ${errMsg}`);
+      throw err;
     }
   } else {
     const textsBeforeLlm = batch.map((item) => item.block.correctedText);
@@ -526,9 +529,12 @@ async function processLlmBatch(
           }
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
-      console.warn('Toplu blok LLM uyarısı:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('Toplu blok LLM hatası:', err);
+      callbacks.onError?.(batch[0]?.chapterId || 'global', `AI Paket Hatası: ${errMsg}`);
+      throw err;
     }
   }
 
@@ -804,7 +810,7 @@ export async function processEpubChapters(
   }
 
   if (globalSuspiciousQueue.length > 0 && options.useLlm && isProviderReady(options) && !signal?.aborted) {
-    const defaultChunkSize = isTranslation ? 7000 : 12000;
+    const defaultChunkSize = isTranslation ? 4500 : 10000;
     const batches = createQueuedBlockBatches(globalSuspiciousQueue, options.chunkSize || defaultChunkSize);
 
     stats.phase = 'ai';
@@ -852,17 +858,27 @@ export async function processEpubChapters(
 
           for (const item of batch) {
             stats.processedBlocks++;
-            stats.totalFixedWords += item.block.diffCount;
             const targetChapter = selectedChapters.find((c) => c.id === item.chapterId);
             if (targetChapter) {
               targetChapter.stats.processedBlocks++;
-              targetChapter.stats.fixedWords += item.block.diffCount;
+              if (isTranslation) {
+                const transWordCount = (item.block.correctedText || '').split(/\s+/).filter(Boolean).length;
+                item.block.diffCount = transWordCount;
+                stats.totalFixedWords += transWordCount;
+                targetChapter.stats.fixedWords += transWordCount;
+              } else {
+                stats.totalFixedWords += item.block.diffCount;
+                targetChapter.stats.fixedWords += item.block.diffCount;
+              }
+
               if (targetChapter.blocks.every((b) => b.status === 'completed')) {
                 if (targetChapter.status !== 'completed') {
                   targetChapter.status = 'completed';
                   stats.completedChapters++;
                   callbacks.onChapterUpdated?.(targetChapter);
                 }
+              } else {
+                callbacks.onChapterUpdated?.(targetChapter);
               }
             }
             callbacks.onBlockUpdated?.(item.chapterId, item.block);

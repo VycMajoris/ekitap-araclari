@@ -139,8 +139,10 @@ export async function parseEpub(fileData: ArrayBuffer | File): Promise<{
 
 /**
  * Extract paragraph/heading text blocks while keeping tag integrity.
+ * Supports standard semantic tags (p, h1-h6, li, etc.) and styled text containers (div, section, article)
+ * commonly found in Calibre and older converted EPUB files.
  */
-function extractBlocksFromHtml(
+export function extractBlocksFromHtml(
   htmlContent: string,
   chapterIdx: number
 ): { title: string; blocks: TextBlock[] } {
@@ -159,29 +161,49 @@ function extractBlocksFromHtml(
   }
 
   const blocks: TextBlock[] = [];
-  const targetSelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
-  const elements = doc.querySelectorAll(targetSelectors);
+  const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
+  const containerSelectors = 'div, section, article';
+
+  // 1. Gather all potential text elements
+  const allElements = Array.from(
+    doc.querySelectorAll(`${primarySelectors}, ${containerSelectors}`)
+  );
 
   let blockIdx = 0;
-  elements.forEach((el) => {
-    // Avoid nested block duplication (e.g. <p> inside <li> or <blockquote>)
-    if (el.parentElement?.closest(targetSelectors)) {
-      return;
+  for (const el of allElements) {
+    const tagName = el.tagName.toLowerCase();
+    const isContainer = ['div', 'section', 'article'].includes(tagName);
+
+    // If it is a container (div, etc.):
+    // ONLY treat as a block if it does NOT contain any nested primary block (p, h1-h6, li, blockquote, etc.)
+    // and does NOT contain nested containers with text.
+    if (isContainer) {
+      if (el.querySelector(primarySelectors)) {
+        continue;
+      }
+      if (el.querySelector(containerSelectors)) {
+        continue;
+      }
+    } else {
+      // For primary selectors (p, h1-h6, etc.), avoid nested primary block duplication
+      if (el.parentElement?.closest(primarySelectors)) {
+        continue;
+      }
+    }
+
+    // Check if element has non-text nodes like math, pre, code that shouldn't be touched
+    if (el.querySelector('pre, code, math, svg')) {
+      continue;
     }
 
     const text = el.textContent?.trim() || '';
     // Skip empty or trivial whitespace blocks
-    if (text.length < 2) return;
-
-    // Check if element has non-text nodes like math, pre, code that shouldn't be touched
-    if (el.querySelector('pre, code, math, svg')) {
-      return;
-    }
+    if (text.length < 2) continue;
 
     const html = el.innerHTML;
     blocks.push({
       id: `${chapterIdx}-${blockIdx++}`,
-      elementTag: el.tagName.toLowerCase(),
+      elementTag: tagName,
       originalHtml: html,
       originalText: text,
       correctedHtml: html,
@@ -189,12 +211,15 @@ function extractBlocksFromHtml(
       status: 'pending',
       diffCount: 0,
     });
-  });
+  }
 
   for (let i = 0; i < blocks.length - 1; i++) {
     const b1 = blocks[i];
     const b2 = blocks[i + 1];
-    if (b1.elementTag === 'p' && b2.elementTag === 'p') {
+    if (
+      (b1.elementTag === 'p' || b1.elementTag === 'div') &&
+      (b2.elementTag === 'p' || b2.elementTag === 'div')
+    ) {
       const trimmed1 = b1.originalText.trim();
       const trimmed2 = b2.originalText.trim();
       if (
@@ -236,20 +261,43 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
       doc = parser.parseFromString(chapter.rawContent, 'text/html');
     }
 
-    const targetSelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
-    const elements = Array.from(doc.querySelectorAll(targetSelectors)).filter(
-      (el) => !el.parentElement?.closest(targetSelectors) && !el.querySelector('pre, code, math, svg')
+    const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
+    const containerSelectors = 'div, section, article';
+
+    const allElements = Array.from(
+      doc.querySelectorAll(`${primarySelectors}, ${containerSelectors}`)
     );
 
-    let blockIndex = 0;
-    for (const el of elements) {
+    const elements: Element[] = [];
+    for (const el of allElements) {
+      const tagName = el.tagName.toLowerCase();
+      const isContainer = ['div', 'section', 'article'].includes(tagName);
+
+      if (isContainer) {
+        if (el.querySelector(primarySelectors) || el.querySelector(containerSelectors)) {
+          continue;
+        }
+      } else {
+        if (el.parentElement?.closest(primarySelectors)) {
+          continue;
+        }
+      }
+
+      if (el.querySelector('pre, code, math, svg')) {
+        continue;
+      }
+
       const text = el.textContent?.trim() || '';
       if (text.length < 2) continue;
 
+      elements.push(el);
+    }
+
+    let blockIndex = 0;
+    for (const el of elements) {
       if (blockIndex < chapter.blocks.length) {
         const block = chapter.blocks[blockIndex];
         const targetTag = block.elementTag || el.tagName.toLowerCase();
-
         const safeHtml = block.correctedHtml || el.innerHTML;
 
         try {
