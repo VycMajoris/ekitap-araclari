@@ -99,6 +99,10 @@ export interface ProcessingStats {
   startTime?: number;
   elapsedSeconds: number;
   estimatedRemainingSeconds?: number;
+  phase?: 'regex' | 'ai' | 'idle' | 'completed';
+  phaseMessage?: string;
+  activeBatchIndex?: number;
+  totalBatches?: number;
 }
 
 export interface DiffItem {

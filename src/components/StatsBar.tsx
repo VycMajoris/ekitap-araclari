@@ -130,12 +130,17 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
             <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
               <Clock className="w-3 h-3 text-zinc-400" />
-              {isProcessing ? 'Kalan Süre' : 'Geçen Süre'}
+              {isProcessing ? 'Kalan / Geçen Süre' : 'Toplam Süre'}
             </span>
             <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-1 truncate">
-              {isProcessing
-                ? formatSeconds(stats.estimatedRemainingSeconds)
-                : `${stats.elapsedSeconds} sn`}
+              {isProcessing ? (
+                <div className="flex items-center gap-1.5 truncate">
+                  <span>{formatSeconds(stats.estimatedRemainingSeconds)}</span>
+                  <span className="text-[10px] text-zinc-400 font-normal">({stats.elapsedSeconds} sn)</span>
+                </div>
+              ) : (
+                `${formatSeconds(stats.elapsedSeconds)}`
+              )}
             </div>
           </div>
         </div>
@@ -225,6 +230,23 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           )}
         </div>
       </div>
+
+      {isProcessing && stats.phaseMessage && (
+        <div className="flex items-center justify-between text-xs px-1">
+          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+            <span className="relative flex h-2 w-2">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stats.phase === 'ai' ? 'bg-indigo-400' : 'bg-emerald-400'}`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.phase === 'ai' ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+            </span>
+            <span className="font-semibold">{stats.phaseMessage}</span>
+          </div>
+          {stats.totalBatches !== undefined && stats.activeBatchIndex !== undefined && stats.phase === 'ai' && (
+            <span className="text-[11px] text-zinc-400 font-mono">
+              Paket {stats.activeBatchIndex}/{stats.totalBatches}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden relative">
         <div

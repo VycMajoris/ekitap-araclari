@@ -203,6 +203,27 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isProcessing) {
+      interval = setInterval(() => {
+        setStats((prev) => {
+          const now = Date.now();
+          const elapsed = prev.startTime
+            ? Math.max(1, Math.round((now - prev.startTime) / 1000))
+            : prev.elapsedSeconds + 1;
+          return {
+            ...prev,
+            elapsedSeconds: elapsed,
+          };
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
+
   const handleOptionsChange = (newOptions: ProcessingOptions) => {
     setOptions(newOptions);
     if (typeof window !== 'undefined') {

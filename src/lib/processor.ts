@@ -612,6 +612,8 @@ export async function processEpubChapters(
     totalFixedWords: 0,
     startTime: Date.now(),
     elapsedSeconds: 0,
+    phase: 'regex',
+    phaseMessage: 'Aşama 1/2: Hızlı Regex & TDK Ön Temizliği Yapılıyor...',
   };
 
   callbacks.onStatsUpdated?.({ ...stats });
@@ -619,9 +621,10 @@ export async function processEpubChapters(
   const rollingContext: { source: string; translated: string }[] = [];
   const globalSuspiciousQueue: QueuedBlockItem[] = [];
 
-  for (const chapter of selectedChapters) {
+  for (let chIdx = 0; chIdx < selectedChapters.length; chIdx++) {
     if (signal?.aborted) break;
 
+    const chapter = selectedChapters[chIdx];
     chapter.status = 'processing';
     chapter.errorMessage = undefined;
     callbacks.onChapterUpdated?.(chapter);
@@ -778,13 +781,22 @@ export async function processEpubChapters(
       stats.completedChapters++;
       callbacks.onChapterUpdated?.(chapter);
     }
-  }
 
-  callbacks.onStatsUpdated?.({ ...stats });
+    stats.phaseMessage = `Aşama 1/2: Hızlı Regex & TDK Taraması (${chIdx + 1}/${selectedChapters.length} Bölüm)`;
+    callbacks.onStatsUpdated?.({ ...stats });
+  }
 
   if (globalSuspiciousQueue.length > 0 && options.useLlm && isProviderReady(options) && !signal?.aborted) {
     const defaultChunkSize = isTranslation ? 7000 : 12000;
     const batches = createQueuedBlockBatches(globalSuspiciousQueue, options.chunkSize || defaultChunkSize);
+
+    stats.phase = 'ai';
+    stats.totalBatches = batches.length;
+    stats.activeBatchIndex = 0;
+    stats.phaseMessage = isTranslation
+      ? `Aşama 2/2: Yapay Zekâ ile Kitap Çevirisi Başlatıldı (${batches.length} Paket)`
+      : `Aşama 2/2: Kalan Şüpheli Paragraflar AI ile Onarılıyor (${batches.length} Paket)`;
+    callbacks.onStatsUpdated?.({ ...stats });
 
     const isHighThroughputProvider =
       options.provider === 'antigravity' ||
@@ -804,6 +816,12 @@ export async function processEpubChapters(
       if (signal?.aborted) break;
 
       const currentBatches = batches.slice(i, i + concurrency);
+      stats.activeBatchIndex = Math.min(batches.length, i + 1);
+      stats.phaseMessage = isTranslation
+        ? `Aşama 2/2: AI Çeviri Paketi İşleniyor (${stats.activeBatchIndex}/${batches.length})`
+        : `Aşama 2/2: AI Onarım Paketi İşleniyor (${stats.activeBatchIndex}/${batches.length})`;
+      callbacks.onStatsUpdated?.({ ...stats });
+
       await Promise.all(
         currentBatches.map(async (batch) => {
           await processLlmBatch(
@@ -842,11 +860,14 @@ export async function processEpubChapters(
         await new Promise((resolve) => setTimeout(resolve, throttleMs));
       }
 
-      stats.elapsedSeconds = Math.round((Date.now() - (stats.startTime || Date.now())) / 1000);
-      if (stats.processedBlocks > 0) {
-        const speed = stats.processedBlocks / stats.elapsedSeconds;
-        const remainingBlocks = stats.totalBlocks - stats.processedBlocks;
-        stats.estimatedRemainingSeconds = speed > 0 ? Math.round(remainingBlocks / speed) : 0;
+      stats.elapsedSeconds = Math.max(1, Math.round((Date.now() - (stats.startTime || Date.now())) / 1000));
+      const remainingBatches = batches.length - Math.min(batches.length, i + concurrency);
+      const batchesDone = Math.min(batches.length, i + concurrency);
+      if (batchesDone > 0) {
+        const secondsPerBatch = stats.elapsedSeconds / batchesDone;
+        stats.estimatedRemainingSeconds = Math.round(remainingBatches * secondsPerBatch);
+      } else {
+        stats.estimatedRemainingSeconds = 15;
       }
       callbacks.onStatsUpdated?.({ ...stats });
     }
@@ -859,6 +880,9 @@ export async function processEpubChapters(
     }
   }
 
+  stats.phase = 'completed';
+  stats.phaseMessage = 'İşlem Başarıyla Tamamlandı';
   stats.completedChapters = selectedChapters.filter((c) => c.status === 'completed').length;
+  stats.estimatedRemainingSeconds = 0;
   callbacks.onStatsUpdated?.({ ...stats });
 }
