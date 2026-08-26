@@ -325,8 +325,8 @@ export class TdkDictionary {
           continue;
         }
 
-        const hasApostrophe = chunk.tokens.some((t) => /[’']/.test(t));
-        if (hasApostrophe) {
+        const hasApostropheOrQuote = chunk.tokens.some((t) => /[’'"“”«»]/.test(t));
+        if (hasApostropheOrQuote) {
           processedChunks.push(chunk.tokens.join(' '));
           continue;
         }

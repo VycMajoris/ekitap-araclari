@@ -227,46 +227,63 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
     return chapter.rawContent;
   }
 
-  const parser = new DOMParser();
-  let isXhtml = true;
-  let doc = parser.parseFromString(chapter.rawContent, 'application/xhtml+xml');
-  if (doc.querySelector('parsererror')) {
-    isXhtml = false;
-    doc = parser.parseFromString(chapter.rawContent, 'text/html');
-  }
-
-  const targetSelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
-  const elements = Array.from(doc.querySelectorAll(targetSelectors)).filter(
-    (el) => !el.parentElement?.closest(targetSelectors) && !el.querySelector('pre, code, math, svg')
-  );
-
-  let blockIndex = 0;
-  for (const el of elements) {
-    const text = el.textContent?.trim() || '';
-    if (text.length < 2) continue;
-
-    if (blockIndex < chapter.blocks.length) {
-      const block = chapter.blocks[blockIndex];
-      const targetTag = block.elementTag || el.tagName.toLowerCase();
-
-      if (targetTag !== el.tagName.toLowerCase()) {
-        const newEl = isXhtml
-          ? doc.createElementNS('http://www.w3.org/1999/xhtml', targetTag)
-          : doc.createElement(targetTag);
-        newEl.innerHTML = block.correctedHtml || el.innerHTML;
-        el.parentNode?.replaceChild(newEl, el);
-      } else if (block.correctedHtml && block.correctedHtml !== block.originalHtml) {
-        el.innerHTML = block.correctedHtml;
-      }
-      blockIndex++;
+  try {
+    const parser = new DOMParser();
+    let isXhtml = true;
+    let doc = parser.parseFromString(chapter.rawContent, 'application/xhtml+xml');
+    if (doc.querySelector('parsererror')) {
+      isXhtml = false;
+      doc = parser.parseFromString(chapter.rawContent, 'text/html');
     }
-  }
 
-  if (isXhtml) {
-    const serializer = new XMLSerializer();
-    return serializer.serializeToString(doc);
-  } else {
-    return doc.documentElement.outerHTML;
+    const targetSelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
+    const elements = Array.from(doc.querySelectorAll(targetSelectors)).filter(
+      (el) => !el.parentElement?.closest(targetSelectors) && !el.querySelector('pre, code, math, svg')
+    );
+
+    let blockIndex = 0;
+    for (const el of elements) {
+      const text = el.textContent?.trim() || '';
+      if (text.length < 2) continue;
+
+      if (blockIndex < chapter.blocks.length) {
+        const block = chapter.blocks[blockIndex];
+        const targetTag = block.elementTag || el.tagName.toLowerCase();
+
+        const safeHtml = block.correctedHtml || el.innerHTML;
+
+        try {
+          if (targetTag !== el.tagName.toLowerCase()) {
+            const newEl = isXhtml
+              ? doc.createElementNS('http://www.w3.org/1999/xhtml', targetTag)
+              : doc.createElement(targetTag);
+            newEl.innerHTML = safeHtml;
+            el.parentNode?.replaceChild(newEl, el);
+          } else if (block.correctedHtml && block.correctedHtml !== block.originalHtml) {
+            el.innerHTML = safeHtml;
+          }
+        } catch {
+          try {
+            el.textContent = block.correctedText || el.textContent;
+          } catch {}
+        }
+        blockIndex++;
+      }
+    }
+
+    if (isXhtml) {
+      const serializer = new XMLSerializer();
+      const serialized = serializer.serializeToString(doc);
+      if (serialized.includes('<parsererror')) {
+        return doc.documentElement.outerHTML || chapter.rawContent;
+      }
+      return serialized;
+    } else {
+      return doc.documentElement.outerHTML || chapter.rawContent;
+    }
+  } catch (e) {
+    console.warn(`Bölüm HTML yeniden oluşturma hatası (${chapter.id}):`, e);
+    return chapter.rawContent;
   }
 }
 
