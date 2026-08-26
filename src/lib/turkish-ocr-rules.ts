@@ -407,7 +407,156 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
     description: "'tarnarn/zarnan/adarn/akşarn' -> 'tamam/zaman/adam/akşam'",
   },
 
-  // 5. Compound words mistakenly split by PDF converters
+  {
+    pattern: /\.\s*,+/g,
+    replacement: '.',
+    description: "'.,,' -> '.'",
+  },
+  {
+    pattern: /,\s*,+/g,
+    replacement: ',',
+    description: "',,' -> ','",
+  },
+  {
+    pattern: /:\s*:+/g,
+    replacement: ':',
+    description: "'::' -> ':'",
+  },
+  {
+    pattern: /;\s*;+/g,
+    replacement: ';',
+    description: "';;' -> ';'",
+  },
+  {
+    pattern: new RegExp(`${WB}N\\s+de\\s+en${WE}`, 'g'),
+    replacement: 'Neden',
+    description: "'N de en' -> 'Neden'",
+  },
+  {
+    pattern: new RegExp(`${WB}n\\s+de\\s+en${WE}`, 'g'),
+    replacement: 'neden',
+    description: "'n de en' -> 'neden'",
+  },
+  {
+    pattern: new RegExp(`${WB}([Nn])\\s+e\\s+d\\s+e\\s+n${WE}`, 'g'),
+    replacement: (_match: string, ...args: unknown[]) => `${args[0]}eden`,
+    description: "'N e d e n' -> 'Neden'",
+  },
+  {
+    pattern: new RegExp(`${WB}([Gg])\\s+e\\s+l\\s+d\\s+i${WE}`, 'g'),
+    replacement: (_match: string, ...args: unknown[]) => `${args[0]}eldi`,
+    description: "'g e l d i' -> 'geldi'",
+  },
+  {
+    pattern: new RegExp(`${WB}([Bb])\\s+a\\s+ş\\s+l\\s+a\\s+d\\s+ı${WE}`, 'g'),
+    replacement: (_match: string, ...args: unknown[]) => `${args[0]}aşladı`,
+    description: "'b a ş l a d ı' -> 'başladı'",
+  },
+  {
+    pattern: new RegExp(`${WB}([Yy])\\s+a\\s+p\\s+t\\s+ı${WE}`, 'g'),
+    replacement: (_match: string, ...args: unknown[]) => `${args[0]}aptı`,
+    description: "'y a p t ı' -> 'yaptı'",
+  },
+  {
+    pattern: new RegExp(`${WB}de[\uFFFD]?il${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'değil'),
+    description: "'deil' -> 'değil'",
+  },
+  {
+    pattern: new RegExp(`${WB}ba[\uFFFD]?lad([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'başlad' + rest),
+    description: "'balad...' -> 'başlad...'",
+  },
+  {
+    pattern: new RegExp(`${WB}i[\uFFFD]?in${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'için'),
+    description: "'iin' -> 'için'",
+  },
+  {
+    pattern: new RegExp(`${WB}ya[\uFFFD]?mur([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'yağmur' + rest),
+    description: "'yamur...' -> 'yağmur...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]imdi${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'şimdi'),
+    description: "'imdi' -> 'şimdi'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]ey(ler|i|e|den|de)?${WE}`, 'gi'),
+    replacement: (match, suffix = '') => replaceCasePreserving(match, 'şey' + (suffix || '')),
+    description: "'ey...' -> 'şey...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]öyle${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'şöyle'),
+    description: "'öyle' -> 'şöyle'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]ehir([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şehir' + rest),
+    description: "'ehir...' -> 'şehir...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]üphe([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şüphe' + rest),
+    description: "'üphe...' -> 'şüphe...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]ans([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şans' + rest),
+    description: "'ans...' -> 'şans...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]eker([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şeker' + rest),
+    description: "'eker...' -> 'şeker...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]arkı([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şarkı' + rest),
+    description: "'arkı...' -> 'şarkı...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]iir([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şiir' + rest),
+    description: "'iir...' -> 'şiir...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]irket([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şirket' + rest),
+    description: "'irket...' -> 'şirket...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]iddet([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şiddet' + rest),
+    description: "'iddet...' -> 'şiddet...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]eref([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şeref' + rest),
+    description: "'eref...' -> 'şeref...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]air([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şair' + rest),
+    description: "'air...' -> 'şair...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]art([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şart' + rest),
+    description: "'art...' -> 'şart...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]aka([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => replaceCasePreserving(match, 'şaka' + rest),
+    description: "'aka...' -> 'şaka...'",
+  },
+  {
+    pattern: new RegExp(`${WB}[\uFFFD]ubat${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'şubat'),
+    description: "'ubat' -> 'şubat'",
+  },
   {
     pattern: new RegExp(`${WB}bir\\s+çok${WE}`, 'gi'),
     replacement: (match) => (match[0] === 'B' ? 'Birçok' : 'birçok'),
@@ -458,29 +607,52 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
 /**
  * Patterns that indicate potential OCR / conversion artifacts in Turkish text.
  */
-const OCR_ANOMALY_PATTERNS: RegExp[] = [
-  new RegExp(`${WB}(yarm|kamı|öğmeci|öğmek|soma|bumu|karamlı|imsan|farkıma\\s+var|ayrımlı|davra|korkumç|düşümce|uyam|yalmız|yamlış|tuma|tumuva|kame|tarnarn|zarnan|adarn|akşarn|andınyor|andıryor|görünrn|tükenrn|bölünrn|claha|cliye|cliyen|clil|clüşün|clünya|clönem|clur|cla|cle|clegil|cleğil|clost|cloktor|clerece|cluygu|clurum|clevam|clüzen|clere|cleniz|clol|clön)\\w*${WE}`, 'iu'),
-  /[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]+-\s+[a-zA-ZçğıöşüÇĞİÖŞÜ]+/, // hyphen split
-  /\b\w*cl[aeıioöuü]\w*/i, // words containing 'cl'
-  /\b(bir çok|her hangi|bir kaç|bir az|hiç bir)\b/i, // split compounds
-  /\s+[,.!?:;]/, // space before punctuation
-  /\w+\s+['’]\w+/, // space around apostrophe
-  /\.\s+\.\s+\./, // spaced dots (. . .)
-  /[bcçdfgğhjklmnprsştvyzBCÇDFGĞHJKLMNPRSŞTVYZ]{4,}/i, // 4+ consecutive consonants (missing vowels like 'artk')
-  /[ÔÊÂÎÛôêâîû@#$\\/|<>~]/, // foreign or corrupted OCR symbols
-  /\b[a-zçğıöşü]+[A-ZÇĞİÖŞÜ]+[a-zçğıöşü]+\b/, // camelCase artifact in body text
-  /\b[a-zA-ZçğıöşüÇĞİÖŞÜ]{1,2}\s+[a-zA-ZçğıöşüÇĞİÖŞÜ]{1,2}\s+[a-zA-ZçğıöşüÇĞİÖŞÜ]{1,2}\b/, // broken split single chars
+const SPLIT_LETTER_SEQUENCE_REGEX = /(?<![\p{L}\p{N}])[\p{L}]{1,2}\s+[\p{L}]{1,2}\s+[\p{L}]{1,2}(?![\p{L}\p{N}])/gu;
+
+const VALID_SHORT_TURKISH_PHRASES = [
+  'o da bir', 'bu da bir', 'şu da bir', 'ne de olsa', 'az da olsa',
+  've ya da', 'o ve bu', 'ya da o', 'o da o', 'bu da bu', 'ne de bir',
+  've de bir', 'en az bir', 'en çok bir', 'o da ne', 'şu da var', 'bir de bu', 'bir de o'
 ];
 
-/**
- * Fast check to detect if a text block contains potential OCR anomalies.
- */
+const OCR_ANOMALY_PATTERNS: RegExp[] = [
+  /\uFFFD/,
+  /\.\s*,|,\s*,|::|;;/,
+  new RegExp(`${WB}(yarm|kamı|öğmeci|öğmek|soma|bumu|karamlı|imsan|farkıma\\s+var|ayrımlı|davra|korkumç|düşümce|uyam|yalmız|yamlış|tuma|tumuva|kame|tarnarn|zarnan|adarn|akşarn|andınyor|andıryor|görünrn|tükenrn|bölünrn|claha|cliye|cliyen|clil|clüşün|clünya|clönem|clur|cla|cle|clegil|cleğil|clost|cloktor|clerece|cluygu|clurum|clevam|clüzen|clere|cleniz|clol|clön)\\w*${WE}`, 'iu'),
+  /[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]+-\s+[a-zA-ZçğıöşüÇĞİÖŞÜ]+/,
+  /\b\w*cl[aeıioöuü]\w*/i,
+  /\b(bir çok|her hangi|bir kaç|bir az|hiç bir)\b/i,
+  /\s+[,.!?:;]/,
+  /\w+\s+['’]\w+/,
+  /\.\s+\.\s+\./,
+  /(?<![A-ZÇĞİÖŞÜ])[bcçdfgğhjklmnprsştvyz]{4,}(?![A-ZÇĞİÖŞÜ])/i,
+  /[ÔÊÂÎÛôêâîû@#$\\/|<>~]/,
+  /\b[a-zçğıöşü]+[A-ZÇĞİÖŞÜ]+[a-zçğıöşü]+\b/,
+];
+
 export function hasOcrAnomaly(text: string): boolean {
+  if (!text || text.trim().length === 0) return false;
+
+  if (text.includes('\uFFFD')) {
+    return true;
+  }
+
   for (const pattern of OCR_ANOMALY_PATTERNS) {
     if (pattern.test(text)) {
       return true;
     }
   }
+
+  const splitMatches = Array.from(text.matchAll(SPLIT_LETTER_SEQUENCE_REGEX));
+  if (splitMatches.length > 0) {
+    const hasInvalidSplit = splitMatches.some(
+      (m) => !VALID_SHORT_TURKISH_PHRASES.includes(m[0].toLowerCase())
+    );
+    if (hasInvalidSplit) {
+      return true;
+    }
+  }
+
   return false;
 }
 

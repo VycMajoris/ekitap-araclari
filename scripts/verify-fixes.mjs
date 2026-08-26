@@ -1,4 +1,4 @@
-import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs } from '../src/lib/turkish-ocr-rules.ts';
+import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import {
   buildTranslationUserPrompt,
@@ -217,6 +217,23 @@ const testCases = [
       assert(!res.includes("2."), "Must remove leaked page number at paragraph end");
       assert.strictEqual(res, "Bir de göğsümü sıkıştırıyor...");
     }
+  },
+  {
+    input: "N de en gelmedi.,, Bu doğru deil.",
+    expected: "Neden gelmedi. Bu doğru değil.",
+    check: (res) => {
+      assert(res.includes("Neden gelmedi"), "Must stitch 'N de en' -> 'Neden'");
+      assert(res.includes("doğru değil"), "Must repair 'deil' -> 'değil'");
+      assert(!res.includes(",,"), "Must clean multiple consecutive commas");
+    }
+  },
+  {
+    input: "g e l d i ve baladı konuşmaya.",
+    expected: "geldi ve başladı konuşmaya.",
+    check: (res) => {
+      assert(res.includes("geldi"), "Must stitch 'g e l d i' -> 'geldi'");
+      assert(res.includes("başladı"), "Must repair 'baladı' -> 'başladı'");
+    }
   }
 ];
 
@@ -319,5 +336,19 @@ assert.strictEqual(res4[1], 'Paragraf 2');
 const res5 = parseBatchResponse('```html\n[BLOCK_0]\n<p>Paragraf 1</p>\n[/BLOCK_0]\n```', 1);
 assert.strictEqual(res5.length, 1);
 assert.strictEqual(res5[0], '<p>Paragraf 1</p>');
+
+console.log('All parseBatchResponse tests passed successfully!');
+
+// 5. Test hasOcrAnomaly Detection
+console.log('Testing hasOcrAnomaly multi-factor evaluation...');
+
+assert.strictEqual(hasOcrAnomaly("Bu tamamen temiz ve düzgün bir Türkçe cümledir."), false, "Clean sentence must have NO anomaly");
+assert.strictEqual(hasOcrAnomaly("Bu cümlede \uFFFD bozuk karakter var."), true, "Replacement char must trigger anomaly");
+assert.strictEqual(hasOcrAnomaly("N de en geldi ama olmadı"), true, "Split letters must trigger anomaly");
+assert.strictEqual(hasOcrAnomaly("O da bir insandı ve ya da geldi."), false, "Valid short Turkish phrases must not trigger anomaly");
+assert.strictEqual(hasOcrAnomaly("Bozuk noktalama .,, vardı"), true, "Irregular punctuation must trigger anomaly");
+assert.strictEqual(hasOcrAnomaly("krtklm buraya gelemez"), true, "4+ consonants 'krtklm' must trigger anomaly");
+
+console.log('All hasOcrAnomaly tests passed successfully!');
 
 console.log('All parseBatchResponse tests passed successfully!');

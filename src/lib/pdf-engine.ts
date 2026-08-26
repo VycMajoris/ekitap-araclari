@@ -246,7 +246,7 @@ function buildLinesFromItems(items: RawTextItem[]): TextLine[] {
 
         const gap = it.x - lastEndX;
         const avgFontSize = (lastFontSize + (it.fontSize || 12)) / 2 || 12;
-        const spaceThreshold = Math.max(1.8, avgFontSize * 0.18);
+        const spaceThreshold = Math.max(2.4, avgFontSize * 0.24);
 
         const hasTrailingSpace = lineText.endsWith(' ');
         const hasLeadingSpace = str.startsWith(' ');
