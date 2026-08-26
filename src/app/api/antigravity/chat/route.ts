@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
 
     let upstreamRes: Response | null = null;
     let lastErrorText = '';
+    let lastStatus = 502;
 
     for (const url of ENDPOINTS) {
       try {
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
           upstreamRes = res;
           break;
         } else {
+          lastStatus = res.status;
           const errText = await res.text();
           lastErrorText = errText || `Upstream error (${res.status})`;
           console.error(`Antigravity upstream error [${res.status}] at ${url}:`, errText);
@@ -129,8 +131,8 @@ export async function POST(req: NextRequest) {
 
     if (!upstreamRes || !upstreamRes.ok) {
       return NextResponse.json(
-        { error: lastErrorText || 'All Antigravity upstream endpoints failed' },
-        { status: upstreamRes?.status || 502 }
+        { error: lastErrorText || 'Antigravity upstream endpoints failed' },
+        { status: lastStatus }
       );
     }
 

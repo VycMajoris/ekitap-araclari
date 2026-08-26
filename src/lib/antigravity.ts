@@ -166,8 +166,41 @@ export async function callAntigravityCorrection({
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.error?.message || `Antigravity API hatası (${response.status})`);
+        let errMessage = '';
+        try {
+          const errorData = await response.json();
+          errMessage = errorData?.error || errorData?.message || JSON.stringify(errorData);
+        } catch {
+          errMessage = await response.text().catch(() => '');
+        }
+        
+        if (response.status === 401 && currentAuth.refreshToken) {
+          // Force immediate token refresh on 401
+          try {
+            const refreshRes = await fetch('/api/antigravity/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: currentAuth.refreshToken }),
+              signal,
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              if (refreshData.access_token) {
+                currentAuth.accessToken = refreshData.access_token;
+                currentAuth.expiresAt = Date.now() + (refreshData.expires_in || 3600) * 1000;
+                onTokenRefreshed?.(currentAuth);
+                continue;
+              }
+            }
+          } catch {}
+        }
+
+        if (attempt === maxRetries) {
+          throw new Error(errMessage || `Antigravity API hatası (${response.status})`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * 1.8, 15000);
+        continue;
       }
 
       const data = await response.json();
