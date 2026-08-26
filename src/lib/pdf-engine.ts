@@ -543,62 +543,98 @@ export async function parsePdf(
   let currentChapter: ChapterDraft | null = null;
   let detectedExplicitChapters = 0;
 
-  for (const pageData of allPageParagraphs) {
+  const consolidatedParagraphs: ExtractedParagraph[] = [];
+
+  for (let i = 0; i < allPageParagraphs.length; i++) {
+    const pageData = allPageParagraphs[i];
     for (const p of pageData.paragraphs) {
-      if (p.isHeading && p.text.length < 80) {
-        const normalizedTitle = collapseLetterSpacing(p.text.trim());
-        const isMajorChapterBreak =
-          /^(?:(?:BİRİNCİ|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI|YEDİNCİ|SEKİZİNCİ|DOKUZUNCU|ONUNCU|ON\s+BİRİNCİ|ON\s+İKİNCİ|ON\s+ÜÇÜNCÜ|ON\s+DÖRDÜNCÜ|ON\s+BEŞİNCİ|ON\s+ALTINCI|ON\s+YEDİNCİ|ON\s+SEKİZİNCİ|ON\s+DOKUZUNCU|YİRMİNCİ|YİRMİ\s+BİRİNCİ|YİRMİ\s+İKİNCİ)\s+(?:BÖLÜM|KISIM)|(?:BÖLÜM|KISIM|CHAPTER|PART)\s*(?:[0-9]{1,3}|[IVXLCDM]{1,6})?|GİRİŞ|ÖNSÖZ|SON\s*SÖZ|EPİLOG|PROLOG|İÇİNDEKİLER|iÇiNDEKiLER|[0-9]{1,2}\.?$|[IVXLCDM]{1,6}\.?$)/i.test(
-            normalizedTitle
-          );
+      const trimmed = p.text.trim();
+      if (!trimmed) continue;
 
-        if (currentChapter && (isMajorChapterBreak || currentChapter.paragraphs.length >= 4)) {
-          if (currentChapter.paragraphs.length > 0) {
-            currentChapter.endPage = pageData.page;
-            chaptersDrafts.push(currentChapter);
-            detectedExplicitChapters++;
+      if (trimmed.length <= 2 && /^[^a-zA-ZçğıöşüÇĞİÖŞÜ0-9]+$/i.test(trimmed)) {
+        continue;
+      }
+      if (/^[a-zA-ZçğıöşüÇĞİÖŞÜ]\s*["']?$/.test(trimmed)) {
+        continue;
+      }
+
+      if (consolidatedParagraphs.length > 0 && !p.isHeading) {
+        const lastP = consolidatedParagraphs[consolidatedParagraphs.length - 1];
+        if (!lastP.isHeading) {
+          const lastText = lastP.text.trim();
+          const lastEndsWithPunct = /[.?!:»"']\s*$/.test(lastText);
+          const currentStartsWithLower = /^[a-zçğıöşü]/.test(trimmed);
+
+          if (lastText.endsWith('-')) {
+            lastP.text = lastText.slice(0, -1) + trimmed;
+            lastP.pageNumber = p.pageNumber;
+            continue;
+          } else if (!lastEndsWithPunct && currentStartsWithLower) {
+            lastP.text = lastText + ' ' + trimmed;
+            lastP.pageNumber = p.pageNumber;
+            continue;
           }
-
-          currentChapter = {
-            title: normalizedTitle,
-            startPage: pageData.page,
-            endPage: pageData.page,
-            paragraphs: [p],
-          };
-          continue;
-        } else if (!currentChapter) {
-          currentChapter = {
-            title: normalizedTitle,
-            startPage: pageData.page,
-            endPage: pageData.page,
-            paragraphs: [p],
-          };
-          continue;
         }
       }
 
-      if (!currentChapter) {
-        currentChapter = {
-          title: metadata.title || 'Bölüm 1',
-          startPage: pageData.page,
-          endPage: pageData.page,
-          paragraphs: [],
-        };
-      }
-
-      currentChapter.paragraphs.push(p);
-      currentChapter.endPage = pageData.page;
+      consolidatedParagraphs.push(p);
     }
+  }
+
+  for (const p of consolidatedParagraphs) {
+    if (p.isHeading && p.text.length < 80) {
+      const normalizedTitle = collapseLetterSpacing(p.text.trim());
+      const isMajorChapterBreak =
+        /^(?:(?:BİRİNCİ|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI|YEDİNCİ|SEKİZİNCİ|DOKUZUNCU|ONUNCU|ON\s+BİRİNCİ|ON\s+İKİNCİ|ON\s+ÜÇÜNCÜ|ON\s+DÖRDÜNCÜ|ON\s+BEŞİNCİ|ON\s+ALTINCI|ON\s+YEDİNCİ|ON\s+SEKİZİNCİ|ON\s+DOKUZUNCU|YİRMİNCİ|YİRMİ\s+BİRİNCİ|YİRMİ\s+İKİNCİ)\s+(?:BÖLÜM|KISIM)|(?:BÖLÜM|KISIM|CHAPTER|PART)\s*(?:[0-9]{1,3}|[IVXLCDM]{1,6})?|GİRİŞ|ÖNSÖZ|SON\s*SÖZ|EPİLOG|PROLOG|İÇİNDEKİLER|iÇiNDEKiLER|[0-9]{1,2}\.?$|[IVXLCDM]{1,6}\.?$)/i.test(
+          normalizedTitle
+        );
+
+      if (currentChapter && (isMajorChapterBreak || currentChapter.paragraphs.length >= 4)) {
+        if (currentChapter.paragraphs.length > 0) {
+          currentChapter.endPage = p.pageNumber;
+          chaptersDrafts.push(currentChapter);
+          detectedExplicitChapters++;
+        }
+
+        currentChapter = {
+          title: normalizedTitle,
+          startPage: p.pageNumber,
+          endPage: p.pageNumber,
+          paragraphs: [p],
+        };
+        continue;
+      } else if (!currentChapter) {
+        currentChapter = {
+          title: normalizedTitle,
+          startPage: p.pageNumber,
+          endPage: p.pageNumber,
+          paragraphs: [p],
+        };
+        continue;
+      }
+    }
+
+    if (!currentChapter) {
+      currentChapter = {
+        title: metadata.title || 'Bölüm 1',
+        startPage: p.pageNumber,
+        endPage: p.pageNumber,
+        paragraphs: [],
+      };
+    }
+
+    currentChapter.paragraphs.push(p);
+    currentChapter.endPage = p.pageNumber;
 
     if (
       detectedExplicitChapters === 0 &&
       currentChapter &&
       currentChapter.paragraphs.length >= 30 &&
-      pageData.page % pagesPerChapterFallback === 0
+      p.pageNumber % pagesPerChapterFallback === 0
     ) {
-      currentChapter.endPage = pageData.page;
+      currentChapter.endPage = p.pageNumber;
       chaptersDrafts.push(currentChapter);
-      const nextStart = pageData.page + 1;
+      const nextStart = p.pageNumber + 1;
       currentChapter = {
         title: `Bölüm ${chaptersDrafts.length + 1} (Sayfa ${nextStart})`,
         startPage: nextStart,
