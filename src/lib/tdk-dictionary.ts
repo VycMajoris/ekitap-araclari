@@ -300,7 +300,11 @@ export class TdkDictionary {
 
       for (const t of rawTokens) {
         const tLower = t.toLowerCase();
-        if (QUESTION_CLITICS.has(tLower) || (STANDALONE_PARTICLES.has(tLower) && t.length >= 2)) {
+        if (
+          QUESTION_CLITICS.has(tLower) ||
+          (STANDALONE_PARTICLES.has(tLower) && t.length >= 2) ||
+          tLower === 'o'
+        ) {
           if (currentTokens.length > 0) {
             chunks.push({ tokens: currentTokens, isParticle: false });
             currentTokens = [];

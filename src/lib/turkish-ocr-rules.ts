@@ -76,20 +76,55 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
     description: 'Bitişik satır sonu hece/ek birleştirme',
   },
   {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ])[·•\u00B7\u2022]([a-zA-ZçğıöşüÇĞİÖŞÜ])/gu,
+    replacement: '$1$2',
+    description: 'Kelime içi bozuk nokta/madde işareti temizliği',
+  },
+  {
     pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]+)\s+([bcçdfgğhjklmnprsştvyzBCÇDFGĞHJKLMNPRSŞTVYZ])\s+([a-zA-ZçğıöşüÇĞİÖŞÜ]{3,})/gu,
     replacement: (match: string, ...args: unknown[]) => {
       const w1 = (args[0] as string) || '';
       const char = (args[1] as string) || '';
       const w2 = (args[2] as string) || '';
 
+      const leftJoined = w1 + char;
       const rightJoined = char + w2;
       const dict = TdkDictionary.getInstance();
-      if (dict.validate(rightJoined)) {
+
+      const isW1Valid = dict.isStandaloneWord(w1);
+      const isW2Valid = dict.isStandaloneWord(w2);
+      const isLeftValid = dict.validate(leftJoined);
+      const isRightValid = dict.validate(rightJoined);
+
+      if (isW2Valid && isLeftValid) {
+        return `${leftJoined} ${w2}`;
+      }
+      if (isW1Valid && isRightValid && !isW2Valid) {
         return `${w1} ${rightJoined}`;
+      }
+      if (isRightValid && !isLeftValid) {
+        return `${w1} ${rightJoined}`;
+      }
+      if (isLeftValid) {
+        return `${leftJoined} ${w2}`;
       }
       return match;
     },
-    description: 'Ayrık tekil harf sağa bağlama',
+    description: 'Ayrık tekil harf çift yönlü bağlama',
+  },
+  {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]{3,})\s+(n?m[ıiuü]ş(?:t[ıiuü][a-zçğıöşü]*)?|r[ıiuü]m[a-zçğıöşü]*|r[ıiuü]n[a-zçğıöşü]*)(?![\p{L}\p{N}])/gu,
+    replacement: (match: string, ...args: unknown[]) => {
+      const stem = (args[0] as string) || '';
+      const suffix = (args[1] as string) || '';
+      const joined = stem + suffix;
+      const dict = TdkDictionary.getInstance();
+      if (dict.validate(joined)) {
+        return joined;
+      }
+      return match;
+    },
+    description: 'Ayrık fiil/iyelik eki birleştirme',
   },
   {
     pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]{2,})\s+(ğ[a-zçğıöşü]{1,})/gu,
@@ -625,6 +660,11 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
     pattern: new RegExp(`${WB}[\uFFFD]ubat${WE}`, 'gi'),
     replacement: (match) => replaceCasePreserving(match, 'şubat'),
     description: "'ubat' -> 'şubat'",
+  },
+  {
+    pattern: new RegExp(`${WB}bıraz(cık|ı)?${WE}`, 'gi'),
+    replacement: (match, suffix = '') => replaceCasePreserving(match, 'biraz' + (suffix || '')),
+    description: "'bıraz...' -> 'biraz...'",
   },
   {
     pattern: new RegExp(`${WB}bir\\s+çok${WE}`, 'gi'),

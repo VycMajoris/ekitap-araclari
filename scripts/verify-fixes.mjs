@@ -335,6 +335,44 @@ const testCases = [
     check: (res) => {
       assert(res.includes("değiştirmek"), "Must reconnect verbal suffix 'değiş tirmek' -> 'değiştirmek'");
     }
+  },
+  {
+    input: '"Faraday kesesi," dedi k aynı anda üçümüz birden.',
+    expected: '"Faraday kesesi," dedik aynı anda üçümüz birden.',
+    check: (res) => {
+      assert(res.includes("dedik aynı"), "Must bind 'k' leftwards to 'dedi' -> 'dedik'");
+      assert(!res.includes("kaynı"), "Must NOT create 'kaynı'");
+    }
+  },
+  {
+    input: 'taklala r atıyordu.',
+    expected: 'taklalar atıyordu.',
+    check: (res) => {
+      assert(res.includes("taklalar atıyordu"), "Must bind 'r' leftwards to 'taklala' -> 'taklalar'");
+      assert(!res.includes("ratıyordu"), "Must NOT create 'ratıyordu'");
+    }
+  },
+  {
+    input: 'Dr. Joo örtülere sarmala nmış yığını özenle bıraktı kolla rıma.',
+    expected: 'Dr. Joo örtülere sarmalanmış yığını özenle bıraktı kollarıma.',
+    check: (res) => {
+      assert(res.includes("sarmalanmış"), "Must reconnect 'sarmala nmış' -> 'sarmalanmış'");
+      assert(res.includes("kollarıma"), "Must reconnect 'kolla rıma' -> 'kollarıma'");
+    }
+  },
+  {
+    input: '"B·ıraz soruştur umd . . ."',
+    expected: '"Biraz soruştur umd..."',
+    check: (res) => {
+      assert(res.includes("Biraz"), "Must clean intra-word bullet/dot 'B·ıraz' -> 'Biraz'");
+    }
+  },
+  {
+    input: 'bir dava bulunduğunu söylemek zorundasın. O tür açıklamalar',
+    expected: 'bir dava bulunduğunu söylemek zorundasın. O tür açıklamalar',
+    check: (res) => {
+      assert(res.includes("O tür"), "Must NOT merge 'O' + 'tür' into 'Otür'");
+    }
   }
 ];
 
