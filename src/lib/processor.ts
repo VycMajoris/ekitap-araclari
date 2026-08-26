@@ -121,19 +121,25 @@ export interface ProcessorCallbacks {
 /**
  * Group suspicious blocks into character-bounded chunks for efficient LLM processing.
  */
-function createBlockBatches(blocks: TextBlock[], maxCharsPerBatch: number = 10000): TextBlock[][] {
-  const batches: TextBlock[][] = [];
-  let currentBatch: TextBlock[] = [];
+export interface QueuedBlockItem {
+  chapterId: string;
+  chapterTitle: string;
+  block: TextBlock;
+}
+
+function createQueuedBlockBatches(items: QueuedBlockItem[], maxCharsPerBatch: number = 10000): QueuedBlockItem[][] {
+  const batches: QueuedBlockItem[][] = [];
+  let currentBatch: QueuedBlockItem[] = [];
   let currentLength = 0;
 
-  for (const block of blocks) {
-    const textLen = block.originalHtml.length;
+  for (const item of items) {
+    const textLen = item.block.originalHtml.length;
     if (currentBatch.length > 0 && currentLength + textLen > maxCharsPerBatch) {
       batches.push(currentBatch);
-      currentBatch = [block];
+      currentBatch = [item];
       currentLength = textLen;
     } else {
-      currentBatch.push(block);
+      currentBatch.push(item);
       currentLength += textLen;
     }
   }
@@ -309,16 +315,14 @@ function parseBlockTagAndContent(raw: string, defaultTag: string = 'p'): { tag: 
  * Process a batch of TextBlocks through LLM.
  */
 async function processLlmBatch(
-  batch: TextBlock[],
+  batch: QueuedBlockItem[],
   options: ProcessingOptions,
-  chapterId: string,
-  chapterTitle: string,
   bookTitle: string | undefined,
   rollingContext: { source: string; translated: string }[],
   callbacks: ProcessorCallbacks,
   signal?: AbortSignal
 ): Promise<void> {
-  if (!isProviderReady(options)) return;
+  if (!isProviderReady(options) || batch.length === 0) return;
 
   const isTranslation = options.taskType === 'translate';
   const cachePrefix = isTranslation
@@ -327,7 +331,8 @@ async function processLlmBatch(
   const cacheEntries: Omit<Parameters<typeof saveBatchCachedCorrections>[0][0], 'key' | 'timestamp'>[] = [];
 
   if (batch.length === 1) {
-    const singleBlock = batch[0];
+    const item = batch[0];
+    const singleBlock = item.block;
     const textBeforeLlm = singleBlock.correctedText;
 
     let userPrompt = `<${singleBlock.elementTag}>${singleBlock.correctedHtml}</${singleBlock.elementTag}>`;
@@ -337,7 +342,7 @@ async function processLlmBatch(
         targetLang: options.targetLanguage || 'tr',
         style: options.translationStyle || 'literary',
         bookTitle,
-        chapterTitle,
+        chapterTitle: item.chapterTitle,
         rollingContext: options.enableRollingContext !== false ? rollingContext : undefined,
         glossary: options.glossary,
         content: `[BLOCK_0]\n<${singleBlock.elementTag}>${singleBlock.originalHtml}</${singleBlock.elementTag}>\n[/BLOCK_0]`,
@@ -398,8 +403,8 @@ async function processLlmBatch(
             timestamp: new Date().toLocaleTimeString('tr-TR'),
             source: 'llm',
             ruleName: ruleLabel,
-            chapterId,
-            chapterTitle,
+            chapterId: item.chapterId,
+            chapterTitle: item.chapterTitle,
             blockId: singleBlock.id,
             originalText: textBeforeLlm,
             correctedText: singleBlock.correctedText,
@@ -416,11 +421,11 @@ async function processLlmBatch(
       console.warn('Tekil blok LLM uyarısı:', err);
     }
   } else {
-    const textsBeforeLlm = batch.map((b) => b.correctedText);
+    const textsBeforeLlm = batch.map((item) => item.block.correctedText);
     const formattedInput = batch
       .map(
-        (b, idx) =>
-          `[BLOCK_${idx}]\n<${b.elementTag}>${isTranslation ? b.originalHtml : b.correctedHtml}</${b.elementTag}>\n[/BLOCK_${idx}]`
+        (item, idx) =>
+          `[BLOCK_${idx}]\n<${item.block.elementTag}>${isTranslation ? item.block.originalHtml : item.block.correctedHtml}</${item.block.elementTag}>\n[/BLOCK_${idx}]`
       )
       .join('\n\n');
 
@@ -432,7 +437,7 @@ async function processLlmBatch(
         targetLang: options.targetLanguage || 'tr',
         style: options.translationStyle || 'literary',
         bookTitle,
-        chapterTitle,
+        chapterTitle: batch[0]?.chapterTitle,
         rollingContext: options.enableRollingContext !== false ? rollingContext : undefined,
         glossary: options.glossary,
         content: formattedInput,
@@ -449,7 +454,8 @@ async function processLlmBatch(
       const parsedBlocks = parseBatchResponse(response, batch.length);
       for (let i = 0; i < batch.length; i++) {
         if (parsedBlocks[i] && parsedBlocks[i].length > 0) {
-          const block = batch[i];
+          const item = batch[i];
+          const block = item.block;
           const textBeforeLlm = textsBeforeLlm[i];
           const { tag, innerHtml, text } = parseBlockTagAndContent(parsedBlocks[i], block.elementTag);
           block.elementTag = tag;
@@ -489,8 +495,8 @@ async function processLlmBatch(
               timestamp: new Date().toLocaleTimeString('tr-TR'),
               source: 'llm',
               ruleName: ruleLabel,
-              chapterId,
-              chapterTitle,
+              chapterId: item.chapterId,
+              chapterTitle: item.chapterTitle,
               blockId: block.id,
               originalText: textBeforeLlm,
               correctedText: block.correctedText,
@@ -610,8 +616,8 @@ export async function processEpubChapters(
 
   callbacks.onStatsUpdated?.({ ...stats });
 
-  // Shared rolling context buffer across the chapter/book
   const rollingContext: { source: string; translated: string }[] = [];
+  const globalSuspiciousQueue: QueuedBlockItem[] = [];
 
   for (const chapter of selectedChapters) {
     if (signal?.aborted) break;
@@ -620,20 +626,41 @@ export async function processEpubChapters(
     chapter.errorMessage = undefined;
     callbacks.onChapterUpdated?.(chapter);
 
-    try {
-      const suspiciousBlocks: TextBlock[] = [];
+    let chapterPendingAiBlocks = 0;
 
-      // 1. First Pass: Cache Lookup & Pre-Processing
-      for (const block of chapter.blocks) {
-        if (
-          block.status === 'completed' &&
-          block.correctedText &&
-          block.correctedText !== block.originalText
-        ) {
+    for (const block of chapter.blocks) {
+      if (
+        block.status === 'completed' &&
+        block.correctedText &&
+        block.correctedText !== block.originalText
+      ) {
+        stats.processedBlocks++;
+        stats.totalFixedWords += block.diffCount;
+        chapter.stats.processedBlocks++;
+        chapter.stats.fixedWords += block.diffCount;
+        if (isTranslation) {
+          rollingContext.push({
+            source: block.originalText,
+            translated: block.correctedText,
+          });
+          if (rollingContext.length > 5) rollingContext.shift();
+        }
+        continue;
+      }
+
+      if (options.useLlm) {
+        const cached = await getCachedCorrection(options.model, block.originalText, cachePrefix);
+        if (cached) {
+          block.correctedHtml = cached.correctedHtml;
+          block.correctedText = cached.correctedText;
+          block.diffCount = cached.diffCount;
+          block.status = 'completed';
           stats.processedBlocks++;
           stats.totalFixedWords += block.diffCount;
           chapter.stats.processedBlocks++;
           chapter.stats.fixedWords += block.diffCount;
+          callbacks.onBlockUpdated?.(chapter.id, block);
+
           if (isTranslation) {
             rollingContext.push({
               source: block.originalText,
@@ -641,212 +668,197 @@ export async function processEpubChapters(
             });
             if (rollingContext.length > 5) rollingContext.shift();
           }
+
+          callbacks.onDebugLog?.({
+            id: `cache-${block.id}-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString('tr-TR'),
+            source: 'system',
+            ruleName: `Önbellekten Yüklendi (${cached.model} - 0 Token)`,
+            chapterId: chapter.id,
+            chapterTitle: chapter.title,
+            blockId: block.id,
+            originalText: block.originalText,
+            correctedText: block.correctedText,
+            changes: [{ before: block.originalText, after: block.correctedText }],
+          });
           continue;
         }
+      }
 
-        if (options.useLlm) {
-          const cached = await getCachedCorrection(options.model, block.originalText, cachePrefix);
-          if (cached) {
-            block.correctedHtml = cached.correctedHtml;
-            block.correctedText = cached.correctedText;
-            block.diffCount = cached.diffCount;
-            block.status = 'completed';
-            stats.processedBlocks++;
-            stats.totalFixedWords += block.diffCount;
-            chapter.stats.processedBlocks++;
-            chapter.stats.fixedWords += block.diffCount;
-            callbacks.onBlockUpdated?.(chapter.id, block);
+      let text = block.originalHtml;
+      if (!isTranslation && options.useRegexPreClean) {
+        const { cleaned, logs } = applyTurkishRegexWithLogs(
+          text,
+          block.id,
+          chapter.id,
+          chapter.title
+        );
+        text = cleaned;
+        block.correctedHtml = text;
 
-            if (isTranslation) {
-              rollingContext.push({
-                source: block.originalText,
-                translated: block.correctedText,
-              });
-              if (rollingContext.length > 5) rollingContext.shift();
+        if (logs.length > 0) {
+          for (const log of logs) {
+            callbacks.onDebugLog?.(log);
+          }
+          if (options.debugMode) {
+            console.log(`[Regex Debug] Chapter ${chapter.title} Block ${block.id}:`, logs);
+            if (typeof console.table === 'function') {
+              console.table(logs);
             }
-
-            callbacks.onDebugLog?.({
-              id: `cache-${block.id}-${Date.now()}`,
-              timestamp: new Date().toLocaleTimeString('tr-TR'),
-              source: 'system',
-              ruleName: `Önbellekten Yüklendi (${cached.model} - 0 Token)`,
-              chapterId: chapter.id,
-              chapterTitle: chapter.title,
-              blockId: block.id,
-              originalText: block.originalText,
-              correctedText: block.correctedText,
-              changes: [{ before: block.originalText, after: block.correctedText }],
-            });
-            continue;
           }
         }
+      } else {
+        block.correctedHtml = text;
+      }
 
-        let text = block.originalHtml;
-        if (!isTranslation && options.useRegexPreClean) {
-          const { cleaned, logs } = applyTurkishRegexWithLogs(
-            text,
-            block.id,
-            chapter.id,
-            chapter.title
-          );
-          text = cleaned;
-          block.correctedHtml = text;
+      const tempDiv = typeof document !== 'undefined' ? document.createElement('div') : null;
+      if (tempDiv) {
+        tempDiv.innerHTML = text;
+        block.correctedText = tempDiv.textContent || text;
+      } else {
+        block.correctedText = text.replace(/<[^>]*>/g, '');
+      }
 
-          if (logs.length > 0) {
-            for (const log of logs) {
-              callbacks.onDebugLog?.(log);
-            }
-            if (options.debugMode) {
-              console.log(`[Regex Debug] Chapter ${chapter.title} Block ${block.id}:`, logs);
-              if (typeof console.table === 'function') {
-                console.table(logs);
-              }
-            }
-          }
+      const { fixedWordCount } = computeTextDiff(block.originalText, block.correctedText);
+      block.diffCount = fixedWordCount;
+
+      if (isTranslation) {
+        if (options.useLlm && isProviderReady(options)) {
+          chapterPendingAiBlocks++;
+          globalSuspiciousQueue.push({ chapterId: chapter.id, chapterTitle: chapter.title, block });
         } else {
-          block.correctedHtml = text;
+          block.status = 'completed';
+          stats.processedBlocks++;
+          callbacks.onBlockUpdated?.(chapter.id, block);
         }
-
-        const tempDiv = typeof document !== 'undefined' ? document.createElement('div') : null;
-        if (tempDiv) {
-          tempDiv.innerHTML = text;
-          block.correctedText = tempDiv.textContent || text;
+      } else if (scanMode === 'rules_only') {
+        block.status = 'completed';
+        stats.processedBlocks++;
+        stats.totalFixedWords += block.diffCount;
+        chapter.stats.processedBlocks++;
+        chapter.stats.fixedWords += block.diffCount;
+        callbacks.onBlockUpdated?.(chapter.id, block);
+      } else if (scanMode === 'smart') {
+        const isSuspicious = hasOcrAnomaly(block.correctedText);
+        if (isSuspicious && options.useLlm && isProviderReady(options)) {
+          chapterPendingAiBlocks++;
+          globalSuspiciousQueue.push({ chapterId: chapter.id, chapterTitle: chapter.title, block });
         } else {
-          block.correctedText = text.replace(/<[^>]*>/g, '');
-        }
-
-        const { fixedWordCount } = computeTextDiff(block.originalText, block.correctedText);
-        block.diffCount = fixedWordCount;
-
-        if (isTranslation) {
-          // In translation mode, all text blocks are queued for LLM translation
-          if (options.useLlm && isProviderReady(options)) {
-            suspiciousBlocks.push(block);
-          } else {
-            block.status = 'completed';
-            stats.processedBlocks++;
-            callbacks.onBlockUpdated?.(chapter.id, block);
-          }
-        } else if (scanMode === 'rules_only') {
-          // Instant completion without LLM
           block.status = 'completed';
           stats.processedBlocks++;
           stats.totalFixedWords += block.diffCount;
           chapter.stats.processedBlocks++;
           chapter.stats.fixedWords += block.diffCount;
           callbacks.onBlockUpdated?.(chapter.id, block);
-        } else if (scanMode === 'smart') {
-          const isSuspicious = hasOcrAnomaly(block.correctedText);
-          if (isSuspicious && options.useLlm && isProviderReady(options)) {
-            suspiciousBlocks.push(block);
-          } else {
-            block.status = 'completed';
-            stats.processedBlocks++;
-            stats.totalFixedWords += block.diffCount;
-            chapter.stats.processedBlocks++;
-            chapter.stats.fixedWords += block.diffCount;
-            callbacks.onBlockUpdated?.(chapter.id, block);
-          }
+        }
+      } else {
+        if (options.useLlm && isProviderReady(options)) {
+          chapterPendingAiBlocks++;
+          globalSuspiciousQueue.push({ chapterId: chapter.id, chapterTitle: chapter.title, block });
         } else {
-          if (options.useLlm && isProviderReady(options)) {
-            suspiciousBlocks.push(block);
-          } else {
-            block.status = 'completed';
-            stats.processedBlocks++;
-            stats.totalFixedWords += block.diffCount;
-            chapter.stats.processedBlocks++;
-            chapter.stats.fixedWords += block.diffCount;
-            callbacks.onBlockUpdated?.(chapter.id, block);
-          }
+          block.status = 'completed';
+          stats.processedBlocks++;
+          stats.totalFixedWords += block.diffCount;
+          chapter.stats.processedBlocks++;
+          chapter.stats.fixedWords += block.diffCount;
+          callbacks.onBlockUpdated?.(chapter.id, block);
         }
       }
+    }
 
-      callbacks.onStatsUpdated?.({ ...stats });
+    const headingBlock = chapter.blocks.find(
+      (b) => b.elementTag === 'h1' || b.elementTag === 'h2' || b.elementTag === 'h3'
+    );
+    if (headingBlock && headingBlock.correctedText.trim().length > 0 && headingBlock.correctedText.length < 75) {
+      chapter.title = headingBlock.correctedText.trim();
+    }
 
-      if (suspiciousBlocks.length > 0 && options.useLlm && isProviderReady(options)) {
-        const defaultChunkSize = isTranslation ? 7000 : 12000;
-        const batches = createBlockBatches(suspiciousBlocks, options.chunkSize || defaultChunkSize);
-
-        const isHighThroughputProvider =
-          options.provider === 'antigravity' ||
-          options.provider === 'gemini_api' ||
-          options.provider === 'custom_openai';
-
-        let concurrency = 1;
-        if (isTranslation) {
-          concurrency = options.enableRollingContext !== false ? 1 : Math.max(1, Math.min(options.concurrency || 2, 3));
-        } else if (isHighThroughputProvider) {
-          concurrency = Math.max(1, Math.min(options.concurrency || 3, 4));
-        } else {
-          concurrency = Math.max(1, Math.min(options.concurrency || 2, 2));
-        }
-
-        for (let i = 0; i < batches.length; i += concurrency) {
-          if (signal?.aborted) break;
-
-          const currentBatches = batches.slice(i, i + concurrency);
-          await Promise.all(
-            currentBatches.map(async (batch) => {
-              await processLlmBatch(
-                batch,
-                options,
-                chapter.id,
-                chapter.title,
-                bookTitle,
-                rollingContext,
-                callbacks,
-                signal
-              );
-
-              for (const block of batch) {
-                stats.processedBlocks++;
-                stats.totalFixedWords += block.diffCount;
-                chapter.stats.processedBlocks++;
-                chapter.stats.fixedWords += block.diffCount;
-                callbacks.onBlockUpdated?.(chapter.id, block);
-              }
-            })
-          );
-
-          if (i + concurrency < batches.length && !signal?.aborted) {
-            const throttleMs = isHighThroughputProvider
-              ? isTranslation ? 400 : 200
-              : isTranslation ? 1000 : 1500;
-            await new Promise((resolve) => setTimeout(resolve, throttleMs));
-          }
-
-          stats.elapsedSeconds = Math.round((Date.now() - (stats.startTime || Date.now())) / 1000);
-          if (stats.processedBlocks > 0) {
-            const speed = stats.processedBlocks / stats.elapsedSeconds;
-            const remainingBlocks = stats.totalBlocks - stats.processedBlocks;
-            stats.estimatedRemainingSeconds = speed > 0 ? Math.round(remainingBlocks / speed) : 0;
-          }
-          callbacks.onStatsUpdated?.({ ...stats });
-        }
-      }
-
-      const headingBlock = chapter.blocks.find(
-        (b) => b.elementTag === 'h1' || b.elementTag === 'h2' || b.elementTag === 'h3'
-      );
-      if (headingBlock && headingBlock.correctedText.trim().length > 0 && headingBlock.correctedText.length < 75) {
-        chapter.title = headingBlock.correctedText.trim();
-      }
-
+    if (chapterPendingAiBlocks === 0) {
       chapter.status = 'completed';
       stats.completedChapters++;
       callbacks.onChapterUpdated?.(chapter);
-      callbacks.onStatsUpdated?.({ ...stats });
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        chapter.status = 'idle';
-        callbacks.onChapterUpdated?.(chapter);
-        break;
+    }
+  }
+
+  callbacks.onStatsUpdated?.({ ...stats });
+
+  if (globalSuspiciousQueue.length > 0 && options.useLlm && isProviderReady(options) && !signal?.aborted) {
+    const defaultChunkSize = isTranslation ? 7000 : 12000;
+    const batches = createQueuedBlockBatches(globalSuspiciousQueue, options.chunkSize || defaultChunkSize);
+
+    const isHighThroughputProvider =
+      options.provider === 'antigravity' ||
+      options.provider === 'gemini_api' ||
+      options.provider === 'custom_openai';
+
+    let concurrency = 1;
+    if (isTranslation) {
+      concurrency = options.enableRollingContext !== false ? 1 : Math.max(1, Math.min(options.concurrency || 2, 3));
+    } else if (isHighThroughputProvider) {
+      concurrency = Math.max(1, Math.min(options.concurrency || 3, 4));
+    } else {
+      concurrency = Math.max(1, Math.min(options.concurrency || 2, 2));
+    }
+
+    for (let i = 0; i < batches.length; i += concurrency) {
+      if (signal?.aborted) break;
+
+      const currentBatches = batches.slice(i, i + concurrency);
+      await Promise.all(
+        currentBatches.map(async (batch) => {
+          await processLlmBatch(
+            batch,
+            options,
+            bookTitle,
+            rollingContext,
+            callbacks,
+            signal
+          );
+
+          for (const item of batch) {
+            stats.processedBlocks++;
+            stats.totalFixedWords += item.block.diffCount;
+            const targetChapter = selectedChapters.find((c) => c.id === item.chapterId);
+            if (targetChapter) {
+              targetChapter.stats.processedBlocks++;
+              targetChapter.stats.fixedWords += item.block.diffCount;
+              if (targetChapter.blocks.every((b) => b.status === 'completed')) {
+                if (targetChapter.status !== 'completed') {
+                  targetChapter.status = 'completed';
+                  stats.completedChapters++;
+                  callbacks.onChapterUpdated?.(targetChapter);
+                }
+              }
+            }
+            callbacks.onBlockUpdated?.(item.chapterId, item.block);
+          }
+        })
+      );
+
+      if (i + concurrency < batches.length && !signal?.aborted) {
+        const throttleMs = isHighThroughputProvider
+          ? isTranslation ? 400 : 200
+          : isTranslation ? 1000 : 1500;
+        await new Promise((resolve) => setTimeout(resolve, throttleMs));
       }
-      const msg = err instanceof Error ? err.message : String(err);
-      chapter.status = 'error';
-      chapter.errorMessage = msg;
-      callbacks.onError?.(chapter.id, msg);
+
+      stats.elapsedSeconds = Math.round((Date.now() - (stats.startTime || Date.now())) / 1000);
+      if (stats.processedBlocks > 0) {
+        const speed = stats.processedBlocks / stats.elapsedSeconds;
+        const remainingBlocks = stats.totalBlocks - stats.processedBlocks;
+        stats.estimatedRemainingSeconds = speed > 0 ? Math.round(remainingBlocks / speed) : 0;
+      }
+      callbacks.onStatsUpdated?.({ ...stats });
+    }
+  }
+
+  for (const chapter of selectedChapters) {
+    if (chapter.status !== 'completed' && chapter.blocks.every((b) => b.status === 'completed')) {
+      chapter.status = 'completed';
       callbacks.onChapterUpdated?.(chapter);
     }
   }
+
+  stats.completedChapters = selectedChapters.filter((c) => c.status === 'completed').length;
+  callbacks.onStatsUpdated?.({ ...stats });
 }
