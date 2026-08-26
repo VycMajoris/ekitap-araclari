@@ -7,12 +7,11 @@
 %100 Tarayıcı Üzerinde Çalışan, Gizlilik Odaklı, Türkçe Dilbilgisi ve Yapay Zeka Destekli eKitap Araç Seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.8-blue?style=flat&logo=react)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=flat&logo=tailwindcss)](https://tailwindcss.com/)
+[![Version](https://img.shields.io/badge/Version-v0.2.0-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Tests: 23 Passed](https://img.shields.io/badge/Tests-23%2F23%20Passed-success)](scripts/verify-fixes.mjs)
+[![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 
-[Özellikler](#-özellikler) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Kurulum](#-hızlı-başlangıç) • [Mimari](#-teknik-mimari) • [Lisans](#-lisans)
+[Özellikler](#-özellikler) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
 
 </div>
 
