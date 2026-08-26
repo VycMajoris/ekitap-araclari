@@ -91,12 +91,35 @@ const SUFFIXES: string[] = [
   'siz', 'sız', 'suz', 'süz',
   'li', 'lı', 'lu', 'lü',
   'ci', 'cı', 'cu', 'cü', 'çi', 'çı', 'çu', 'çü',
+  'yışından', 'yışınden', 'yışında', 'yışinde', 'yışıyla', 'yişiyle',
+  'yışına', 'yişine', 'yışını', 'yişini', 'yışı', 'yişi', 'yuşu', 'yüşü', 'yış', 'yiş', 'yuş', 'yüş',
+  'diğimizde', 'dığımızda', 'düğünüzde', 'duğunuzda',
+  'diğinde', 'dığında', 'düğünde', 'duğunda',
+  'diğimde', 'dığımda', 'düğümde', 'duğumda',
+  'diğini', 'dığını', 'düğünü', 'duğunu',
+  'diğine', 'dığına', 'düğüne', 'duğuna',
+  'diğinden', 'dığından', 'düğünden', 'duğundan',
+  'tiğinde', 'tığında', 'tüğünde', 'tuğunda',
+  'tiğimde', 'tığımda', 'tiğimizde', 'tığımızda',
+  'ğinde', 'ğında', 'ğünde', 'ğunda',
+  'ğimde', 'ğımda', 'ğümde', 'ğumda',
+  'ğimizde', 'ğımızda', 'ğümüzde', 'ğumuzda',
+  'ğünü', 'ğını', 'ğunu', 'ğini',
+  'ğine', 'ğına', 'ğuna', 'ğüne',
+  'ğinden', 'ğından', 'ğundan', 'ğünden',
+  'ğüm', 'ğım', 'ğim', 'ğum',
   'ce', 'ca', 'çe', 'ça', 'ken', 'leyin'
 ].sort((a, b) => b.length - a.length);
 
+const QUESTION_CLITICS = new Set([
+  'mi', 'mı', 'mu', 'mü', 'misin', 'mısın', 'musun', 'müsün',
+  'miydi', 'mıydı', 'muydum', 'müydü', 'miyiz', 'mıyız'
+]);
+
 const STANDALONE_PARTICLES = new Set([
   've', 'ile', 'ama', 'fakat', 'için', 'gibi', 'bu', 'şu', 'o', 'veya',
-  'ise', 'çünkü', 'ya', 'da', 'de', 'ki', 'ne', 'bir', 'her', 'az', 'çok', 'daha'
+  'ise', 'çünkü', 'ya', 'da', 'de', 'ki', 'ne', 'bir', 'her', 'az', 'çok', 'daha',
+  'hep', 'tek', 'gün', 'tüm', 'ayı', 'ay', 'işi', 'iş', 'iyi', 'onu', 'sen', 'ben', 'biz', 'siz', 'onlar', 'var', 'yok'
 ]);
 
 export class TdkDictionary {
@@ -245,11 +268,20 @@ export class TdkDictionary {
     return false;
   }
 
+  public isStandaloneWord(word: string): boolean {
+    if (/[’']/.test(word)) return true;
+    const clean = this.normalizeTr(word);
+    if (QUESTION_CLITICS.has(clean)) return true;
+    if (STANDALONE_PARTICLES.has(clean)) return true;
+    if (clean.length >= 2 && this.wordSet.has(clean)) return true;
+    return false;
+  }
+
   public repairDynamicSplitWords(text: string): { repaired: string; fixedCount: number } {
     if (!text || text.length < 3) return { repaired: text, fixedCount: 0 };
 
     let fixedCount = 0;
-    const splitRegex = /(?<![\p{L}\p{N}])(?:[\p{L}]{1,3}\s+){1,15}[\p{L}]{1,3}(?![\p{L}\p{N}])/gu;
+    const splitRegex = /(?<![\p{L}\p{N}'’])(?:[\p{L}]{1,3}\s+){1,15}[\p{L}]{1,3}(?![\p{L}\p{N}'’])/gu;
 
     const repaired = text.replace(splitRegex, (match) => {
       const rawTokens = match.trim().split(/\s+/);
@@ -267,7 +299,8 @@ export class TdkDictionary {
       let currentTokens: string[] = [];
 
       for (const t of rawTokens) {
-        if (STANDALONE_PARTICLES.has(t.toLowerCase()) && t.length >= 2) {
+        const tLower = t.toLowerCase();
+        if (QUESTION_CLITICS.has(tLower) || (STANDALONE_PARTICLES.has(tLower) && t.length >= 2)) {
           if (currentTokens.length > 0) {
             chunks.push({ tokens: currentTokens, isParticle: false });
             currentTokens = [];
@@ -284,6 +317,18 @@ export class TdkDictionary {
       const processedChunks: string[] = [];
       for (const chunk of chunks) {
         if (chunk.isParticle || chunk.tokens.length <= 1) {
+          processedChunks.push(chunk.tokens.join(' '));
+          continue;
+        }
+
+        const hasApostrophe = chunk.tokens.some((t) => /[’']/.test(t));
+        if (hasApostrophe) {
+          processedChunks.push(chunk.tokens.join(' '));
+          continue;
+        }
+
+        const areAllValidStandalone = chunk.tokens.every((t) => t.length >= 2 && this.isStandaloneWord(t));
+        if (areAllValidStandalone) {
           processedChunks.push(chunk.tokens.join(' '));
           continue;
         }

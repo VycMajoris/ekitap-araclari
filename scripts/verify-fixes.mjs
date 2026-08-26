@@ -253,6 +253,88 @@ const testCases = [
       assert(res.includes("Tarihi"), "Must stitch 'T ar i h i' -> 'Tarihi' with uppercase preserved");
       assert(res.includes("anlattı"), "Must stitch 'a n l a t t ı' -> 'anlattı'");
     }
+  },
+  {
+    input: 'Kalktım ayağa. "İyi ş anslar."',
+    expected: 'Kalktım ayağa. "İyi şanslar."',
+    check: (res) => {
+      assert(res.includes("İyi şanslar"), "Must bind single letter 'ş' rightwards to 'şanslar'");
+      assert(!res.includes("i̇yiş"), "Must NOT create 'i̇yiş'");
+    }
+  },
+  {
+    input: '"Luciditee\'nin E serisini sen yapmışsın. Çeyrek M, de ğil mi?"',
+    expected: '"Luciditee\'nin E serisini sen yapmışsın. Çeyrek M, değil mi?"',
+    check: (res) => {
+      assert(res.includes("değil mi"), "Must repair 'de ğil' -> 'değil'");
+      assert(res.includes("E serisini"), "Must NOT merge 'E' into 'Luciditee'");
+    }
+  },
+  {
+    input: 'Rowan\'ın aklı en iyi karanlıkta çalışır.',
+    expected: 'Rowan\'ın aklı en iyi karanlıkta çalışır.',
+    check: (res) => {
+      assert(res.includes("en iyi"), "Must NOT merge valid standalone 'en' + 'iyi'");
+    }
+  },
+  {
+    input: '"Öyle mi?" dedim. "Onu mu kastettin, Rowan?"',
+    expected: '"Öyle mi?" dedim. "Onu mu kastettin, Rowan?"',
+    check: (res) => {
+      assert(res.includes("Onu mu"), "Must NOT merge question clitic 'mu' into 'onumu'");
+    }
+  },
+  {
+    input: 'Gersh Andy\'ye ayı ve güneşi vadedecek',
+    expected: 'Gersh Andy\'ye ayı ve güneşi vadedecek',
+    check: (res) => {
+      assert(res.includes("Andy'ye ayı"), "Must NOT merge 'Andy'ye' + 'ayı'");
+    }
+  },
+  {
+    input: 'Hak etmedi ğimde bile bana hep iyi davranmıştı.',
+    expected: 'Hak etmediğimde bile bana hep iyi davranmıştı.',
+    check: (res) => {
+      assert(res.includes("etmediğimde"), "Must reconnect suffix 'etmedi ğimde' -> 'etmediğimde'");
+      assert(res.includes("hep iyi"), "Must NOT merge 'hep' + 'iyi'");
+    }
+  },
+  {
+    input: 'O yüzden onaylama yışı dokunuyordu.',
+    expected: 'O yüzden onaylamayışı dokunuyordu.',
+    check: (res) => {
+      assert(res.includes("onaylamayışı"), "Must reconnect suffix 'onaylama yışı' -> 'onaylamayışı'");
+    }
+  },
+  {
+    input: '"Tek işi olan sen değilsin!',
+    expected: '"Tek işi olan sen değilsin!',
+    check: (res) => {
+      assert(res.includes("Tek işi"), "Must NOT merge 'Tek' + 'işi'");
+    }
+  },
+  {
+    input: 'Caleb\'ımın, di ğer tüm Caleblardan daha iyi, claha farklı göründü ğünü söylemem lazım.',
+    expected: 'Caleb\'ımın, diğer tüm Caleblardan daha iyi, daha farklı göründüğünü söylemem lazım.',
+    check: (res) => {
+      assert(res.includes("diğer tüm"), "Must repair 'di ğer' -> 'diğer' and keep 'tüm' separate");
+      assert(res.includes("daha farklı"), "Must repair 'claha' -> 'daha'");
+      assert(res.includes("göründüğünü"), "Must repair 'göründü ğünü' -> 'göründüğünü'");
+    }
+  },
+  {
+    input: 'Sende ne fikir ler var, Rowan?',
+    expected: 'Sende ne fikirler var, Rowan?',
+    check: (res) => {
+      assert(res.includes("fikirler"), "Must reconnect plural suffix 'fikir ler' -> 'fikirler'");
+    }
+  },
+  {
+    input: 'dünyayı değiş tirmek istiyor.',
+    expected: 'dünyayı değiştirmek istiyor.',
+    check: (res) => {
+      assert(res.includes("değiştirmek"), "Must reconnect verbal suffix 'değiş tirmek' -> 'değiştirmek'");
+    }
   }
 ];
 

@@ -75,6 +75,74 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
     },
     description: 'Bitişik satır sonu hece/ek birleştirme',
   },
+  {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]+)\s+([bcçdfgğhjklmnprsştvyzBCÇDFGĞHJKLMNPRSŞTVYZ])\s+([a-zA-ZçğıöşüÇĞİÖŞÜ]{3,})/gu,
+    replacement: (match: string, ...args: unknown[]) => {
+      const w1 = (args[0] as string) || '';
+      const char = (args[1] as string) || '';
+      const w2 = (args[2] as string) || '';
+
+      const rightJoined = char + w2;
+      const dict = TdkDictionary.getInstance();
+      if (dict.validate(rightJoined)) {
+        return `${w1} ${rightJoined}`;
+      }
+      return match;
+    },
+    description: 'Ayrık tekil harf sağa bağlama',
+  },
+  {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]{2,})\s+(ğ[a-zçğıöşü]{1,})/gu,
+    replacement: (_match: string, ...args: unknown[]) => {
+      const stem = (args[0] as string) || '';
+      const suffix = (args[1] as string) || '';
+      return `${stem}${suffix}`;
+    },
+    description: "'ğ' ile başlayan ayrık ek birleştirme",
+  },
+  {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]{2,})\s+(y(?:[ıiuü]ş[a-zçğıöşü]*|[ıiuü]nc[ae]|[ae]r[ae]k|[ıiuü]p))(?![\p{L}\p{N}])/gu,
+    replacement: (match: string, ...args: unknown[]) => {
+      const stem = (args[0] as string) || '';
+      const suffix = (args[1] as string) || '';
+      const joined = stem + suffix;
+      const dict = TdkDictionary.getInstance();
+      if (dict.validate(joined) && !dict.isStandaloneWord(suffix)) {
+        return joined;
+      }
+      return match;
+    },
+    description: "'y' ile başlayan ayrık ek birleştirme",
+  },
+  {
+    pattern: new RegExp(`${WB}(?:de\\s+ğil|cle\\s+ğil)${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'değil'),
+    description: "'de ğil' -> 'değil'",
+  },
+  {
+    pattern: new RegExp(`${WB}di\\s+ğer${WE}`, 'gi'),
+    replacement: (match) => replaceCasePreserving(match, 'diğer'),
+    description: "'di ğer' -> 'diğer'",
+  },
+  {
+    pattern: new RegExp(`${WB}değiş\\s+(tirmek|tirme|tirdi|tirerek|tirir)${WE}`, 'gi'),
+    replacement: (match, suffix = '') => replaceCasePreserving(match, 'değiş' + suffix),
+    description: "'değiş tirmek' -> 'değiştirmek'",
+  },
+  {
+    pattern: /([a-zA-ZçğıöşüÇĞİÖŞÜ]{2,})\s+(ler|lar|leri|ları|lerde|larda|lerden|lardan)(?![\p{L}\p{N}])/gu,
+    replacement: (match: string, ...args: unknown[]) => {
+      const stem = (args[0] as string) || '';
+      const suffix = (args[1] as string) || '';
+      const joined = stem + suffix;
+      const dict = TdkDictionary.getInstance();
+      if (dict.validate(joined)) {
+        return joined;
+      }
+      return match;
+    },
+    description: 'Ayrık çoğul eki birleştirme',
+  },
 
   // 2. Unwanted space before punctuation: "kelime , başka" -> "kelime, başka"
   {

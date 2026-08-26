@@ -191,7 +191,32 @@ function extractBlocksFromHtml(
     });
   });
 
-  return { title, blocks };
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const b1 = blocks[i];
+    const b2 = blocks[i + 1];
+    if (b1.elementTag === 'p' && b2.elementTag === 'p') {
+      const trimmed1 = b1.originalText.trim();
+      const trimmed2 = b2.originalText.trim();
+      if (
+        /[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]-$/.test(trimmed1) &&
+        /^[a-zçğıöşü]/.test(trimmed2)
+      ) {
+        const mergedText = trimmed1.slice(0, -1) + trimmed2;
+        const mergedHtml = b1.originalHtml.replace(/-\s*$/, '') + b2.originalHtml;
+        b1.originalHtml = mergedHtml;
+        b1.originalText = mergedText;
+        b1.correctedHtml = mergedHtml;
+        b1.correctedText = mergedText;
+        b2.originalHtml = '';
+        b2.originalText = '';
+        b2.correctedHtml = '';
+        b2.correctedText = '';
+        b2.status = 'completed';
+      }
+    }
+  }
+
+  return { title, blocks: blocks.filter((b) => b.originalText.length > 0 || b.originalHtml.length > 0) };
 }
 
 /**
