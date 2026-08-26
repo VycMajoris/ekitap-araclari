@@ -9,6 +9,7 @@ import {
 } from './openrouter';
 import { callAntigravityCorrection, callGeminiApiCorrection } from './antigravity';
 import { getCachedCorrection, saveBatchCachedCorrections } from './cache';
+import { TdkDictionary } from './tdk-dictionary';
 
 export async function callOpenAiCustomCorrection({
   baseUrl,
@@ -587,6 +588,7 @@ export async function processEpubChapters(
     );
   }
 
+  await TdkDictionary.getInstance().init().catch(() => {});
   await refineChapterTitlesWithAi(chapters, options, callbacks, signal);
 
   const selectedChapters = chapters.filter((c) => c.isSelected);

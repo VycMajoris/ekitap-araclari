@@ -47,4 +47,5 @@ next-env.d.ts
 !public/
 *.log
 *.txt
+!public/tdk-words.txt
 progress.md

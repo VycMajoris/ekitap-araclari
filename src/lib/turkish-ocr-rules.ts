@@ -1,5 +1,6 @@
 import { diffWordsWithSpace, Change } from 'diff';
 import { DiffItem, DebugLogEntry } from './types';
+import { TdkDictionary } from './tdk-dictionary';
 
 export interface RuleReplacement {
   pattern: RegExp;
@@ -727,6 +728,26 @@ export function applyTurkishRegexWithLogs(
       });
     }
   });
+
+  const textBeforeTdk = currentText;
+  const { repaired: tdkRepaired, fixedCount: tdkFixedCount } =
+    TdkDictionary.getInstance().repairDynamicSplitWords(currentText);
+
+  if (tdkFixedCount > 0 && tdkRepaired !== textBeforeTdk) {
+    currentText = tdkRepaired;
+    logs.push({
+      id: `${blockId}-tdk-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString('tr-TR'),
+      source: 'regex',
+      ruleName: 'TDK Sözlük Dinamik Kelime Birleştirme',
+      chapterId,
+      chapterTitle,
+      blockId,
+      originalText: originalBlockText,
+      correctedText: currentText,
+      changes: [{ before: textBeforeTdk, after: currentText }],
+    });
+  }
 
   return { cleaned: currentText, logs };
 }

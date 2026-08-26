@@ -1,5 +1,6 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
+import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
 import {
   buildTranslationUserPrompt,
   getLanguageName,
@@ -8,6 +9,8 @@ import {
 import assert from 'node:assert';
 
 console.log('Running verification tests for Turkish OCR fixes...');
+await TdkDictionary.getInstance().init();
+console.log(`TDK Dictionary loaded with ${TdkDictionary.getInstance().getWordCount()} words.`);
 
 // 1. Test Hyphenation Exclusions and OCR rules
 const testCases = [
@@ -233,6 +236,22 @@ const testCases = [
     check: (res) => {
       assert(res.includes("geldi"), "Must stitch 'g e l d i' -> 'geldi'");
       assert(res.includes("başladı"), "Must repair 'baladı' -> 'başladı'");
+    }
+  },
+  {
+    input: "k i t a p l a r ı masaya bıraktı ve d ü ş ü n d ü.",
+    expected: "kitapları masaya bıraktı ve düşündü.",
+    check: (res) => {
+      assert(res.includes("kitapları"), "Must stitch 'k i t a p l a r ı' -> 'kitapları'");
+      assert(res.includes("düşündü"), "Must stitch 'd ü ş ü n d ü' -> 'düşündü'");
+    }
+  },
+  {
+    input: "T ar i h i olayları a n l a t t ı.",
+    expected: "Tarihi olayları anlattı.",
+    check: (res) => {
+      assert(res.includes("Tarihi"), "Must stitch 'T ar i h i' -> 'Tarihi' with uppercase preserved");
+      assert(res.includes("anlattı"), "Must stitch 'a n l a t t ı' -> 'anlattı'");
     }
   }
 ];
