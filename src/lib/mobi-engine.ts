@@ -210,19 +210,34 @@ export async function parseMobi(file: File): Promise<{
   }
 
   const chapters: EpubChapter[] = [];
-  const rawChapterSplits = fullBookHtml.split(/(?=<mbp:pagebreak|<h[1-2][^>]*>)/i);
+  let rawChapterSplits = fullBookHtml.split(/(?=<mbp:pagebreak)/i);
 
   if (rawChapterSplits.length <= 1) {
-    const rawParts = fullBookHtml.split(/(?=<div class="chapter"|<hr\s*\/?>)/i);
-    if (rawParts.length > 1) {
-      rawChapterSplits.splice(0, rawChapterSplits.length, ...rawParts);
+    rawChapterSplits = fullBookHtml.split(/(?=<h1[^>]*>|<div class="chapter"|<hr\s*\/?>)/i);
+  }
+
+  if (rawChapterSplits.length <= 1) {
+    const headingSplits = fullBookHtml.split(/(?=<h2[^>]*>)/i);
+    if (headingSplits.length > 1) {
+      const consolidated: string[] = [];
+      let currentChunk = '';
+      for (const part of headingSplits) {
+        if (currentChunk.length < 300) {
+          currentChunk += part;
+        } else {
+          consolidated.push(currentChunk);
+          currentChunk = part;
+        }
+      }
+      if (currentChunk) consolidated.push(currentChunk);
+      rawChapterSplits = consolidated;
     }
   }
 
   let chIdx = 1;
   for (const part of rawChapterSplits) {
     const trimmed = part.trim();
-    if (!trimmed) continue;
+    if (!trimmed || trimmed.length < 30) continue;
 
     const chapterId = `chapter_${chIdx}`;
     let chapterTitle = `Bölüm ${chIdx}`;
@@ -230,7 +245,7 @@ export async function parseMobi(file: File): Promise<{
     const titleMatch = /<h[1-3][^>]*>(.*?)<\/h[1-3]>/i.exec(trimmed);
     if (titleMatch) {
       const cleanTitle = titleMatch[1].replace(/<[^>]+>/g, '').trim();
-      if (cleanTitle.length > 0 && cleanTitle.length < 100) {
+      if (cleanTitle.length > 0 && cleanTitle.length < 100 && !/^[*•#\-_\s\d]+$/.test(cleanTitle)) {
         chapterTitle = cleanTitle;
       }
     }

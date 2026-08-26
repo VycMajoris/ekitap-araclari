@@ -159,11 +159,20 @@ export function parseBatchResponse(response: string, expectedCount: number): str
 
   const blockMap = new Map<number, string>();
 
+  const sanitizeContent = (raw: string): string => {
+    return raw
+      .replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+      .replace(/(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s+<\//g, '</')
+      .trim();
+  };
+
   const closedTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>)([\s\S]*?)(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]\1(?:\]|>)/gi;
   let match: RegExpExecArray | null;
   while ((match = closedTagRegex.exec(cleanResponse)) !== null) {
     const index = parseInt(match[1], 10);
-    const content = match[2].trim();
+    const content = sanitizeContent(match[2]);
     if (content.length > 0) {
       blockMap.set(index, content);
     }
@@ -173,8 +182,7 @@ export function parseBatchResponse(response: string, expectedCount: number): str
     const openTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>):?([\s\S]*?)(?=(?:\[|<)(?:BLOCK|BLOK)[_\s]\d+(?:\]|>)|$)/gi;
     while ((match = openTagRegex.exec(cleanResponse)) !== null) {
       const index = parseInt(match[1], 10);
-      let content = match[2].trim();
-      content = content.replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]\d+(?:\]|>)\s*$/i, '').trim();
+      const content = sanitizeContent(match[2]);
       if (content.length > 0 && !blockMap.has(index)) {
         blockMap.set(index, content);
       }
@@ -182,7 +190,7 @@ export function parseBatchResponse(response: string, expectedCount: number): str
   }
 
   if (expectedCount === 1 && blockMap.size === 0 && cleanResponse.length > 0) {
-    return [cleanResponse];
+    return [sanitizeContent(cleanResponse)];
   }
 
   if (blockMap.size > 0 && !blockMap.has(0) && blockMap.has(1)) {
@@ -194,7 +202,7 @@ export function parseBatchResponse(response: string, expectedCount: number): str
   }
 
   if (blockMap.size === 0 && expectedCount > 1 && cleanResponse.length > 0) {
-    const paragraphs = cleanResponse.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    const paragraphs = cleanResponse.split(/\n\s*\n/).map((p) => sanitizeContent(p)).filter(Boolean);
     if (paragraphs.length === expectedCount) {
       return paragraphs;
     }
@@ -287,10 +295,14 @@ async function callLlmCorrection({
 }
 
 function parseBlockTagAndContent(raw: string, defaultTag: string = 'p'): { tag: string; innerHtml: string; text: string } {
-  const trimmed = raw.trim();
-  const match = trimmed.match(/^<([a-z0-9]+)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>$/i);
+  const cleanRaw = raw
+    .replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+    .replace(/(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+    .trim();
+
+  const match = cleanRaw.match(/^<([a-z0-9]+)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>$/i);
   let tag = defaultTag;
-  let innerHtml = trimmed;
+  let innerHtml = cleanRaw;
 
   if (match) {
     const matchedTag = match[1].toLowerCase();
@@ -299,6 +311,11 @@ function parseBlockTagAndContent(raw: string, defaultTag: string = 'p'): { tag: 
       innerHtml = match[2].trim();
     }
   }
+
+  innerHtml = innerHtml
+    .replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+    .replace(/(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+    .trim();
 
   const text = innerHtml
     .replace(/<[^>]*>/g, '')

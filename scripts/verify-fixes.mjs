@@ -476,6 +476,11 @@ const res5 = parseBatchResponse('```html\n[BLOCK_0]\n<p>Paragraf 1</p>\n[/BLOCK_
 assert.strictEqual(res5.length, 1);
 assert.strictEqual(res5[0], '<p>Paragraf 1</p>');
 
+// Leaked tag stripping
+const res6 = parseBatchResponse('[BLOCK_0]\n<p>Paragraf 1 [/BLOCK_13] [BLOCK_14]</p>\n[/BLOCK_0]', 1);
+assert.strictEqual(res6.length, 1);
+assert.strictEqual(res6[0], '<p>Paragraf 1</p>');
+
 console.log('All parseBatchResponse tests passed successfully!');
 
 // 5. Test hasOcrAnomaly Detection
