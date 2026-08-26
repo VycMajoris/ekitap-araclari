@@ -1,4 +1,5 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs } from '../src/lib/turkish-ocr-rules.ts';
+import { parseBatchResponse } from '../src/lib/processor.ts';
 import {
   buildTranslationUserPrompt,
   getLanguageName,
@@ -56,6 +57,20 @@ const testCases = [
     check: (res) => {
       assert(res.includes("yapılamaz"), "Must contain 'yapılamaz'");
       assert.strictEqual(res, "Tarihi yapılamaz denilen surlar.");
+    }
+  },
+  {
+    input: "Tarihi yapı-<br/>lamaz denilen surlar.",
+    expected: "Tarihi yapılamaz denilen surlar.",
+    check: (res) => {
+      assert(res.includes("yapılamaz"), "Must merge with <br/> tag");
+    }
+  },
+  {
+    input: "Tarihi yapı-lamaz denilen surlar.",
+    expected: "Tarihi yapılamaz denilen surlar.",
+    check: (res) => {
+      assert(res.includes("yapılamaz"), "Must merge direct suffix hyphen");
     }
   },
   {
@@ -124,6 +139,21 @@ const testCases = [
     check: (res) => {
       assert(res.includes("tamam"), "Must contain 'tamam'");
       assert(res.includes("zaman"), "Must contain 'zaman'");
+    }
+  },
+  {
+    input: "Eski bir tanıdığı andınyordu, sesini de andıryordu.",
+    expected: "Eski bir tanıdığı andırıyordu, sesini de andırıyordu.",
+    check: (res) => {
+      assert(res.includes("andırıyordu"), "Must fix 'andınyordu' -> 'andırıyordu'");
+    }
+  },
+  {
+    input: "Uzakta bir ışık görünrnüyordu, tükenrnez bir karanlık vardı.",
+    expected: "Uzakta bir ışık görünmüyordu, tükenmez bir karanlık vardı.",
+    check: (res) => {
+      assert(res.includes("görünmüyordu"), "Must fix 'görünrnüyordu' -> 'görünmüyordu'");
+      assert(res.includes("tükenmez"), "Must fix 'tükenrnez' -> 'tükenmez'");
     }
   },
   {
@@ -257,3 +287,37 @@ assert.strictEqual(getLanguageName('tr'), 'Türkçe');
 assert.strictEqual(getLanguageName('auto'), 'Otomatik Algıla (Auto-Detect)');
 
 console.log('All unit assertions passed successfully!');
+
+// 4. Test parseBatchResponse robustness
+console.log('Testing parseBatchResponse multi-tag resilience...');
+
+// Standard format
+const res1 = parseBatchResponse('[BLOCK_0]\n<p>Paragraf 1</p>\n[/BLOCK_0]\n\n[BLOCK_1]\n<p>Paragraf 2</p>\n[/BLOCK_1]', 2);
+assert.strictEqual(res1.length, 2);
+assert.strictEqual(res1[0], '<p>Paragraf 1</p>');
+assert.strictEqual(res1[1], '<p>Paragraf 2</p>');
+
+// XML / Angle bracket format
+const res2 = parseBatchResponse('<BLOCK_0><p>Paragraf 1</p></BLOCK_0>\n<BLOCK_1><p>Paragraf 2</p></BLOCK_1>', 2);
+assert.strictEqual(res2.length, 2);
+assert.strictEqual(res2[0], '<p>Paragraf 1</p>');
+assert.strictEqual(res2[1], '<p>Paragraf 2</p>');
+
+// Turkish BLOK format
+const res3 = parseBatchResponse('[BLOK_0]\n<p>Paragraf 1</p>\n[/BLOK_0]\n\n[BLOK_1]\n<p>Paragraf 2</p>\n[/BLOK_1]', 2);
+assert.strictEqual(res3.length, 2);
+assert.strictEqual(res3[0], '<p>Paragraf 1</p>');
+assert.strictEqual(res3[1], '<p>Paragraf 2</p>');
+
+// Unclosed sequential blocks
+const res4 = parseBatchResponse('[BLOCK_0] Paragraf 1 [BLOCK_1] Paragraf 2', 2);
+assert.strictEqual(res4.length, 2);
+assert.strictEqual(res4[0], 'Paragraf 1');
+assert.strictEqual(res4[1], 'Paragraf 2');
+
+// Markdown code fence wrapped
+const res5 = parseBatchResponse('```html\n[BLOCK_0]\n<p>Paragraf 1</p>\n[/BLOCK_0]\n```', 1);
+assert.strictEqual(res5.length, 1);
+assert.strictEqual(res5[0], '<p>Paragraf 1</p>');
+
+console.log('All parseBatchResponse tests passed successfully!');

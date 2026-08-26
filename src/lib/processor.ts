@@ -120,7 +120,7 @@ export interface ProcessorCallbacks {
 /**
  * Group suspicious blocks into character-bounded chunks for efficient LLM processing.
  */
-function createBlockBatches(blocks: TextBlock[], maxCharsPerBatch: number = 3000): TextBlock[][] {
+function createBlockBatches(blocks: TextBlock[], maxCharsPerBatch: number = 10000): TextBlock[][] {
   const batches: TextBlock[][] = [];
   let currentBatch: TextBlock[] = [];
   let currentLength = 0;
@@ -144,27 +144,40 @@ function createBlockBatches(blocks: TextBlock[], maxCharsPerBatch: number = 3000
   return batches;
 }
 
-/**
- * Parses batch response formatted with [BLOCK_N]...[/BLOCK_N] tags.
- */
-function parseBatchResponse(response: string, expectedCount: number): string[] {
-  const results: string[] = [];
-  const regex = /\[BLOCK_(\d+)\]([\s\S]*?)\[\/BLOCK_\1\]/gi;
-  let match;
+export function parseBatchResponse(response: string, expectedCount: number): string[] {
+  let cleanResponse = response.trim();
+  if (cleanResponse.startsWith('```')) {
+    cleanResponse = cleanResponse.replace(/^```[a-zA-Z0-9_-]*\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+  }
+
   const blockMap = new Map<number, string>();
 
-  while ((match = regex.exec(response)) !== null) {
+  const closedTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>)([\s\S]*?)(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]\1(?:\]|>)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = closedTagRegex.exec(cleanResponse)) !== null) {
     const index = parseInt(match[1], 10);
     const content = match[2].trim();
-    blockMap.set(index, content);
+    if (content.length > 0) {
+      blockMap.set(index, content);
+    }
   }
 
-  // Fallback 1: If expected 1 block and model returned text without [BLOCK_0] wrapper
-  if (expectedCount === 1 && blockMap.size === 0 && response.trim().length > 0) {
-    return [response.trim()];
+  if (blockMap.size < expectedCount) {
+    const openTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>):?([\s\S]*?)(?=(?:\[|<)(?:BLOCK|BLOK)[_\s]\d+(?:\]|>)|$)/gi;
+    while ((match = openTagRegex.exec(cleanResponse)) !== null) {
+      const index = parseInt(match[1], 10);
+      let content = match[2].trim();
+      content = content.replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]\d+(?:\]|>)\s*$/i, '').trim();
+      if (content.length > 0 && !blockMap.has(index)) {
+        blockMap.set(index, content);
+      }
+    }
   }
 
-  // Fallback 2: Check if model used 1-based indexing [BLOCK_1]... instead of 0-based
+  if (expectedCount === 1 && blockMap.size === 0 && cleanResponse.length > 0) {
+    return [cleanResponse];
+  }
+
   if (blockMap.size > 0 && !blockMap.has(0) && blockMap.has(1)) {
     for (let i = 1; i <= expectedCount; i++) {
       if (blockMap.has(i)) {
@@ -173,6 +186,14 @@ function parseBatchResponse(response: string, expectedCount: number): string[] {
     }
   }
 
+  if (blockMap.size === 0 && expectedCount > 1 && cleanResponse.length > 0) {
+    const paragraphs = cleanResponse.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    if (paragraphs.length === expectedCount) {
+      return paragraphs;
+    }
+  }
+
+  const results: string[] = [];
   for (let i = 0; i < expectedCount; i++) {
     if (blockMap.has(i)) {
       results.push(blockMap.get(i)!);
@@ -713,12 +734,10 @@ export async function processEpubChapters(
           chapter.stats.fixedWords += block.diffCount;
           callbacks.onBlockUpdated?.(chapter.id, block);
         } else if (scanMode === 'smart') {
-          // Check if block has OCR anomalies or was modified
-          const isSuspicious = hasOcrAnomaly(block.originalText) || block.diffCount > 0;
+          const isSuspicious = hasOcrAnomaly(block.correctedText);
           if (isSuspicious && options.useLlm && isProviderReady(options)) {
             suspiciousBlocks.push(block);
           } else {
-            // Already clean block
             block.status = 'completed';
             stats.processedBlocks++;
             stats.totalFixedWords += block.diffCount;
@@ -727,7 +746,6 @@ export async function processEpubChapters(
             callbacks.onBlockUpdated?.(chapter.id, block);
           }
         } else {
-          // 'deep_llm': send all blocks
           if (options.useLlm && isProviderReady(options)) {
             suspiciousBlocks.push(block);
           } else {
@@ -743,10 +761,23 @@ export async function processEpubChapters(
 
       callbacks.onStatsUpdated?.({ ...stats });
 
-      // 2. Second Pass: LLM on suspicious / target blocks only
       if (suspiciousBlocks.length > 0 && options.useLlm && isProviderReady(options)) {
-        const batches = createBlockBatches(suspiciousBlocks, options.chunkSize || 3000);
-        const concurrency = isTranslation ? 1 : Math.max(1, Math.min(options.concurrency || 1, 2));
+        const defaultChunkSize = isTranslation ? 7000 : 12000;
+        const batches = createBlockBatches(suspiciousBlocks, options.chunkSize || defaultChunkSize);
+
+        const isHighThroughputProvider =
+          options.provider === 'antigravity' ||
+          options.provider === 'gemini_api' ||
+          options.provider === 'custom_openai';
+
+        let concurrency = 1;
+        if (isTranslation) {
+          concurrency = options.enableRollingContext !== false ? 1 : Math.max(1, Math.min(options.concurrency || 2, 3));
+        } else if (isHighThroughputProvider) {
+          concurrency = Math.max(1, Math.min(options.concurrency || 3, 4));
+        } else {
+          concurrency = Math.max(1, Math.min(options.concurrency || 2, 2));
+        }
 
         for (let i = 0; i < batches.length; i += concurrency) {
           if (signal?.aborted) break;
@@ -775,9 +806,11 @@ export async function processEpubChapters(
             })
           );
 
-          // Polite throttle delay between LLM batches to respect OpenRouter rate limits
           if (i + concurrency < batches.length && !signal?.aborted) {
-            await new Promise((resolve) => setTimeout(resolve, isTranslation ? 1000 : 1500));
+            const throttleMs = isHighThroughputProvider
+              ? isTranslation ? 400 : 200
+              : isTranslation ? 1000 : 1500;
+            await new Promise((resolve) => setTimeout(resolve, throttleMs));
           }
 
           stats.elapsedSeconds = Math.round((Date.now() - (stats.startTime || Date.now())) / 1000);

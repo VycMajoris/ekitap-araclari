@@ -29,7 +29,12 @@ function replaceCasePreserving(match: string, target: string): string {
  */
 export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
   {
-    pattern: /([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ0-9'’]+)-\s+([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ]+)/g,
+    pattern: /[\u00AD\u200B\u200C\u200D\uFEFF]/g,
+    replacement: '',
+    description: 'Görünmez bozuk karakter temizliği (Soft hyphen / ZWSP)',
+  },
+  {
+    pattern: /([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ0-9'’]+)-(?:<br\s*\/?>|\s)+([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ]+)/gi,
     replacement: (_match: string, ...args: unknown[]) => {
       const part1 = args[0] as string;
       const part2 = args[1] as string;
@@ -52,6 +57,22 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
       return `${part1} - ${part2}`;
     },
     description: 'Satır sonu tire ve ara söz korumalı birleştirme',
+  },
+  {
+    pattern: /([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ0-9]+)-([abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ]+)/g,
+    replacement: (match: string, ...args: unknown[]) => {
+      const part1 = (args[0] as string) || '';
+      const part2 = (args[1] as string) || '';
+      const isCapitalized = /^[A-ZÇĞİÖŞÜ]/.test(part2);
+      const matchesFinishedClause = FINISHED_VERB_OR_CLAUSE_REGEX.test(part1);
+      const isPart2ASuffix = TURKISH_SUFFIX_CONTINUATION_REGEX.test(part2);
+
+      if (!isCapitalized && !matchesFinishedClause && isPart2ASuffix) {
+        return `${part1}${part2}`;
+      }
+      return match;
+    },
+    description: 'Bitişik satır sonu hece/ek birleştirme',
   },
 
   // 2. Unwanted space before punctuation: "kelime , başka" -> "kelime, başka"
@@ -191,6 +212,46 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
   },
 
   // 4. 'rn' <-> 'm' confusion rules
+  {
+    pattern: new RegExp(`${WB}andınyor([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, suffix = '') => {
+      const preservedRoot = replaceCasePreserving(match.slice(0, 4), 'andı');
+      return preservedRoot + 'rıyor' + suffix;
+    },
+    description: "'andınyor...' -> 'andırıyor...'",
+  },
+  {
+    pattern: new RegExp(`${WB}andıryor([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, suffix = '') => {
+      const preservedRoot = replaceCasePreserving(match.slice(0, 4), 'andı');
+      return preservedRoot + 'rıyor' + suffix;
+    },
+    description: "'andıryor...' -> 'andırıyor...'",
+  },
+  {
+    pattern: new RegExp(`${WB}görünrn([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => {
+      const preservedRoot = replaceCasePreserving(match.slice(0, 5), 'görün');
+      return preservedRoot + 'm' + rest;
+    },
+    description: "'görünrn...' -> 'görünm...'",
+  },
+  {
+    pattern: new RegExp(`${WB}tükenrn([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => {
+      const preservedRoot = replaceCasePreserving(match.slice(0, 5), 'tüken');
+      return preservedRoot + 'm' + rest;
+    },
+    description: "'tükenrn...' -> 'tükenm...'",
+  },
+  {
+    pattern: new RegExp(`${WB}bölünrn([a-zçğıöşü]*)${WE}`, 'gi'),
+    replacement: (match, rest) => {
+      const preservedRoot = replaceCasePreserving(match.slice(0, 5), 'bölün');
+      return preservedRoot + 'm' + rest;
+    },
+    description: "'bölünrn...' -> 'bölünm...'",
+  },
   {
     pattern: new RegExp(`${WB}yarm(dan|ki|a)?${WE}`, 'gi'),
     replacement: (match, suffix = '') => {
@@ -398,7 +459,7 @@ export const TURKISH_OCR_REGEX_RULES: RuleReplacement[] = [
  * Patterns that indicate potential OCR / conversion artifacts in Turkish text.
  */
 const OCR_ANOMALY_PATTERNS: RegExp[] = [
-  new RegExp(`${WB}(yarm|kamı|öğmeci|öğmek|soma|bumu|karamlı|imsan|farkıma\\s+var|ayrımlı|davra|korkumç|düşümce|uyam|yalmız|yamlış|tuma|tumuva|kame|tarnarn|zarnan|adarn|akşarn|claha|cliye|cliyen|clil|clüşün|clünya|clönem|clur|cla|cle|clegil|cleğil|clost|cloktor|clerece|cluygu|clurum|clevam|clüzen|clere|cleniz|clol|clön)\\w*${WE}`, 'iu'),
+  new RegExp(`${WB}(yarm|kamı|öğmeci|öğmek|soma|bumu|karamlı|imsan|farkıma\\s+var|ayrımlı|davra|korkumç|düşümce|uyam|yalmız|yamlış|tuma|tumuva|kame|tarnarn|zarnan|adarn|akşarn|andınyor|andıryor|görünrn|tükenrn|bölünrn|claha|cliye|cliyen|clil|clüşün|clünya|clönem|clur|cla|cle|clegil|cleğil|clost|cloktor|clerece|cluygu|clurum|clevam|clüzen|clere|cleniz|clol|clön)\\w*${WE}`, 'iu'),
   /[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]+-\s+[a-zA-ZçğıöşüÇĞİÖŞÜ]+/, // hyphen split
   /\b\w*cl[aeıioöuü]\w*/i, // words containing 'cl'
   /\b(bir çok|her hangi|bir kaç|bir az|hiç bir)\b/i, // split compounds
