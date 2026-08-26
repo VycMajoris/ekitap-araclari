@@ -36,41 +36,51 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 - `pdfjs-dist` ve yerel PalmDOC/MOBI ikili motoruyla doğrudan tarayıcınızda çalışır.
 - EPUB, PDF ve **MOBI** formatındaki kitapları açabilir, onarabilir ve hem **EPUB** hem de eski Kindle cihazları için **MOBI** olarak dışa aktarabilir.
 - Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, gereksiz kelime içi boşlukları engeller.
-- Sayfa üst/alt bilgi (header/footer) ve sayfa numaralarını otomatik temizler.
+- Sayfalar arası bölünmüş cümleleri (`söz` + `veriyorum."` ➔ `söz veriyorum."`) ve sayfa alt/üst çöp lekelerini otomatik birleştirir.
 - İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini akıllıca ayırır.
 
-### 2. 🔍 Türkçe Morfoloji & Kural Tabanlı OCR Motoru
-- Sabit kelime listelerine bağlı kalmadan Türkçe ek ve kök kurallarına dayalı morfolojik regex motoru içerir.
-- Cümle içi ara söz tirelerini (`- ... -`) ve diyalog çizgilerini korur.
-- İki yana yaslı (`text-align: justify`) temiz CSS ile e-okuyucu ve Kindle uyumlu EPUB üretir.
+### 2. 📚 74.000+ Kelimelik TDK Sözlüğü & Morfolojik OCR Motoru
+- `sozluk.gov.tr` resmi veri tabanından derlenen 74.000+ kelimelik çevrimdışı Türkçe sözlük ile çalışır.
+- Dinamik ek çözücü (*Suffix Peeler*) ve ünsüz yumuşaması motoru ile ayrık harfleri (`k i t a p` ➔ `kitap`, `T ar i h i` ➔ `Tarihi`, `g e l i y o r d u` ➔ `geliyordu`) 0 milisaniyede onarır.
+- Çift yönlü harf bağlama ile `İyi ş anslar` ➔ `İyi şanslar` ve `dedi k aynı` ➔ `dedik aynı` hatalarını çözer.
+- Bağımsız geçerli kelimeleri (`en iyi`, `hep iyi`, `tek işi`, `o gün`, `Onu mu`) koruyarak hatalı birleşmeleri (false positive) engeller.
+- Unicode değiştirme karakterlerini (`\uFFFD` / ) ve bozuk noktalama işaretlerini (`.,,`) temizler.
 
-### 3. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
+### 3. 🌐 Bağlamsal Yapay Zekâ Kitap Çeviri Motoru
+- 14 kaynak dilden 12 hedef dile (Türkçe, İngilizce, Almanca, Fransızca, İspanyolca vb.) tam kitap çevirisi.
+- **Edebi & Akıcı Roman, Akademik ve Günlük Dil** üslup seçenekleri.
+- **Kayan Bağlam Belleği (Rolling Memory):** Önceki paragrafların çevirisini hafızada tutarak karakter ses tonunu, hitap şekillerini ve zamir tutarlılığını korur.
+- **Özel Karakter & Terim Sözlüğü (Glossary):** Kitaba özel kurgusal terimlerin ve karakter isimlerinin kitap boyunca %100 tutarlı çevrilmesini sağlar.
+
+### 4. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
 - **Google Hesabı (Antigravity OAuth)**: Gemini 3.7 Flash, Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
 - **Google AI Studio (Gemini Key)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı.
 - **OpenAI Uyumlu API (Özel)**: OpenAI (GPT-4o / mini), DeepSeek (deepseek-chat), Groq (Llama 3.3 70B), Ollama (Lokal) ve herhangi bir özel LLM uç noktası desteği.
 - **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral modelleriyle sıfır maliyetli kullanım.
 
-### 4. ⚡ İşleme ve Hız Modları
+### 5. ⚡ 2 Aşamalı Hız ve İşleme Mimarisi (2-Phase Pipeline)
 Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
-- ⚡ **Akıllı Hibrit (Önerilen)**: Kural tabanlı ön temizlik yapılır; sadece şüpheli ve belirsiz kelimeler yapay zekaya gönderilir (~1-2 dk, sıfır rate limit).
-- 🚀 **Yıldırım Hızı (Regex)**: Yalnızca kural motoru çalışır. API anahtarı gerekmez, 0 saniyede tamamlanır.
-- 🧠 **Tam Derin Tarama**: Tüm paragraflar istisnasız seçili yapay zeka ile taranır.
+- ⚡ **Akıllı Hibrit (Önerilen)**:
+  - *1. Aşama (1 Saniye):* Tüm kitap duraksamadan Regex & TDK motorundan geçer, %85'i anında temizlenir.
+  - *2. Aşama (~15-30 Saniye):* Regex'in çözemediği  karakterleri ve ağır bozulmalar genel havuzda toplanıp 10k-12k karakterlik büyük paketlerle paralel AI'a gönderilir.
+- 🚀 **Yıldırım Hızı (Regex)**: 0 saniyede tamamlanır, API anahtarı gerektirmez.
+- 🧠 **Tam Derin Tarama**: Tüm paragrafları istisnasız seçili yapay zeka ile derinlemesine tarar.
 
-### 5. 📱 Cihaza Gönder (Send-to-Kindle & KOReader Wi-Fi)
+### 6. 📱 Cihaza Gönder (Send-to-Kindle & KOReader Wi-Fi)
 - **Send to Kindle**: `@kindle.com` adresinize Gmail/SMTP veya Resend ile doğrudan tek tıkla e-posta gönderimi.
 - **KOReader Wi-Fi Aktarımı**: Yerel ağ üzerinden KOReader yüklü e-okuyucunuza (Kindle, Kobo, PocketBook, reMarkable) kablosuz dosya yükleme.
 - **QR Kod & Yerel İndirme**: E-okuyucunun web tarayıcısından tek tıkla indirme imkanı.
 
-### 6. 💾 Kalıcı IndexedDB Önbelleği
+### 7. 💾 Kalıcı IndexedDB Önbelleği
 - İşlem durdurulduğunda veya sayfa yenilendiğinde tamamlanan paragraflar tarayıcı IndexedDB deposunda saklanır.
 - Aynı kitap tekrar işlendiğinde daha önce taranan bloklar için tekrar token harcanmaz.
 
-### 7. 🛠️ Geliştirici (Developer) Modu
+### 8. 🛠️ Geliştirici (Developer) Modu
 - Ayarlardan tek tıkla açılıp kapatılabilen sade / gelişmiş görünüm.
 - Canlı regex ve LLM değişiklik günlüğü (*Diff Console*), JSON dışa aktarma.
 - Özel Sistem Talimatı (*System Prompt*) düzenleyici, eşzamanlılık (*concurrency*) ve paket boyutu ayarı.
 
-### 8. 🌓 Karanlık ve Aydınlık Tema
+### 9. 🌓 Karanlık ve Aydınlık Tema
 - Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
 
 ---
@@ -182,10 +192,12 @@ src/
     ├── antigravity.ts        # Google OAuth PKCE ve model tanımları
     ├── cache.ts              # IndexedDB kalıcı blok önbellek motoru
     ├── epub-engine.ts        # EPUB ayrıştırma, DOM onarımı & JSZip paketleme
-    ├── openrouter.ts         # OpenRouter API client ve kuyruk yönetimi
-    ├── pdf-engine.ts         # Client-side PDF-to-EPUB ayrıştırma motoru
-    ├── processor.ts          # Blok paketleme, dinamik başlık ve LLM yöneticisi
-    ├── turkish-ocr-rules.ts  # Türkçe morfoloji regex ve tire koruma kuralları
+    ├── mobi-engine.ts        # PalmDOC/MOBI ayrıştırma ve format dönüştürücü
+    ├── openrouter.ts         # OpenRouter client ve edebi çeviri motoru
+    ├── pdf-engine.ts         # Client-side PDF-to-EPUB ayrıştırma ve reflow motoru
+    ├── processor.ts          # 2 Aşamalı boru hattı, AI batching ve LLM yöneticisi
+    ├── tdk-dictionary.ts     # 74k TDK sözlüğü, Suffix Peeler ve dinamik birleştirici
+    ├── turkish-ocr-rules.ts  # Türkçe morfoloji regex, çift yönlü bağlama kuralları
     └── types.ts              # TypeScript arayüz ve tip tanımları
 ```
 
@@ -193,12 +205,15 @@ src/
 
 ## 🧪 Test Kapsamı
 
-Projede yer alan 23 adet Türkçe morfolojik birim testi:
-- Ara söz tirelerinin korunması (`- ... -`)
-- Cümle başı/sonu tireleme hatalarının onarılması
-- Satır sonu hece bölmelerinin birleştirilmesi
-- Çoklu nokta (`...`) ve OCR boşluk anomalilerinin düzeltilmesi
-- Gerçek dünya kitap tarama örneklerinin doğrulanması
+Projede yer alan **47 adet** Türkçe morfoloji, dinamik kelime birleştirme ve çeviri birim testi:
+- Ara söz tirelerinin korunması (`- ... -`) ve diyalog çizgileri
+- Ayrık harf ve hece birleştirmeleri (`k i t a p` ➔ `kitap`, `T ar i h i` ➔ `Tarihi`)
+- Çift yönlü harf bağlama (`dedi k aynı` ➔ `dedik aynı`, `İyi ş anslar` ➔ `İyi şanslar`)
+- Bağımsız kelime ve soru eki koruması (`en iyi`, `Onu mu`, `tek işi`)
+- Sayfalar arası bölünmüş cümlelerin birleştirilmesi
+- TDK morfolojik çekim çözücü (*Suffix Peeler*) doğrulamaları
+- Edebi AI çeviri promptu ve bağlam koruma testleri
+- Dayanıklı AI paket ayrıştırıcı (*Batch Parser Resilience*) testleri
 
 Testleri çalıştırmak için:
 ```bash
