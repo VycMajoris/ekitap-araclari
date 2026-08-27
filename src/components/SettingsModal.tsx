@@ -49,43 +49,216 @@ interface SettingsModalProps {
   initialTab?: LlmProvider;
 }
 
-export const OPENAI_PRESETS = [
+export interface OpenAiPreset {
+  id: string;
+  name: string;
+  url: string;
+  defaultModel: string;
+  models: { id: string; name: string }[];
+  keyUrl?: string;
+  keyPlaceholder?: string;
+  badge?: string;
+  description?: string;
+}
+
+export const OPENAI_PRESETS: OpenAiPreset[] = [
+  {
+    id: 'groq',
+    name: 'Groq',
+    url: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b-versatile',
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile (Önerilen & Çok Hızlı)' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant (Ultra Hızlı)' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Yeni)' },
+      { id: 'qwen/qwen3.6-27b', name: 'Qwen 3.6 27B (Yeni)' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B (Düşünce Modeli)' },
+      { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
+    ],
+    keyUrl: 'https://console.groq.com/keys',
+    keyPlaceholder: 'gsk_...',
+    badge: 'Ücretsiz & Süper Hızlı',
+    description: 'Groq LPU donanımı ile ultra yüksek hızda ve cömert ücretsiz kota ile çalışan açık kaynak modeller.',
+  },
   {
     id: 'openai',
     name: 'OpenAI (ChatGPT)',
     url: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'o3-mini', 'gpt-4.5-preview'],
+    models: [
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Hızlı & Ekonomik - Önerilen)' },
+      { id: 'gpt-4o', name: 'GPT-4o (Amiral Gemisi)' },
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol (En Gelişmiş Frontier Model)' },
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra (Dengeli Zekâ & Maliyet)' },
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna (Hızlı & Ekonomik Frontier)' },
+      { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini' },
+      { id: 'gpt-5.4', name: 'GPT-5.4' },
+      { id: 'gpt-5.5', name: 'GPT-5.5' },
+      { id: 'gpt-5.5-pro', name: 'GPT-5.5 Pro' },
+      { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
+      { id: 'gpt-5', name: 'GPT-5' },
+      { id: 'gpt-5.4-nano', name: 'GPT-5.4 nano' },
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
+      { id: 'gpt-4.1', name: 'GPT-4.1' },
+      { id: 'o3-mini', name: 'o3-mini (Akıl Yürütme)' },
+      { id: 'o3', name: 'o3' },
+      { id: 'o3-pro', name: 'o3-pro' },
+      { id: 'o1', name: 'o1' },
+    ],
+    keyUrl: 'https://platform.openai.com/api-keys',
+    keyPlaceholder: 'sk-proj-...',
+    badge: 'Resmi',
+    description: 'Resmi OpenAI API uç noktası, GPT-5.6 Frontier ve GPT-4o serisi modelleri.',
   },
   {
     id: 'deepseek',
     name: 'DeepSeek',
     url: 'https://api.deepseek.com/v1',
     defaultModel: 'deepseek-chat',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: [
+      { id: 'deepseek-chat', name: 'DeepSeek-V3 (Chat - Edebi & Akıcı)' },
+      { id: 'deepseek-reasoner', name: 'DeepSeek-R1 (Reasoner - Düşünce Modeli)' },
+    ],
+    keyUrl: 'https://platform.deepseek.com/api_keys',
+    keyPlaceholder: 'sk-...',
+    badge: 'Ekonomik & Akıcı',
+    description: 'DeepSeek resmi API uç noktası ve V3/R1 modelleri.',
   },
   {
-    id: 'groq',
-    name: 'Groq (Süper Hızlı)',
-    url: 'https://api.groq.com/openai/v1',
-    defaultModel: 'llama-3.3-70b-versatile',
-    models: ['llama-3.3-70b-versatile', 'qwen-2.5-32b', 'mixtral-8x7b-32768'],
+    id: 'together',
+    name: 'Together AI',
+    url: 'https://api.together.xyz/v1',
+    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    models: [
+      { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B Turbo' },
+      { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek V3' },
+      { id: 'deepseek-ai/DeepSeek-R1', name: 'DeepSeek R1' },
+      { id: 'Qwen/Qwen2.5-72B-Instruct-Turbo', name: 'Qwen 2.5 72B Turbo' },
+      { id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', name: 'Llama 3.1 8B Turbo' },
+    ],
+    keyUrl: 'https://api.together.ai/settings/api-keys',
+    keyPlaceholder: '...',
+    badge: 'Açık Kaynak',
+    description: 'Together AI açık kaynaklı model bulut platformu.',
   },
   {
     id: 'ollama',
-    name: 'Ollama (Lokal / PC)',
+    name: 'Ollama (Lokal)',
     url: 'http://localhost:11434/v1',
     defaultModel: 'llama3.2',
-    models: ['llama3.2', 'qwen2.5', 'mistral', 'deepseek-r1'],
+    models: [
+      { id: 'llama3.3', name: 'Llama 3.3 (70B)' },
+      { id: 'llama3.2', name: 'Llama 3.2' },
+      { id: 'qwen2.5', name: 'Qwen 2.5' },
+      { id: 'deepseek-r1', name: 'DeepSeek R1' },
+      { id: 'mistral', name: 'Mistral' },
+      { id: 'gemma2', name: 'Gemma 2' },
+    ],
+    keyUrl: '',
+    keyPlaceholder: 'Lokal sunucularda API anahtarı boş bırakılabilir',
+    badge: 'Lokal / İnternetsiz',
+    description: 'Bilgisayarınızda yerel çalışan Ollama sunucusu (API anahtarı gerekmez).',
   },
   {
     id: 'custom',
-    name: 'Özel Sunucu / Diğer',
+    name: 'Özel / Diğer',
     url: '',
     defaultModel: '',
     models: [],
+    keyUrl: '',
+    keyPlaceholder: 'sk-...',
+    badge: 'Manuel',
+    description: 'Herhangi bir OpenAI uyumlu (v1/chat/completions) özel sunucu veya proxy adresi.',
   },
 ];
+
+export type UnifiedProviderId =
+  | 'google'
+  | 'groq'
+  | 'openrouter'
+  | 'openai'
+  | 'deepseek'
+  | 'together'
+  | 'ollama'
+  | 'custom';
+
+export interface UnifiedProviderInfo {
+  id: UnifiedProviderId;
+  name: string;
+  badge?: string;
+  description: string;
+}
+
+export const UNIFIED_PROVIDERS: UnifiedProviderInfo[] = [
+  {
+    id: 'google',
+    name: 'Google AI Studio',
+    badge: 'Önerilen & Ücretsiz',
+    description: 'Google AI Studio üzerinden günde 1.500 istek ücretsiz Gemini 3.7 / 3.6 Flash modelleri.',
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    badge: 'Süper Hızlı & Ücretsiz',
+    description: 'Groq LPU donanımı ile ultra yüksek hızda ve cömert ücretsiz kota ile çalışan açık kaynak modeller.',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    badge: 'Açık Kaynak',
+    description: 'OpenRouter üzerinden onlarca ücretsiz (:free) açık kaynaklı yapay zekâ modeli.',
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI (ChatGPT)',
+    badge: 'Resmi',
+    description: 'Resmi OpenAI API uç noktası, GPT-5.6 Frontier ve GPT-4o serisi modelleri.',
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    badge: 'Ekonomik & Akıcı',
+    description: 'DeepSeek resmi API uç noktası ve V3 (Chat) / R1 (Reasoner) modelleri.',
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    badge: 'Açık Kaynak',
+    description: 'Together AI açık kaynaklı model bulut platformu (Llama 3.3 Turbo, Qwen).',
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (Lokal)',
+    badge: 'Lokal / İnternetsiz',
+    description: 'Kendi bilgisayarınızda yerel çalışan Ollama sunucusu (API anahtarı gerekmez).',
+  },
+  {
+    id: 'custom',
+    name: 'Özel / Diğer',
+    badge: 'Manuel',
+    description: 'Herhangi bir OpenAI uyumlu (v1/chat/completions) özel sunucu veya proxy adresi.',
+  },
+];
+
+export const getUnifiedProviderId = (options: ProcessingOptions): UnifiedProviderId => {
+  const provider = options.provider;
+  if (provider === 'gemini_api' || provider === 'antigravity') return 'google';
+  if (provider === 'openrouter') return 'openrouter';
+  if (provider === 'custom_openai') {
+    const url = (options.customOpenAiBaseUrl || '').trim().toLowerCase();
+    if (url.includes('groq.com')) return 'groq';
+    if (url.includes('openai.com')) return 'openai';
+    if (url.includes('deepseek.com')) return 'deepseek';
+    if (url.includes('together')) return 'together';
+    if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('11434')) return 'ollama';
+    return 'custom';
+  }
+  return 'google';
+};
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -99,6 +272,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showKey, setShowKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+  const [isCustomModelManual, setIsCustomModelManual] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>(POPULAR_FREE_MODELS);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
@@ -107,8 +281,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newTermKey, setNewTermKey] = useState('');
   const [newTermVal, setNewTermVal] = useState('');
 
-  const activeTab: LlmProvider = initialTab || (options.provider === 'antigravity' ? 'gemini_api' : options.provider) || 'gemini_api';
+  const activeUnifiedProvider = getUnifiedProviderId(options);
+  const activeProviderInfo = UNIFIED_PROVIDERS.find((p) => p.id === activeUnifiedProvider) || UNIFIED_PROVIDERS[0];
   const isDevMode = Boolean(options.isDevMode);
+
+  const handleSelectUnifiedProvider = (providerId: UnifiedProviderId) => {
+    setIsCustomModelManual(false);
+
+    if (providerId === 'google') {
+      let model = options.model;
+      if (!GEMINI_API_MODELS.some((m) => m.id === model)) {
+        model = GEMINI_API_MODELS[0].id;
+      }
+      const newOptions: ProcessingOptions = {
+        ...options,
+        provider: 'gemini_api',
+        model,
+      };
+      onOptionsChange(newOptions);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('epub_ocr_provider', 'gemini_api');
+        localStorage.setItem('epub_ocr_model', model);
+      }
+      return;
+    }
+
+    if (providerId === 'openrouter') {
+      let model = options.model;
+      if (!models.some((m) => m.id === model)) {
+        model = models[0]?.id || POPULAR_FREE_MODELS[0].id;
+      }
+      const newOptions: ProcessingOptions = {
+        ...options,
+        provider: 'openrouter',
+        model,
+      };
+      onOptionsChange(newOptions);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('epub_ocr_provider', 'openrouter');
+        localStorage.setItem('epub_ocr_model', model);
+      }
+      return;
+    }
+
+    const preset = OPENAI_PRESETS.find((p) => p.id === providerId) || OPENAI_PRESETS[0];
+    const newUrl = preset.url;
+    const newModel = preset.defaultModel || options.customOpenAiModel || 'llama-3.3-70b-versatile';
+
+    const newOptions: ProcessingOptions = {
+      ...options,
+      provider: 'custom_openai',
+      customOpenAiBaseUrl: newUrl,
+      customOpenAiModel: newModel,
+      model: newModel,
+    };
+    onOptionsChange(newOptions);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('epub_ocr_provider', 'custom_openai');
+      localStorage.setItem('epub_ocr_openai_base_url', newUrl);
+      localStorage.setItem('epub_ocr_openai_model', newModel);
+      localStorage.setItem('epub_ocr_model', newModel);
+    }
+  };
 
   const handleAddGlossaryTerm = () => {
     if (!newTermKey.trim()) return;
@@ -133,12 +367,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (activeTab === 'openrouter') {
+      if (activeUnifiedProvider === 'openrouter') {
         handleFetchModels();
       }
       getCacheStats().then((stats) => setCacheStats(stats));
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeUnifiedProvider]);
 
   const handleFetchModels = async () => {
     setIsLoadingModels(true);
@@ -160,33 +394,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setCacheStats(updated);
     } finally {
       setIsClearingCache(false);
-    }
-  };
-
-  const handleSelectTab = (tab: LlmProvider) => {
-    let nextModel = options.model;
-
-    if (tab === 'gemini_api') {
-      if (!GEMINI_API_MODELS.some((m) => m.id === options.model)) {
-        nextModel = GEMINI_API_MODELS[0].id;
-      }
-    } else if (tab === 'openrouter') {
-      if (!models.some((m) => m.id === options.model)) {
-        nextModel = models[0]?.id || POPULAR_FREE_MODELS[0].id;
-      }
-    } else if (tab === 'custom_openai') {
-      nextModel = options.customOpenAiModel || 'gpt-4o-mini';
-    }
-
-    const newOptions: ProcessingOptions = {
-      ...options,
-      provider: tab,
-      model: nextModel,
-    };
-    onOptionsChange(newOptions);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('epub_ocr_provider', tab);
-      localStorage.setItem('epub_ocr_model', nextModel);
     }
   };
 
@@ -266,54 +473,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300">
-              Yapay Zeka Sağlayıcısı
-            </label>
-            <div className="grid grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => handleSelectTab('gemini_api')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'gemini_api'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Key className="w-3.5 h-3.5 text-amber-500" />
-                <span className="truncate">Google AI Studio</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTab('openrouter')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'openrouter'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Cpu className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="truncate">OpenRouter</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTab('custom_openai')}
-                className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'custom_openai'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs border border-zinc-200/80 dark:border-zinc-700'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Server className="w-3.5 h-3.5 text-purple-500" />
-                <span className="truncate">OpenAI / Özel</span>
-              </button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300">
+                Yapay Zeka Sağlayıcısı (API)
+              </label>
+              <span className="text-[11px] text-zinc-400 font-medium">
+                {activeProviderInfo.name}
+              </span>
             </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              {UNIFIED_PROVIDERS.map((p) => {
+                const isSelected = activeUnifiedProvider === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectUnifiedProvider(p.id)}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-300 shadow-xs border border-zinc-200/80 dark:border-zinc-700 font-bold'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <span className="truncate w-full text-center">{p.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeProviderInfo.description && (
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/30 rounded-xl p-2.5 text-[11px] text-emerald-800/90 dark:text-emerald-300/90 flex items-center justify-between">
+                <span>{activeProviderInfo.description}</span>
+                {activeProviderInfo.badge && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shrink-0 ml-2">
+                    {activeProviderInfo.badge}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Tab 1: Google AI Studio (Gemini Key) */}
-          {activeTab === 'gemini_api' && (
+          {activeUnifiedProvider === 'google' && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -362,7 +564,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Gemini Model Selection */}
               <div className="space-y-2">
                 <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-amber-500" />
@@ -391,11 +592,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 )}
               </div>
+
+              <div className="space-y-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                  <span>Hesap / Kota Türü</span>
+                  <span className="text-[11px] font-normal text-zinc-400">
+                    {options.geminiTier === 'paid' ? 'Turbo Hız (Sınırsız RPM)' : '15 RPM Akıllı Hız Koruması'}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOptionsChange({ ...options, geminiTier: 'free' });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('ekitap_gemini_tier', 'free');
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      options.geminiTier !== 'paid'
+                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>Ücretsiz Katman (Free - 15 RPM)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOptionsChange({ ...options, geminiTier: 'paid' });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('ekitap_gemini_tier', 'paid');
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      options.geminiTier === 'paid'
+                        ? 'bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>Ücretli Katman (Paid / Turbo)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  {options.geminiTier === 'paid'
+                    ? 'Kredi kartı tanımlı Google Cloud / AI Studio hesapları için paketler bekleme olmadan paralel hızla işlenir.'
+                    : 'Ücretsiz AI Studio anahtarlarında dakikalık 15 istek sınırını aşmamak için akıllı hız kontrolü uygulanır.'}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Tab 3: OpenRouter (Ücretsiz API Key) */}
-          {activeTab === 'openrouter' && (
+          {activeUnifiedProvider === 'openrouter' && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -439,7 +687,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
               </div>
 
-              {/* OpenRouter Model Selection */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
@@ -483,118 +730,228 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'custom_openai' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
-                  Hızlı Sağlayıcı Şablonu (Presets)
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {OPENAI_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => {
-                        const newUrl = preset.url || options.customOpenAiBaseUrl || '';
-                        const newModel = preset.defaultModel || options.customOpenAiModel || 'gpt-4o-mini';
-                        onOptionsChange({
-                          ...options,
-                          customOpenAiBaseUrl: newUrl,
-                          customOpenAiModel: newModel,
-                          model: newModel,
-                        });
+          {activeUnifiedProvider !== 'google' && activeUnifiedProvider !== 'openrouter' && (() => {
+            const currentPreset = OPENAI_PRESETS.find((p) => p.id === activeUnifiedProvider) || OPENAI_PRESETS[0];
+            const hasPresetModels = currentPreset.models.length > 0;
+            const isKnownModel = currentPreset.models.some((m) => m.id === options.customOpenAiModel);
+            const showCustomInput = !hasPresetModels || !isKnownModel || isCustomModelManual;
+
+            return (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-xs">
+                      <Key className="w-4 h-4 text-purple-500" />
+                      <span>{currentPreset.name} API Anahtarı</span>
+                    </label>
+                    {currentPreset.keyUrl && (
+                      <a
+                        href={currentPreset.keyUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        {currentPreset.name}&apos;dan Anahtar Al <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showOpenAiKey ? 'text' : 'password'}
+                      value={options.customOpenAiKey || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        onOptionsChange({ ...options, customOpenAiKey: val });
                         if (typeof window !== 'undefined') {
-                          localStorage.setItem('epub_ocr_openai_base_url', newUrl);
-                          localStorage.setItem('epub_ocr_openai_model', newModel);
-                          localStorage.setItem('epub_ocr_model', newModel);
+                          localStorage.setItem('epub_ocr_openai_key', val);
                         }
                       }}
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-zinc-700 dark:text-zinc-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+                      placeholder={currentPreset.keyPlaceholder || 'sk-...'}
+                      className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 pr-10 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
                     >
-                      {preset.name}
+                      {showOpenAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
-                  ))}
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    {currentPreset.id === 'ollama'
+                      ? 'Lokal Ollama sunucusu için API anahtarı boş bırakılabilir.'
+                      : 'API anahtarınız yalnızca tarayıcınızın yerel hafızasında saklanır.'}
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                  <Server className="w-4 h-4 text-purple-500" />
-                  API Base URL (Endpoint)
-                </label>
-                <input
-                    type="text"
-                    value={options.apiKey}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onOptionsChange({ ...options, provider: 'openrouter', apiKey: val });
-                      if (typeof window !== 'undefined') {
-                        localStorage.setItem('epub_ocr_provider', 'openrouter');
-                        localStorage.setItem('epub_ocr_api_key', val);
-                      }
-                    }}
-                  placeholder="https://api.openai.com/v1"
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
-                />
-                <p className="text-[11px] text-zinc-500">
-                  OpenAI, DeepSeek, Groq, Ollama (örn: <code>http://localhost:11434/v1</code>) veya herhangi bir OpenAI uyumlu API uç noktası.
-                </p>
-              </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-xs">
+                      <Cpu className="w-4 h-4 text-purple-500" />
+                      <span>Model Seçimi</span>
+                    </label>
+                    {hasPresetModels && !showCustomInput && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomModelManual(true)}
+                        className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                      >
+                        Özel Model Yaz
+                      </button>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                  <Key className="w-4 h-4 text-purple-500" />
-                  API Anahtarı (API Key)
-                </label>
-                <div className="relative">
+                  {hasPresetModels && (
+                    <select
+                      value={isKnownModel && !isCustomModelManual ? options.customOpenAiModel : 'custom_manual'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'custom_manual') {
+                          setIsCustomModelManual(true);
+                        } else {
+                          setIsCustomModelManual(false);
+                          onOptionsChange({
+                            ...options,
+                            customOpenAiModel: val,
+                            model: val,
+                          });
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('epub_ocr_openai_model', val);
+                            localStorage.setItem('epub_ocr_model', val);
+                          }
+                        }
+                      }}
+                      className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 cursor-pointer"
+                    >
+                      {currentPreset.models.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                      <option value="custom_manual">➕ Farklı / Özel Model Adı Gir...</option>
+                    </select>
+                  )}
+
+                  {showCustomInput && (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={options.customOpenAiModel || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          onOptionsChange({
+                            ...options,
+                            customOpenAiModel: val,
+                            model: val,
+                          });
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('epub_ocr_openai_model', val);
+                            localStorage.setItem('epub_ocr_model', val);
+                          }
+                        }}
+                        placeholder="Model adını girin (Örn: llama-3.3-70b-versatile, deepseek-chat, gpt-4o)"
+                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                      />
+                      {hasPresetModels && isCustomModelManual && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomModelManual(false);
+                            const fallback = currentPreset.defaultModel || currentPreset.models[0]?.id || '';
+                            onOptionsChange({
+                              ...options,
+                              customOpenAiModel: fallback,
+                              model: fallback,
+                            });
+                            if (typeof window !== 'undefined') {
+                              localStorage.setItem('epub_ocr_openai_model', fallback);
+                              localStorage.setItem('epub_ocr_model', fallback);
+                            }
+                          }}
+                          className="text-[11px] text-zinc-500 hover:text-purple-600 dark:hover:text-purple-400 underline cursor-pointer"
+                        >
+                          Hazır model listesine dön ({currentPreset.name})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {currentPreset.id === 'groq' && (
+                  <div className="space-y-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                    <label className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                      <span>Hesap / Kota Türü (Groq)</span>
+                      <span className="text-[11px] font-normal text-zinc-400">
+                        {options.groqTier === 'paid' ? 'Turbo Hız (Sınırsız RPM)' : '30 RPM Akıllı Hız Koruması'}
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 bg-zinc-100 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOptionsChange({ ...options, groqTier: 'free' });
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('ekitap_groq_tier', 'free');
+                          }
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          options.groqTier !== 'paid'
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                            : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                        }`}
+                      >
+                        <span>Ücretsiz Katman (Free - 30 RPM)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOptionsChange({ ...options, groqTier: 'paid' });
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('ekitap_groq_tier', 'paid');
+                          }
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          options.groqTier === 'paid'
+                            ? 'bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                            : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                        }`}
+                      >
+                        <span>Ücretli Katman (Paid / Turbo)</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-zinc-500">
+                      {options.groqTier === 'paid'
+                        ? 'Kredi kartı tanımlı Groq hesapları için paketler bekleme olmadan paralel hızla işlenir.'
+                        : 'Ücretsiz Groq anahtarlarında dakikalık 30 istek sınırını aşmamak için akıllı hız kontrolü uygulanır.'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                  <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-xs">
+                    <Server className="w-4 h-4 text-purple-500" />
+                    <span>API Base URL (Endpoint)</span>
+                  </label>
                   <input
-                    type={showOpenAiKey ? 'text' : 'password'}
-                    value={options.customOpenAiKey || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onOptionsChange({ ...options, customOpenAiKey: val });
-                      if (typeof window !== 'undefined') {
-                        localStorage.setItem('epub_ocr_openai_key', val);
-                      }
-                    }}
-                    placeholder="sk-..."
-                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 pr-10 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOpenAiKey(!showOpenAiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-                  >
-                    {showOpenAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-[11px] text-zinc-500">
-                  Lokal Ollama sunucuları için API anahtarı boş bırakılabilir.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-purple-500" />
-                  Model Adı
-                </label>
-                <input
                     type="text"
-                    value={options.customOpenAiKey || ''}
+                    value={options.customOpenAiBaseUrl || ''}
                     onChange={(e) => {
                       const val = e.target.value;
-                      onOptionsChange({ ...options, provider: 'custom_openai', customOpenAiKey: val });
+                      onOptionsChange({ ...options, customOpenAiBaseUrl: val });
                       if (typeof window !== 'undefined') {
-                        localStorage.setItem('epub_ocr_provider', 'custom_openai');
-                        localStorage.setItem('epub_ocr_openai_key', val);
+                        localStorage.setItem('epub_ocr_openai_base_url', val);
                       }
                     }}
-                  placeholder="gpt-4o-mini veya deepseek-chat"
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
-                />
+                    placeholder="https://api.groq.com/openai/v1"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                  />
+                  <p className="text-[11px] text-zinc-500">
+                    İstekler <code>{`${(options.customOpenAiBaseUrl || 'https://api.openai.com/v1').trim().replace(/\/+$/, '')}/chat/completions`}</code> adresine gönderilir.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Book Translation Settings */}
           <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-4">

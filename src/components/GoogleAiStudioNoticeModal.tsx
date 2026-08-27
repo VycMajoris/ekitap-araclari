@@ -109,6 +109,32 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
               </li>
             </ul>
           </div>
+
+          <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/40 rounded-2xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200 text-xs">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>v0.3.2 Sürüm Yenilikleri</span>
+              </span>
+              <span className="text-[10px] bg-blue-200/70 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full">
+                Yenilikler
+              </span>
+            </div>
+            <ul className="text-[11px] text-blue-900/90 dark:text-blue-300/90 space-y-1.5 leading-relaxed">
+              <li className="flex items-start gap-1.5">
+                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
+                <span><strong>Birleşik API Paneli:</strong> Google AI Studio, Groq, OpenRouter, OpenAI, DeepSeek, Together ve Ollama tek listede birleştirildi.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
+                <span><strong>Groq (Llama 3.3 70B):</strong> Ultra yüksek hız ve 30 RPM ücretsiz kota korumasıyla eklendi.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
+                <span><strong>OpenAI Frontier Serisi:</strong> GPT-5.6 Sol, Terra, Luna ve GPT-5.4 Mini modelleri hazır seçeneklere dahil edildi.</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
         {/* Footer & Actions */}

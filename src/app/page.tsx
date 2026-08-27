@@ -130,6 +130,8 @@ export default function Home() {
 
       const storedKey = localStorage.getItem('epub_ocr_api_key') || '';
       const storedGeminiKey = localStorage.getItem('epub_ocr_gemini_api_key') || '';
+      const storedGeminiTier = (localStorage.getItem('ekitap_gemini_tier') as 'free' | 'paid') || 'free';
+      const storedGroqTier = (localStorage.getItem('ekitap_groq_tier') as 'free' | 'paid') || 'free';
       const storedOpenAiKey = localStorage.getItem('epub_ocr_openai_key') || '';
       const storedOpenAiBaseUrl = localStorage.getItem('epub_ocr_openai_base_url') || 'https://api.openai.com/v1';
       const storedOpenAiModel = localStorage.getItem('epub_ocr_openai_model') || 'gpt-4o-mini';
@@ -196,6 +198,8 @@ export default function Home() {
         provider: storedProvider,
         apiKey: storedKey,
         geminiApiKey: storedGeminiKey,
+        geminiTier: storedGeminiTier,
+        groqTier: storedGroqTier,
         customOpenAiKey: storedOpenAiKey,
         customOpenAiBaseUrl: storedOpenAiBaseUrl,
         customOpenAiModel: storedOpenAiModel,
@@ -651,6 +655,25 @@ export default function Home() {
             </button>
           </div>
         )}
+
+        <div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+              v0.3.2
+            </span>
+            <span>
+              <strong>Yenilik:</strong> Birleşik API paneli (Google AI Studio, Groq, OpenAI, DeepSeek) ve Groq 30 RPM hız koruması eklendi.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsAiNoticeOpen(true)}
+            className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>Detayları Gör</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
 
         <UploadSection
           onFileLoaded={handleFileLoaded}

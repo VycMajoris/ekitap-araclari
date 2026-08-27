@@ -75,8 +75,15 @@ export const Header: React.FC<HeaderProps> = ({
       return `AI Studio (${shortId})`;
     }
     if (activeProvider === 'custom_openai') {
-      const customModel = options?.customOpenAiModel || 'gpt-4o-mini';
-      return `OpenAI API (${customModel})`;
+      const customModel = options?.customOpenAiModel || 'llama-3.3-70b-versatile';
+      const baseUrl = options?.customOpenAiBaseUrl || '';
+      let prefix = 'Özel API';
+      if (baseUrl.includes('groq.com')) prefix = 'Groq';
+      else if (baseUrl.includes('deepseek.com')) prefix = 'DeepSeek';
+      else if (baseUrl.includes('together')) prefix = 'Together';
+      else if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('11434')) prefix = 'Ollama';
+      else if (baseUrl.includes('openai.com')) prefix = 'OpenAI';
+      return `${prefix} (${customModel})`;
     }
     if (activeModelId?.includes('llama-3.3') || modelName?.includes('Llama 3.3')) {
       return 'OpenRouter (Llama 3.3)';

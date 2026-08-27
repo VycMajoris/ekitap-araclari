@@ -288,8 +288,9 @@ export async function callGeminiApiCorrection({
             'Google AI Studio ücretsiz istek limitiniz (429 - Kota Doldu) aşıldı. Fatura çıkmaz; kotanız dakikalık/günlük süre dolunca otomatik olarak tekrar açılacaktır.'
           );
         }
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        delay = Math.min(delay * 1.5, 10000);
+        // When Google hits 429 on free tier RPM limit, wait 15 seconds to let the 1-minute rate-limit bucket reset
+        const quotaCooldown = attempt === 0 ? 8000 : 16000;
+        await new Promise((resolve) => setTimeout(resolve, quotaCooldown));
         continue;
       }
 

@@ -113,6 +113,16 @@ Tamamen ücretsiz açık kaynaklı modelleri kullanmak isterseniz:
 
 ---
 
+### ⚡ Seçenek 3: Groq / OpenAI / DeepSeek / Ollama (Özel & Hızlı API)
+Ultra yüksek hız veya yerel model çalıştırmak isterseniz:
+
+1. **Groq (Süper Hızlı & Ücretsiz):** [console.groq.com/keys](https://console.groq.com/keys) üzerinden ücretsiz API key alın.
+2. eKitap Araçları **Ayarlar > OpenAI / Özel** sekmesine gidin.
+3. Üstteki hızlı şablonlardan **Groq**'a tıklayın. Model otomatik olarak `Llama 3.3 70B Versatile` seçilecektir.
+4. Anahtarınızı yapıştırıp **Kaydet**'e basın. (Ayrıca DeepSeek, OpenAI veya yerel Ollama sunucusu da tek tıkla seçilebilir).
+
+---
+
 ## 📱 Cihaza Gönder Rehberi (Kindle & KOReader)
 
 ### A. Send to Kindle (E-Posta ile Gönderim)

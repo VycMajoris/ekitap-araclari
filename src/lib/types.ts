@@ -73,6 +73,8 @@ export interface ProcessingOptions {
   provider?: LlmProvider;
   apiKey: string;
   geminiApiKey?: string;
+  geminiTier?: 'free' | 'paid';
+  groqTier?: 'free' | 'paid';
   customOpenAiKey?: string;
   customOpenAiBaseUrl?: string;
   customOpenAiModel?: string;

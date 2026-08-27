@@ -5,6 +5,31 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.3.2] - 2026-08-27
+
+### 🚀 Yeni Özellikler (Added)
+* **🌐 Birleşik Yapay Zekâ Sağlayıcı (API) Mimarisi:** Karmaşık ve iç içe geçmiş sekmeler kaldırılarak 8 büyük sağlayıcı tek çatı altında toplandı:
+  - 🟡 **Google AI Studio** (Gemini 3.7 / 3.6 Flash)
+  - ⚡ **Groq** (Llama 3.3 70B, Qwen 3.8/3.6, DeepSeek R1, GPT-OSS)
+  - 🟢 **OpenRouter** (Ücretsiz `:free` model havuzu)
+  - 🟣 **OpenAI** (GPT-5.6 Sol/Terra/Luna, GPT-5.4 Mini, GPT-4o, o3-mini)
+  - 🔵 **DeepSeek** (V3 Chat, R1 Reasoner)
+  - 🟠 **Together AI** (Llama 3.3 Turbo, Qwen 2.5 Turbo)
+  - 🦙 **Ollama (Lokal)** (Yerel ve internetsiz çalışma)
+  - ⚙️ **Özel / Diğer** (Özel proxy / OpenAI uyumlu uç noktalar)
+* **⚡ Groq & Gemini Free Tier Hız Koruması (RPM Throttling):**
+  - **Google AI Studio:** 15 RPM ücretsiz limit koruması (3.8s nazik gecikme).
+  - **Groq:** 30 RPM ücretsiz limit koruması (2.1s nazik gecikme).
+  - **Paid / Turbo Katman Desteği:** Ücretli veya kredi kartı tanımlı hesaplar için beklemesiz turbo işlem hızı.
+* **🛡️ 429 Kota Durumunda Otomatik Adaptif Geri Çekilme (Backoff):** Anlık hız sınırı aşıldığında işlem durdurulmadan otomatik olarak birkaç saniyelik bekleme periyodu ile kendini onararak çeviriye devam etmesi sağlandı.
+* **🌟 OpenAI Frontier & Groq Güncel Modelleri:** OpenAI'ın en yeni `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.4-mini` modelleri ile Groq'un metin modelleri doğrudan açılır listeye eklendi; ses ve moderasyon modelleri ayıklandı.
+
+### 🛠️ Düzeltmeler (Fixed)
+* **Özel OpenAI Ayarları ve Uç Nokta Senkronizasyonu:** `custom_openai` sekmesinde `customOpenAiBaseUrl` ve model adının hatalı bağlanması giderildi, sağlayıcı bazlı şablonlar ile tek tıkla otomatik doldurma sağlandı.
+* **Header Sağlayıcı Göstergesi:** Üst çubukta aktif sağlayıcı ve model adı (örneğin `Groq (llama-3.3-70b-versatile)`) dinamik ve doğru şekilde gösterilir hale getirildi.
+
+---
+
 ## [0.3.1] - 2026-08-27
 
 ### 🛠️ Düzeltmeler (Hotfixes)

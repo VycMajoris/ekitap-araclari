@@ -68,9 +68,14 @@ export async function callOpenAiCustomCorrection({
 
       if (response.status === 429) {
         if (attempt === maxRetries) {
-          throw new Error('API istek limiti (Rate Limit / 429) aşıldı.');
+          throw new Error('API istek limiti (Rate Limit / 429 - Kota Doldu) aşıldı. Lütfen birkaç saniye bekleyin veya hesap kotanızı kontrol edin.');
         }
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        const retryAfterHeader = response.headers.get('Retry-After');
+        let waitMs = retryAfterHeader ? Math.max(parseFloat(retryAfterHeader) * 1000, delay) : delay;
+        if (cleanBaseUrl.includes('groq.com')) {
+          waitMs = Math.max(waitMs, attempt === 0 ? 3000 : 7000);
+        }
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
         delay = Math.min(delay * 1.8, 15000);
         continue;
       }
@@ -864,13 +869,21 @@ export async function processEpubChapters(
       options.provider === 'gemini_api' ||
       options.provider === 'custom_openai';
 
+    const isGeminiPaid = options.provider === 'gemini_api' && options.geminiTier === 'paid';
+    const isGroq = options.provider === 'custom_openai' && (options.customOpenAiBaseUrl || '').includes('groq.com');
+    const isGroqPaid = isGroq && options.groqTier === 'paid';
+
     let concurrency = 1;
     if (isTranslation) {
-      concurrency = options.enableRollingContext !== false ? 1 : Math.max(1, Math.min(options.concurrency || 2, 3));
-    } else if (isHighThroughputProvider) {
+      concurrency = (isGeminiPaid || isGroqPaid) && options.enableRollingContext === false ? 2 : 1;
+    } else if (isGeminiPaid || isGroqPaid) {
       concurrency = Math.max(1, Math.min(options.concurrency || 3, 4));
+    } else if (options.provider === 'gemini_api' || isGroq) {
+      concurrency = 1;
+    } else if (isHighThroughputProvider) {
+      concurrency = Math.max(1, Math.min(options.concurrency || 2, 3));
     } else {
-      concurrency = Math.max(1, Math.min(options.concurrency || 2, 2));
+      concurrency = 1;
     }
 
     for (let i = 0; i < batches.length; i += concurrency) {
@@ -925,9 +938,18 @@ export async function processEpubChapters(
       );
 
       if (i + concurrency < batches.length && !signal?.aborted) {
-        const throttleMs = isHighThroughputProvider
-          ? isTranslation ? 400 : 200
-          : isTranslation ? 1000 : 1500;
+        let throttleMs = 500;
+        if (isGeminiPaid || isGroqPaid) {
+          throttleMs = isTranslation ? 300 : 150;
+        } else if (options.provider === 'gemini_api') {
+          throttleMs = 3800;
+        } else if (isGroq) {
+          throttleMs = isTranslation ? 2100 : 1200;
+        } else if (isHighThroughputProvider) {
+          throttleMs = isTranslation ? 800 : 400;
+        } else {
+          throttleMs = isTranslation ? 2000 : 1500;
+        }
         await new Promise((resolve) => setTimeout(resolve, throttleMs));
       }
 
