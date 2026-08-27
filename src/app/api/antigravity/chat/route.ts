@@ -45,11 +45,12 @@ function extractTextFromResponse(data: any): string {
 
 function mapToGeminiModel(model: string): string {
   const clean = model.replace(/^antigravity-/, '');
-  if (clean.includes('3.7-flash') || clean.includes('3-flash')) return 'gemini-2.0-flash';
-  if (clean.includes('3.5-flash')) return 'gemini-2.0-flash';
-  if (clean.includes('3-pro') || clean.includes('3.1-pro')) return 'gemini-2.0-flash';
-  if (clean.includes('opus') || clean.includes('sonnet')) return 'gemini-2.0-flash';
-  return clean || 'gemini-2.0-flash';
+  if (clean.includes('3.6-flash')) return 'gemini-3.6-flash';
+  if (clean.includes('3.7-flash') || clean.includes('3-flash')) return 'gemini-3.7-flash';
+  if (clean.includes('3.5-flash')) return 'gemini-3.6-flash';
+  if (clean.includes('3-pro') || clean.includes('3.1-pro')) return 'gemini-1.5-pro';
+  if (clean.includes('opus') || clean.includes('sonnet')) return 'gemini-3.6-flash';
+  return clean || 'gemini-3.6-flash';
 }
 
 export async function POST(req: NextRequest) {

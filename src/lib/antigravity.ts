@@ -35,12 +35,10 @@ export const ANTIGRAVITY_MODELS: AntigravityModelInfo[] = [
 ];
 
 export const GEMINI_API_MODELS: AntigravityModelInfo[] = [
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Önerilen & Çok Hızlı)' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (En Yeni)' },
-  { id: 'gemini-2.0-flash-thinking-exp', name: 'Gemini 2.0 Flash Thinking Exp' },
-  { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Exp' },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (En Yeni, En Yüksek Zeka & Hız - Önerilen)' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Hızlı & Kararlı)' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Büyük Belgeler İçin)' },
 ];
 
 export async function generatePkce(): Promise<{ verifier: string; challenge: string }> {
@@ -284,7 +282,9 @@ export async function callGeminiApiCorrection({
 
       if (response.status === 429) {
         if (attempt === maxRetries) {
-          throw new Error('Gemini API istek limiti (Rate Limit / 429) aşıldı.');
+          throw new Error(
+            'Google AI Studio ücretsiz istek limitiniz (429 - Kota Doldu) aşıldı. Fatura çıkmaz; kotanız dakikalık/günlük süre dolunca otomatik olarak tekrar açılacaktır.'
+          );
         }
         await new Promise((resolve) => setTimeout(resolve, delay));
         delay = Math.min(delay * 1.8, 20000);

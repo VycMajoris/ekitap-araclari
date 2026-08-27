@@ -437,6 +437,21 @@ async function processLlmBatch(
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
       const errMsg = err instanceof Error ? err.message : String(err);
       console.error('Tekil blok LLM hatası:', err);
+
+      const errLog: DebugLogEntry = {
+        id: `err-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString('tr-TR'),
+        source: 'error',
+        ruleName: `API İstek Hatası (${options.provider || 'default'})`,
+        chapterId: item.chapterId,
+        chapterTitle: item.chapterTitle,
+        blockId: singleBlock.id,
+        originalText: textBeforeLlm,
+        correctedText: errMsg,
+        changes: [{ before: 'İstek Gönderildi', after: errMsg }],
+      };
+      callbacks.onDebugLog?.(errLog);
+
       callbacks.onError?.(item.chapterId, `AI İstek Hatası: ${errMsg}`);
       throw err;
     }
@@ -533,6 +548,21 @@ async function processLlmBatch(
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
       const errMsg = err instanceof Error ? err.message : String(err);
       console.error('Toplu blok LLM hatası:', err);
+
+      const errLog: DebugLogEntry = {
+        id: `err-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString('tr-TR'),
+        source: 'error',
+        ruleName: `API İstek Hatası (${options.provider || 'default'})`,
+        chapterId: batch[0]?.chapterId || 'global',
+        chapterTitle: batch[0]?.chapterTitle || 'Genel',
+        blockId: batch[0]?.block.id || 'batch-error',
+        originalText: `Paket (${batch.length} blok)`,
+        correctedText: errMsg,
+        changes: [{ before: 'İstek Gönderildi', after: errMsg }],
+      };
+      callbacks.onDebugLog?.(errLog);
+
       callbacks.onError?.(batch[0]?.chapterId || 'global', `AI Paket Hatası: ${errMsg}`);
       throw err;
     }

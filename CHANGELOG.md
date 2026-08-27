@@ -5,13 +5,19 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
-## [0.2.1] - 2026-08-26
+## [0.3.0] - 2026-08-27
+
+### 🚀 Yeni Özellikler (Added)
+* **💎 Google Gemini 3.7 Flash & 3.6 Flash Varsayılan Motor:** Google AI Studio entegrasyonu en güncel ve edebi çeviri zekâsı en yüksek olan `gemini-3.7-flash` modeline güncellendi.
+* **💡 İlk Giriş Bilgilendirme Modalı:** Kullanıcıları Google AI Studio'dan 10 saniyede tamamen ücretsiz ($0) ve günde 1.500 istek / 15-20 kitap hakkı sunan API anahtarını almaya yönlendiren şık bilgilendirme penceresi eklendi.
+* **📖 Adım Adım Ücretsiz API Anahtarı Rehberi:** `README.md` içerisine Google AI Studio ve OpenRouter üzerinden sıfır maliyetle API anahtarı alma rehberi eklendi.
+* **🛑 Kullanıcı Dostu 429 Kota Uyarısı:** AI Studio istek limiti aşıldığında panik yaratmayan, fatura çıkmayacağını ve kotanın süre dolunca otomatik yenileneceğini belirten net Türkçe bildirim eklendi.
+* **🐞 Hata ve İstek Takip Günlüğü:** API hataları, durum kodları ve ağ detayları anlık olarak `DebugConsole` (Değişiklik & Hata Günlüğü) çekmecesine işlenir hale getirildi.
 
 ### 🛠️ Düzeltmeler (Fixed)
-* **📖 Calibre & Eski EPUB `<div>` Paragraf Desteği:** `<p>` etiketi içermeyen ancak metin barındıran `<div>`, `<section>`, `<article>` etiketli EPUB'ların (örneğin Calibre ile dönüştürülmüş Küçük Prens vb. e-kitaplar) ayrıştırılamama ve çevrilememe sorunu giderildi; 800+ metin bloğu eksiksiz ayrıştırılıp yeniden oluşturulabilir hale getirildi.
-* **🌐 Canlı Ortam (Serverless) Zaman Aşımı Optimizasyonu:** Cloudflare Pages ve Vercel fonksiyon zaman aşımı (timeout) sınırları için AI çeviri paket boyutu 4.500 karaktere optimize edildi; isteklerin 2-5 saniye içinde tamamlanması sağlandı.
-* **📊 Canlı Çeviri İstatistikleri ve Kelime Sayacı:** Çeviri modunda her blok işlendiğinde çevrilen kelime sayısının (`totalFixedWords`) anlık olarak arayüzde ve bölüm kartlarında güncellenmesi sağlandı.
-* **⚠️ Hata Görünürlüğü:** AI paket işleme hatalarının sessizce yutulması engellendi; hata durumunda arayüzde doğrudan kırmızı uyarı gösterilmesi sağlandı.
+* **Google OAuth Sekmesi Temizliği:** Google'ın API sandbox kısıtlamaları nedeniyle sorun çıkaran Antigravity OAuth sağlayıcı sekmesi kaldırılarak doğrudan resmi Google AI Studio API motoru birincil yapıldı.
+* **Süre Sayacı ve Buton Kayması:** Süre uzadıkça butonların sağa/sola zıplaması engellendi; `Kalan` ve `Geçen` süre `X dk Y sn` formatında ayrık bloklara alındı ve `tabular-nums` ile butonlar sabitlendi.
+* **Calibre / Eski EPUB `<div>` Ayrıştırma:** `<p>` etiketi içermeyen metin içeren `<div>`, `<section>`, `<article>` bloklarının algılanıp eksiksiz Türkçeleştirilmesi sağlandı.
 
 ---
 

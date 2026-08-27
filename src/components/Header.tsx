@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     if (activeProvider === 'gemini_api') {
       const model = GEMINI_API_MODELS.find((m) => m.id === activeModelId);
-      const shortId = model ? model.id : activeModelId || 'gemini-2.0-flash';
+      const shortId = model ? model.id : activeModelId || 'gemini-3.7-flash';
       return `AI Studio (${shortId})`;
     }
     if (activeProvider === 'custom_openai') {

@@ -7,11 +7,11 @@
 %100 Tarayıcı Üzerinde Çalışan, Gizlilik Odaklı, Türkçe Dilbilgisi ve Yapay Zeka Destekli eKitap Araç Seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.2.0-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.3.0-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 
-[Özellikler](#-özellikler) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
+[Özellikler](#-özellikler) • [Ücretsiz API Key Rehberi](#-ücretsiz-yapay-zekâ-api-key-nasıl-alınır) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
 
 </div>
 
@@ -53,10 +53,9 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 - **Özel Karakter & Terim Sözlüğü (Glossary):** Kitaba özel kurgusal terimlerin ve karakter isimlerinin kitap boyunca %100 tutarlı çevrilmesini sağlar.
 
 ### 4. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
-- **Google Hesabı (Antigravity OAuth)**: Gemini 3.7 Flash, Gemini 3.5 Flash, Gemini 3 Pro ve Claude modellerini yüksek hız ve kotayla kullanma imkanı.
-- **Google AI Studio (Gemini Key)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı.
+- **Google AI Studio (Gemini 3.7 Flash / 3.6 Flash)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı. Günde **1.500 istek / gün** tamamen ücretsizdir.
 - **OpenAI Uyumlu API (Özel)**: OpenAI (GPT-4o / mini), DeepSeek (deepseek-chat), Groq (Llama 3.3 70B), Ollama (Lokal) ve herhangi bir özel LLM uç noktası desteği.
-- **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B, Gemini 2.0 Flash ve Mistral modelleriyle sıfır maliyetli kullanım.
+- **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B ve Mistral modelleriyle sıfır maliyetli kullanım.
 
 ### 5. ⚡ 2 Aşamalı Hız ve İşleme Mimarisi (2-Phase Pipeline)
 Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
@@ -82,6 +81,35 @@ Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
 
 ### 9. 🌓 Karanlık ve Aydınlık Tema
 - Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
+
+---
+
+## 🔑 Ücretsiz Yapay Zekâ API Key Nasıl Alınır?
+
+eKitap Araçları'nda yapay zekâ destekli OCR onarımı ve roman/kitap çevirisi yapmak için **tamamen ücretsiz ($0)** API anahtarı kullanabilirsiniz. Kredi kartı bilgisi gerekmez ve asla fatura çıkmaz.
+
+### 🌟 Seçenek 1: Google AI Studio (Önerilen & En Güçlü)
+Google, **Gemini 3.7 Flash** ve **Gemini 3.6 Flash** modellerini bireysel kullanım için **günde 1.500 istek (yaklaşık 15-20 tam kitap çevirisi)** ücretsiz olarak sunar.
+
+1. **[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)** adresine gidin.
+2. Google (Gmail) hesabınızla giriş yapın.
+3. Mavi renkli **"Create API key"** (API Anahtarı Oluştur) butonuna tıklayın.
+4. Çıkan listeden bir proje seçin veya *"Create API key in new project"* deyin.
+5. Oluşturulan `AIzaSy...` ile başlayan anahtarınızı **Kopyalayın**.
+6. **eKitap Araçları** sitesinde sağ üstteki **⚙️ Ayarlar**'ı açın.
+7. **Google AI Studio** sekmesine yapıştırın ve **Kaydet**'e basın.
+
+> **💡 Not:** Günlük limit dolduğunda fatura kesilmez; sistem `429 (Kota Doldu)` hatası vererek durur ve gece yarısı/süre dolunca kotanız otomatik yenilenir.
+
+---
+
+### 🌐 Seçenek 2: OpenRouter (Llama 3.3 70B & Qwen 2.5)
+Tamamen ücretsiz açık kaynaklı modelleri kullanmak isterseniz:
+
+1. **[openrouter.ai](https://openrouter.ai/)** adresine gidin ve ücretsiz bir hesap açın.
+2. **Keys** sekmesinden **"Create Key"** butonuna basarak yeni bir anahtar oluşturun.
+3. eKitap Araçları **Ayarlar > OpenRouter** sekmesine anahtarınızı yapıştırın.
+4. Model olarak `:free` uzantılı ücretsiz modelleri (örneğin `meta-llama/llama-3.3-70b-instruct:free`) seçin.
 
 ---
 

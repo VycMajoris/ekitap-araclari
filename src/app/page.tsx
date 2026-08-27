@@ -11,6 +11,7 @@ import { DebugConsole } from '@/components/DebugConsole';
 import { StatsBar } from '@/components/StatsBar';
 import { ChapterList } from '@/components/ChapterList';
 import { DiffViewer } from '@/components/DiffViewer';
+import { GoogleAiStudioNoticeModal } from '@/components/GoogleAiStudioNoticeModal';
 import {
   EpubMetadata,
   EpubChapter,
@@ -93,6 +94,8 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPacking, setIsPacking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<LlmProvider | undefined>(undefined);
+  const [isAiNoticeOpen, setIsAiNoticeOpen] = useState(false);
   const [isSendToDeviceOpen, setIsSendToDeviceOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -132,10 +135,10 @@ export default function Home() {
       const storedOpenAiModel = localStorage.getItem('epub_ocr_openai_model') || 'gpt-4o-mini';
       const storedProvider = (localStorage.getItem('epub_ocr_provider') as LlmProvider) || 'antigravity';
       const storedModel = localStorage.getItem('epub_ocr_model') || (
-        storedProvider === 'antigravity'
+        storedProvider === 'gemini_api'
           ? 'gemini-3.7-flash'
-          : storedProvider === 'gemini_api'
-          ? 'gemini-2.0-flash'
+          : storedProvider === 'antigravity'
+          ? 'gemini-3.7-flash'
           : storedProvider === 'custom_openai'
           ? storedOpenAiModel
           : 'google/gemini-2.0-flash-exp:free'
@@ -200,6 +203,15 @@ export default function Home() {
         useLlm: effectiveUseLlm,
         isDevMode: storedDevMode,
       }));
+
+      // Check if AI Studio notice should be shown on initial load
+      const hideAiNotice = localStorage.getItem('ekitap_hide_aistudio_notice') === 'true';
+      if (!hideAiNotice && !storedGeminiKey.trim()) {
+        const timer = setTimeout(() => {
+          setIsAiNoticeOpen(true);
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
     }
   }, []);
 
@@ -462,6 +474,7 @@ export default function Home() {
           },
           onError: (chapterId: string, error: string) => {
             console.error(`Bölüm hatası (${chapterId}):`, error);
+            setErrorMessage(error);
           },
         },
         controller.signal,
@@ -1013,11 +1026,25 @@ export default function Home() {
 
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          setSettingsInitialTab(undefined);
+        }}
         options={options}
         onOptionsChange={handleOptionsChange}
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
+        initialTab={settingsInitialTab}
+      />
+
+      <GoogleAiStudioNoticeModal
+        isOpen={isAiNoticeOpen}
+        onClose={() => setIsAiNoticeOpen(false)}
+        onOpenGeminiSettings={() => {
+          setIsAiNoticeOpen(false);
+          setSettingsInitialTab('gemini_api');
+          setIsSettingsOpen(true);
+        }}
       />
 
       <SendToDeviceModal

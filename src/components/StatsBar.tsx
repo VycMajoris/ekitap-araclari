@@ -49,19 +49,23 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   const isTranslation = taskType === 'translate';
 
   const formatSeconds = (sec?: number) => {
-    if (sec === undefined || isNaN(sec) || sec < 0) return 'Hesaplanıyor...';
+    if (sec === undefined || isNaN(sec) || sec < 0) return '0 sn';
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return m > 0 ? `${m} dk ${s} sn` : `${s} sn`;
+    if (m > 0) {
+      return `${m} dk ${s} sn`;
+    }
+    return `${s} sn`;
   };
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm space-y-4">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
-          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        {/* Metric Cards Grid - Fixed Column Layout */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3 min-w-[130px]">
             <span className="text-[11px] font-medium text-zinc-500 block">İlerleme</span>
-            <div className="flex items-baseline gap-1 mt-0.5">
+            <div className="flex items-baseline gap-1 mt-0.5 tabular-nums">
               <span className="text-lg font-extrabold text-zinc-900 dark:text-white">
                 %{percent}
               </span>
@@ -72,7 +76,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           </div>
 
           <div
-            className={`border rounded-2xl p-3 ${
+            className={`border rounded-2xl p-3 min-w-[130px] ${
               isTranslation
                 ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/80 dark:border-blue-800/40'
                 : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
@@ -87,15 +91,15 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             >
               {isTranslation ? (
                 <>
-                  <Languages className="w-3 h-3" /> Çevrilen Kelime
+                  <Languages className="w-3 h-3 shrink-0" /> Çevrilen Kelime
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3 h-3" /> Düzeltilen Kelime
+                  <Sparkles className="w-3 h-3 shrink-0" /> Düzeltilen Kelime
                 </>
               )}
             </span>
-            <div className="flex items-baseline gap-1 mt-0.5">
+            <div className="flex items-baseline gap-1 mt-0.5 tabular-nums">
               <span
                 className={`text-lg font-extrabold ${
                   isTranslation
@@ -117,9 +121,9 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3 min-w-[130px]">
             <span className="text-[11px] font-medium text-zinc-500 block">Bölüm Durumu</span>
-            <div className="flex items-baseline gap-1 mt-0.5">
+            <div className="flex items-baseline gap-1 mt-0.5 tabular-nums">
               <span className="text-lg font-extrabold text-zinc-900 dark:text-white">
                 {stats.completedChapters}
               </span>
@@ -127,25 +131,36 @@ export const StatsBar: React.FC<StatsBarProps> = ({
             </div>
           </div>
 
-          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3">
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-3 min-w-[150px]">
             <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-zinc-400" />
-              {isProcessing ? 'Kalan / Geçen Süre' : 'Toplam Süre'}
+              <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+              {isProcessing ? 'Süre (Kalan / Geçen)' : 'Toplam Süre'}
             </span>
-            <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-1 truncate">
+            <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-1 tabular-nums">
               {isProcessing ? (
-                <div className="flex items-center gap-1.5 truncate">
-                  <span>{formatSeconds(stats.estimatedRemainingSeconds)}</span>
-                  <span className="text-[10px] text-zinc-400 font-normal">({stats.elapsedSeconds} sn)</span>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-zinc-400 font-normal">Kalan:</span>
+                    <span className="font-bold text-zinc-900 dark:text-white">
+                      {formatSeconds(stats.estimatedRemainingSeconds)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-zinc-400 font-normal">Geçen:</span>
+                    <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                      {formatSeconds(stats.elapsedSeconds)}
+                    </span>
+                  </div>
                 </div>
               ) : (
-                `${formatSeconds(stats.elapsedSeconds)}`
+                <span className="text-sm">{formatSeconds(stats.elapsedSeconds)}</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+        {/* Action Buttons - Stable Fixed Layout without wrapping or jumping */}
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-start lg:justify-end shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-zinc-100 dark:border-zinc-800">
           {stats.processedBlocks > 0 && !isProcessing && (
             <button
               onClick={onResetProgress}
