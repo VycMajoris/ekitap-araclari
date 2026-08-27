@@ -7,7 +7,7 @@
 %100 Tarayıcı Üzerinde Çalışan, Gizlilik Odaklı, Türkçe Dilbilgisi ve Yapay Zeka Destekli eKitap Araç Seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.3.0-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.3.1-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 

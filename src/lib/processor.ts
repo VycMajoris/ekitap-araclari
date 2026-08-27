@@ -594,6 +594,7 @@ export async function refineChapterTitlesWithAi(
     return;
   }
 
+  // Do not block or abort whole pipeline if title translation fails or times out
   const titlesList = chapters
     .map((ch, idx) => `[TITLE_${idx}] ${ch.title}`)
     .join('\n');
@@ -605,11 +606,18 @@ export async function refineChapterTitlesWithAi(
     : `Aşağıda bir kitabın bölümlerine ait başlık listesi yer almaktadır. Lütfen bu başlıklardaki OCR, harf birleşme (rn->m, cl->d, l< -> k vb.) ve bozuk karakter hatalarını aslına uygun düzgün Türkçe başlıklar olarak düzelt. Her başlığı [TITLE_X] Düzeltilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`;
 
   try {
-    const response = await callLlmCorrection({
-      options,
-      content: prompt,
-      signal,
-    });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Başlık çevirisi zaman aşımına uğradı, paragraflarla devam ediliyor.')), 10000)
+    );
+
+    const response = await Promise.race([
+      callLlmCorrection({
+        options,
+        content: prompt,
+        signal,
+      }),
+      timeoutPromise,
+    ]);
 
     const lines = response.split('\n');
     for (const line of lines) {
@@ -624,7 +632,7 @@ export async function refineChapterTitlesWithAi(
       }
     }
   } catch (err) {
-    console.warn('Başlıkları AI ile iyileştirme uyarısı:', err);
+    console.warn('Başlıkları AI ile iyileştirme atlandı/uyarısı:', err);
   }
 }
 

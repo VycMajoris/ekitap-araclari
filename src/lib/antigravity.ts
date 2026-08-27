@@ -247,7 +247,7 @@ export async function callGeminiApiCorrection({
   customPrompt,
 }: CallGeminiApiCorrectionParams): Promise<string> {
   const systemMessage = customPrompt || TURKISH_OCR_SYSTEM_PROMPT;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+  let activeModel = model;
 
   const maxRetries = 5;
   let delay = 2000;
@@ -256,6 +256,8 @@ export async function callGeminiApiCorrection({
     if (signal?.aborted) {
       throw new DOMException('İşlem kullanıcı tarafından durduruldu.', 'AbortError');
     }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey.trim()}`;
 
     try {
       const response = await fetch(url, {
@@ -287,15 +289,33 @@ export async function callGeminiApiCorrection({
           );
         }
         await new Promise((resolve) => setTimeout(resolve, delay));
-        delay = Math.min(delay * 1.8, 20000);
+        delay = Math.min(delay * 1.5, 10000);
         continue;
       }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData?.error?.message || `Gemini API hatası (Kod: ${response.status} ${response.statusText})`
-        );
+        const rawErr = errorData?.error?.message || `Gemini API hatası (Kod: ${response.status} ${response.statusText})`;
+        
+        // Handle High Demand (503 / overload) with automatic fallback to gemini-3.6-flash or gemini-2.0-flash
+        const isHighDemand =
+          response.status === 503 ||
+          rawErr.toLowerCase().includes('high demand') ||
+          rawErr.toLowerCase().includes('overloaded') ||
+          rawErr.toLowerCase().includes('resource has been exhausted');
+
+        if (isHighDemand && attempt < maxRetries) {
+          if (activeModel === 'gemini-3.7-flash') {
+            activeModel = 'gemini-3.6-flash';
+          } else if (activeModel === 'gemini-3.6-flash') {
+            activeModel = 'gemini-2.0-flash';
+          }
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay = Math.min(delay * 1.5, 8000);
+          continue;
+        }
+
+        throw new Error(rawErr);
       }
 
       const data = await response.json();
@@ -319,7 +339,7 @@ export async function callGeminiApiCorrection({
         throw err;
       }
       await new Promise((resolve) => setTimeout(resolve, delay));
-      delay = Math.min(delay * 1.8, 20000);
+      delay = Math.min(delay * 1.5, 10000);
     }
   }
 

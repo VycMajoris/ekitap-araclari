@@ -133,15 +133,17 @@ export default function Home() {
       const storedOpenAiKey = localStorage.getItem('epub_ocr_openai_key') || '';
       const storedOpenAiBaseUrl = localStorage.getItem('epub_ocr_openai_base_url') || 'https://api.openai.com/v1';
       const storedOpenAiModel = localStorage.getItem('epub_ocr_openai_model') || 'gpt-4o-mini';
-      const storedProvider = (localStorage.getItem('epub_ocr_provider') as LlmProvider) || 'antigravity';
+      const rawStoredProvider = localStorage.getItem('epub_ocr_provider');
+      const storedProvider: LlmProvider =
+        rawStoredProvider === 'gemini_api' || rawStoredProvider === 'openrouter' || rawStoredProvider === 'custom_openai'
+          ? rawStoredProvider
+          : 'gemini_api';
       const storedModel = localStorage.getItem('epub_ocr_model') || (
         storedProvider === 'gemini_api'
           ? 'gemini-3.7-flash'
-          : storedProvider === 'antigravity'
-          ? 'gemini-3.7-flash'
           : storedProvider === 'custom_openai'
           ? storedOpenAiModel
-          : 'google/gemini-2.0-flash-exp:free'
+          : 'meta-llama/llama-3.3-70b-instruct:free'
       );
       const storedDevMode = localStorage.getItem('epub_ocr_dev_mode') === 'true';
       const storedTaskType = (localStorage.getItem('ekitap_task_type') as TaskType) || 'ocr_fix';
@@ -405,22 +407,39 @@ export default function Home() {
   };
 
   const handleStartProcessing = async () => {
+    // If user has a Gemini API key configured, ensure provider is gemini_api if it was stuck on antigravity
+    let effectiveOptions = { ...options };
+    if (effectiveOptions.provider === 'antigravity' || !effectiveOptions.provider) {
+      if (effectiveOptions.geminiApiKey?.trim()) {
+        effectiveOptions.provider = 'gemini_api';
+        effectiveOptions.model = effectiveOptions.model || 'gemini-3.7-flash';
+        setOptions(effectiveOptions);
+      } else if (effectiveOptions.apiKey?.trim()) {
+        effectiveOptions.provider = 'openrouter';
+        setOptions(effectiveOptions);
+      } else if (effectiveOptions.customOpenAiKey?.trim()) {
+        effectiveOptions.provider = 'custom_openai';
+        setOptions(effectiveOptions);
+      }
+    }
+
     const isConfigured =
-      (options.provider === 'antigravity' && Boolean(options.antigravityAuth?.accessToken)) ||
-      (options.provider === 'gemini_api' && Boolean(options.geminiApiKey?.trim())) ||
-      (options.provider === 'custom_openai' && Boolean(options.customOpenAiKey?.trim() || options.customOpenAiBaseUrl?.includes('localhost') || options.customOpenAiBaseUrl?.includes('127.0.0.1'))) ||
-      (options.provider === 'openrouter' && Boolean(options.apiKey?.trim()));
+      (effectiveOptions.provider === 'gemini_api' && Boolean(effectiveOptions.geminiApiKey?.trim())) ||
+      (effectiveOptions.provider === 'custom_openai' && Boolean(effectiveOptions.customOpenAiKey?.trim() || effectiveOptions.customOpenAiBaseUrl?.includes('localhost') || effectiveOptions.customOpenAiBaseUrl?.includes('127.0.0.1'))) ||
+      (effectiveOptions.provider === 'openrouter' && Boolean(effectiveOptions.apiKey?.trim())) ||
+      (effectiveOptions.provider === 'antigravity' && Boolean(effectiveOptions.antigravityAuth?.accessToken));
 
     const requiresAi =
-      options.taskType === 'translate' ||
-      options.scanMode === 'smart' ||
-      options.scanMode === 'deep_llm' ||
-      options.useLlm;
+      effectiveOptions.taskType === 'translate' ||
+      effectiveOptions.scanMode === 'smart' ||
+      effectiveOptions.scanMode === 'deep_llm' ||
+      effectiveOptions.useLlm;
 
     if (requiresAi && !isConfigured) {
       setErrorMessage(
-        'Yapay Zekâ (AI) moduyla işlem yapabilmek için lütfen Google Hesabınızla giriş yapın veya Ayarlar panelinden geçerli bir API anahtarı (Google AI Studio, OpenRouter vb.) tanımlayın. API kullanmadan devam etmek için "Yıldırım Hızı (Regex)" modunu seçebilirsiniz.'
+        'Yapay Zekâ (AI) işlemi için lütfen Ayarlar panelinden ücretsiz bir Google AI Studio veya OpenRouter API anahtarı tanımlayın. API anahtarı olmadan devam etmek için "Yıldırım Hızı (Regex)" modunu seçebilirsiniz.'
       );
+      setSettingsInitialTab('gemini_api');
       setIsSettingsOpen(true);
       return;
     }

@@ -5,6 +5,16 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.3.1] - 2026-08-27
+
+### 🛠️ Düzeltmeler (Hotfixes)
+* **🔄 Google AI Studio Otomatik Model Devretme (Auto-Failover):** Google sunucuları `gemini-3.7-flash` modelinde geçici yoğunluk (`503 / High Demand`) verdiğinde işlem durdurulmadan otomatik olarak `gemini-3.6-flash` veya `gemini-2.0-flash` modeline geçilerek çevirinin kesintisiz tamamlanması sağlandı.
+* **🛡️ Otomatik Sağlayıcı Kurtarma (Auto Provider Recovery):** Kullanıcının tarayıcısında eski `antigravity` ayarı kalmış olsa dahi başlatma anında ve API anahtarı girildiğinde otomatik olarak `gemini_api` (AI Studio) moduna geçirilmesi sağlandı.
+* **⚡ Başlık Çevirisi Kilitlenmesini Engelleme:** `refineChapterTitlesWithAi` fonksiyonuna 10 saniyelik zaman aşımı koruması eklendi; başlık çevirisinde oluşabilecek bir gecikmenin kitap paragraflarının çevirisini kilitlemesi engellendi.
+* **📊 Canlı İlerleme ve Debug Hata Görünürlüğü:** Tüm API ve LLM hata yanıtları anında hem arayüz bildirimine hem de `DebugConsole` çekmecesine işlendi.
+
+---
+
 ## [0.3.0] - 2026-08-27
 
 ### 🚀 Yeni Özellikler (Added)

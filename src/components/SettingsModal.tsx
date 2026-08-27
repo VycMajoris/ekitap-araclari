@@ -523,15 +523,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   API Base URL (Endpoint)
                 </label>
                 <input
-                  type="text"
-                  value={options.customOpenAiBaseUrl || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onOptionsChange({ ...options, customOpenAiBaseUrl: val });
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('epub_ocr_openai_base_url', val);
-                    }
-                  }}
+                    type="text"
+                    value={options.apiKey}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onOptionsChange({ ...options, provider: 'openrouter', apiKey: val });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('epub_ocr_provider', 'openrouter');
+                        localStorage.setItem('epub_ocr_api_key', val);
+                      }
+                    }}
                   placeholder="https://api.openai.com/v1"
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
                 />
@@ -578,16 +579,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Model Adı
                 </label>
                 <input
-                  type="text"
-                  value={options.customOpenAiModel || options.model || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onOptionsChange({ ...options, customOpenAiModel: val, model: val });
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('epub_ocr_openai_model', val);
-                      localStorage.setItem('epub_ocr_model', val);
-                    }
-                  }}
+                    type="text"
+                    value={options.customOpenAiKey || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onOptionsChange({ ...options, provider: 'custom_openai', customOpenAiKey: val });
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('epub_ocr_provider', 'custom_openai');
+                        localStorage.setItem('epub_ocr_openai_key', val);
+                      }
+                    }}
                   placeholder="gpt-4o-mini veya deepseek-chat"
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
                 />
