@@ -43,6 +43,15 @@ function extractTextFromResponse(data: any): string {
   return '';
 }
 
+function mapToGeminiModel(model: string): string {
+  const clean = model.replace(/^antigravity-/, '');
+  if (clean.includes('3.7-flash') || clean.includes('3-flash')) return 'gemini-2.0-flash';
+  if (clean.includes('3.5-flash')) return 'gemini-2.0-flash';
+  if (clean.includes('3-pro') || clean.includes('3.1-pro')) return 'gemini-2.0-flash';
+  if (clean.includes('opus') || clean.includes('sonnet')) return 'gemini-2.0-flash';
+  return clean || 'gemini-2.0-flash';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -126,6 +135,54 @@ export async function POST(req: NextRequest) {
         const msg = err instanceof Error ? err.message : String(err);
         lastErrorText = msg;
         console.error(`Antigravity fetch error at ${url}:`, msg);
+      }
+    }
+
+    // Fallback: If Cloud Code sandbox endpoints returned 403 (e.g. custom GCP project),
+    // fallback to official Generative Language API using the user's OAuth access token.
+    if ((!upstreamRes || !upstreamRes.ok) && (lastStatus === 403 || lastStatus === 404)) {
+      try {
+        const geminiModel = mapToGeminiModel(model);
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
+        const geminiPayload = {
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: userContent }],
+            },
+          ],
+          systemInstruction: systemPrompt ? {
+            parts: [{ text: systemPrompt }]
+          } : undefined,
+          generationConfig: {
+            temperature: temperature ?? 0.1,
+          },
+        };
+
+        const geminiRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(geminiPayload),
+        });
+
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const text = extractTextFromResponse(geminiData);
+          return NextResponse.json({
+            content: text,
+            text: text,
+            model: model,
+            choices: [{ message: { content: text } }],
+          });
+        } else {
+          const geminiErr = await geminiRes.text();
+          console.error(`Gemini API fallback error [${geminiRes.status}]:`, geminiErr);
+        }
+      } catch (geminiEx) {
+        console.error('Gemini API fallback exception:', geminiEx);
       }
     }
 
