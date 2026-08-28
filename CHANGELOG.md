@@ -5,6 +5,14 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.3.3] - 2026-08-27
+
+### 🚀 Yeni Özellikler (Added)
+* **💎 Tüm Gemini 3.x Flash, Flash-Lite ve Pro Modelleri:** Google AI Studio model listesine `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview` ve `gemini-3-flash-preview` modelleri eklendi.
+* **🔄 Çok Kademeli Yüksek Yoğunluk Geri Çekilmesi (Failover):** Google sunucuları geçici yoğunluk (503 / High Demand) verdiğinde otomatik olarak 3.7 ➔ 3.6 ➔ 3.5 ➔ 3.5-Lite ➔ 2.0 kademeli devretme zinciri devreye alınarak çeviri kesintisiz sürdürülür.
+
+---
+
 ## [0.3.2] - 2026-08-27
 
 ### 🚀 Yeni Özellikler (Added)

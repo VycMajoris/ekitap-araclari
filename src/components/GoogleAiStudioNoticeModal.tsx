@@ -42,8 +42,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header with decorative gradient */}
-        <div className="relative bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-emerald-500/10 border-b border-zinc-100 dark:border-zinc-800/80 p-6">
+        <div className="relative bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border-b border-zinc-100 dark:border-zinc-800/80 p-6">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/60 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
@@ -53,87 +52,74 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs border border-amber-500/20 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs border border-emerald-500/20 shrink-0">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                Önemli Bilgilendirme
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
+                v0.3.3 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
-                Yapay Zekâ (AI) ve Çeviri Kullanımı
+                eKitap Araçları &amp; Yapay Zekâ Yenilikleri
               </h3>
             </div>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-4 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-          <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-4 space-y-2">
-            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Google Hesap Girişi (OAuth) Kısıtlaması Hakkında</span>
+        <div className="p-6 space-y-4 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed max-h-[65vh] overflow-y-auto">
+          <div className="bg-gradient-to-br from-emerald-50/90 to-blue-50/90 dark:from-emerald-950/40 dark:to-blue-950/40 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl p-4 space-y-2.5 shadow-xs">
+            <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
+              <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Neler Yeni? (v0.3.3)</span>
+              </span>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                Son Güncelleme
+              </span>
             </div>
-            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-              Google&apos;ın son güvenlik ve API politika güncellemeleri nedeniyle doğrudan Google OAuth ile giriş yapılarak kullanılan dahili sandbox uç noktaları genel erişime kısıtlanmıştır.
-            </p>
+            <ul className="text-[11px] text-zinc-700 dark:text-zinc-200 space-y-2 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Tek ve Birleşik API Paneli:</strong> Google AI Studio, Groq, OpenRouter, OpenAI, DeepSeek, Together ve yerel Ollama tek tıkla seçilebilir hale getirildi.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Tüm Gemini 3.x Serisi:</strong> Gemini 3.7 Flash, 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite, 3.1 Pro ve 3 Flash Preview eklendi.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Groq (Llama 3.3 70B &amp; Qwen):</strong> Ultra yüksek işlem hızı ve dakikalık 30 RPM ücretsiz kota koruması entegre edildi.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>OpenAI Frontier Serisi:</strong> GPT-5.6 Sol, Terra, Luna ve GPT-5.4 Mini modelleri dahil edildi.
+                </span>
+              </li>
+            </ul>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Resmi ve Kesintisiz Çözüm: Google AI Studio</span>
+          <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl p-4 space-y-2">
+            <h4 className="font-bold text-amber-950 dark:text-amber-200 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>Google AI Studio ile Ücretsiz Kullanım</span>
             </h4>
-            <p>
-              Google, tüm kullanıcılara <strong>Google AI Studio</strong> üzerinden en güncel Gemini modellerini (Gemini 3.6 Flash, 3.7 Flash vb.) tamamen <strong>ücretsiz</strong> olarak sunmaktadır:
+            <p className="text-[11px] text-amber-900/90 dark:text-amber-300/90 leading-relaxed">
+              Google, tüm kullanıcılara Google AI Studio üzerinden günde <strong>1.500 istek (15-20 tam kitap)</strong> tamamen ücretsiz sunar. Kredi kartı gerekmez, kota bittiğinde fatura çıkmaz ve süre dolunca otomatik yenilenir.
             </p>
-
-            <ul className="space-y-2 text-[11px] bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Günde 1.500 İstek Ücretsiz:</strong> Günde ortalama <strong>15 - 20 tam kitap</strong> çevirebilir ve sınırsız OCR onarımı yapabilirsiniz.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Kredi Kartı Gerekmez:</strong> 10 saniyede Google hesabınızla ücretsiz API anahtarı oluşturabilirsiniz.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>%100 Kişisel Kota:</strong> Başkalarının yoğunluğundan etkilenmez, doğrudan en yüksek hızda çalışır.
-                </span>
-              </li>
-            </ul>
           </div>
 
-          <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/40 rounded-2xl p-3.5 space-y-2">
-            <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200 text-xs">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>v0.3.2 Sürüm Yenilikleri</span>
-              </span>
-              <span className="text-[10px] bg-blue-200/70 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full">
-                Yenilikler
-              </span>
-            </div>
-            <ul className="text-[11px] text-blue-900/90 dark:text-blue-300/90 space-y-1.5 leading-relaxed">
-              <li className="flex items-start gap-1.5">
-                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
-                <span><strong>Birleşik API Paneli:</strong> Google AI Studio, Groq, OpenRouter, OpenAI, DeepSeek, Together ve Ollama tek listede birleştirildi.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
-                <span><strong>Groq (Llama 3.3 70B):</strong> Ultra yüksek hız ve 30 RPM ücretsiz kota korumasıyla eklendi.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-blue-500 font-bold mt-0.5">&bull;</span>
-                <span><strong>OpenAI Frontier Serisi:</strong> GPT-5.6 Sol, Terra, Luna ve GPT-5.4 Mini modelleri hazır seçeneklere dahil edildi.</span>
-              </li>
-            </ul>
+          <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 flex items-start gap-2.5 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            <AlertTriangle className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+            <p>
+              <strong>Google OAuth Girişi Hakkında Not:</strong> Google&apos;ın güvenlik politikası güncellemeleri nedeniyle dahili hesap girişi yerine doğrudan kişisel Google AI Studio ve Groq API anahtarları kullanılmaktadır.
+            </p>
           </div>
         </div>
 

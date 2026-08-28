@@ -659,10 +659,10 @@ export default function Home() {
         <div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-              v0.3.2
+              v0.3.3
             </span>
             <span>
-              <strong>Yenilik:</strong> Birleşik API paneli (Google AI Studio, Groq, OpenAI, DeepSeek) ve Groq 30 RPM hız koruması eklendi.
+              <strong>Yenilik:</strong> Birleşik API paneli (Google AI Studio, Groq, OpenAI, DeepSeek), tüm Gemini 3.x modelleri ve Groq 30 RPM hız koruması eklendi.
             </span>
           </div>
           <button
