@@ -388,7 +388,13 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'convert' }),
-      }).catch(() => {});
+      })
+        .then(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('ekitap_stats_updated'));
+          }
+        })
+        .catch(() => {});
     } catch (err: unknown) {
       console.error('PDF ayrıştırma hatası:', err);
       const msg = err instanceof Error ? err.message : 'PDF dosyası ayrıştırılamadı.';
@@ -525,7 +531,7 @@ export default function Home() {
     abortControllerRef.current = controller;
 
     try {
-      await processEpubChapters(
+      const finalStats = await processEpubChapters(
         chapters,
         options,
         {
@@ -569,14 +575,27 @@ export default function Home() {
         metadata?.title
       );
 
+      const fixedCount =
+        finalStats?.totalFixedWords ??
+        chapters.reduce(
+          (sum, ch) => sum + ch.blocks.reduce((bSum, b) => bSum + (b.diffCount || 0), 0),
+          0
+        );
+
       fetch('/api/stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: options.taskType === 'translate' ? 'translate' : 'convert',
-          fixedWords: stats.totalFixedWords,
+          fixedWords: fixedCount,
         }),
-      }).catch(() => {});
+      })
+        .then(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('ekitap_stats_updated'));
+          }
+        })
+        .catch(() => {});
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         console.log('Kullanıcı durdurdu.');

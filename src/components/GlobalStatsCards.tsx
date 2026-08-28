@@ -36,8 +36,16 @@ export const GlobalStatsCards: React.FC = () => {
     };
 
     fetchStats();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ekitap_stats_updated', fetchStats);
+    }
+
     return () => {
       isMounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('ekitap_stats_updated', fetchStats);
+      }
     };
   }, []);
 

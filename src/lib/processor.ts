@@ -650,7 +650,7 @@ export async function processEpubChapters(
   callbacks: ProcessorCallbacks,
   signal?: AbortSignal,
   bookTitle?: string
-): Promise<void> {
+): Promise<ProcessingStats> {
   const isTranslation = options.taskType === 'translate';
   const requiresAi = options.useLlm || isTranslation || options.scanMode === 'smart' || options.scanMode === 'deep_llm';
 
@@ -986,4 +986,6 @@ export async function processEpubChapters(
   stats.completedChapters = selectedChapters.filter((c) => c.status === 'completed').length;
   stats.estimatedRemainingSeconds = 0;
   callbacks.onStatsUpdated?.({ ...stats });
+
+  return stats;
 }
