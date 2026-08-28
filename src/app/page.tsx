@@ -214,12 +214,11 @@ export default function Home() {
         isDevMode: storedDevMode,
       }));
 
-      // Check if AI Studio notice should be shown on initial load
-      const hideAiNotice = localStorage.getItem('ekitap_hide_aistudio_notice') === 'true';
-      if (!hideAiNotice && !storedGeminiKey.trim()) {
+      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.4.0') === 'true';
+      if (!hideNotice) {
         const timer = setTimeout(() => {
           setIsAiNoticeOpen(true);
-        }, 1200);
+        }, 800);
         return () => clearTimeout(timer);
       }
     }
