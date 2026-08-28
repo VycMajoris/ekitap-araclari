@@ -742,17 +742,23 @@ const OCR_ANOMALY_PATTERNS: RegExp[] = [
 export function hasOcrAnomaly(text: string): boolean {
   if (!text || text.trim().length === 0) return false;
 
-  if (text.includes('\uFFFD')) {
+  const cleanTextForCheck = text
+    .replace(/(?:<aside\b[^>]*>[\s\S]*?<\/aside>|<a\b[^>]*\bepub:type=["']noteref["'][^>]*>[\s\S]*?<\/a>|\[\^[a-zA-Z0-9_:-]+\](?::)?|\^[a-zA-Z0-9_:-]+(?::)?)/gi, '')
+    .trim();
+
+  if (!cleanTextForCheck) return false;
+
+  if (cleanTextForCheck.includes('\uFFFD')) {
     return true;
   }
 
   for (const pattern of OCR_ANOMALY_PATTERNS) {
-    if (pattern.test(text)) {
+    if (pattern.test(cleanTextForCheck)) {
       return true;
     }
   }
 
-  const splitMatches = Array.from(text.matchAll(SPLIT_LETTER_SEQUENCE_REGEX));
+  const splitMatches = Array.from(cleanTextForCheck.matchAll(SPLIT_LETTER_SEQUENCE_REGEX));
   if (splitMatches.length > 0) {
     const hasInvalidSplit = splitMatches.some(
       (m) => !VALID_SHORT_TURKISH_PHRASES.includes(m[0].toLowerCase())
@@ -763,6 +769,27 @@ export function hasOcrAnomaly(text: string): boolean {
   }
 
   return false;
+}
+
+const PROTECTED_FOOTNOTE_REGEX = /(?:<aside\b[^>]*>[\s\S]*?<\/aside>|<a\b[^>]*\bepub:type=["']noteref["'][^>]*>[\s\S]*?<\/a>|\[\^[a-zA-Z0-9_:-]+\](?::)?|\^[a-zA-Z0-9_:-]+(?::)?)/gi;
+
+function maskProtectedTokens(text: string): { masked: string; tokens: Map<string, string> } {
+  const tokens = new Map<string, string>();
+  let idx = 0;
+  const masked = text.replace(PROTECTED_FOOTNOTE_REGEX, (match) => {
+    const key = `__PROTECTED_FN_${idx++}__`;
+    tokens.set(key, match);
+    return key;
+  });
+  return { masked, tokens };
+}
+
+function unmaskProtectedTokens(text: string, tokens: Map<string, string>): string {
+  let result = text;
+  tokens.forEach((originalVal, key) => {
+    result = result.split(key).join(originalVal);
+  });
+  return result;
 }
 
 /**
@@ -781,7 +808,8 @@ export function applyTurkishRegexWithLogs(
   chapterId: string,
   chapterTitle: string
 ): { cleaned: string; logs: DebugLogEntry[] } {
-  let currentText = text;
+  const { masked, tokens } = maskProtectedTokens(text);
+  let currentText = masked;
   const logs: DebugLogEntry[] = [];
   const originalBlockText = text;
 
@@ -831,7 +859,7 @@ export function applyTurkishRegexWithLogs(
         chapterTitle,
         blockId,
         originalText: originalBlockText,
-        correctedText: currentText,
+        correctedText: unmaskProtectedTokens(currentText, tokens),
         changes: ruleChanges,
       });
     }
@@ -852,12 +880,15 @@ export function applyTurkishRegexWithLogs(
       chapterTitle,
       blockId,
       originalText: originalBlockText,
-      correctedText: currentText,
-      changes: [{ before: textBeforeTdk, after: currentText }],
+      correctedText: unmaskProtectedTokens(currentText, tokens),
+      changes: [{ before: unmaskProtectedTokens(textBeforeTdk, tokens), after: unmaskProtectedTokens(currentText, tokens) }],
     });
   }
 
-  return { cleaned: currentText, logs };
+  return {
+    cleaned: unmaskProtectedTokens(currentText, tokens),
+    logs,
+  };
 }
 
 /**

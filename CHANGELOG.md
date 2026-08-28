@@ -5,6 +5,21 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.4.2] - 2026-08-28
+
+### 🚀 Yeni Özellikler (Added)
+* **📌 İnteraktif Açılır Pencere (Popup Footnote) ve EPUB 3 Dipnot Motoru:**
+  - PDF'lerdeki dipnot referanslarını ve sayfa altı dipnot tanımlarını otomatik tespit eden, ayrıştıran ve standart EPUB 3 popup formatına dönüştüren motor geliştirildi.
+  - **Dikey Üstsimge Gruplama (Superscript Clustered Grouping):** Satır taban çizgisinden yukarı kaydırılmış küçük fontlu referans numaraları (`¹`, `²`, `[1]`, `1`) tespit edilerek ana metindeki ilgili kelimeye bağlandı.
+  - **Alt Bölge Dipnot Tanım Ayrıştırması (`extractFootnotesAndBodyFromPage`):** Sayfa altındaki küçük puntoyla yazılmış dipnot metinleri (`1.`, `1)`, `[1]`, `*`, `Dipnot:`) ana metinden ayrılarak dipnot tanım bloklarına dönüştürüldü.
+  - **Çakışmasız Sayfa Kapsamı (`[^p{page}_{num}]`):** Farklı sayfalardaki aynı numaralı dipnotların paralel/asenkron işleme sırasında karışması `p{page}_{num}` etiketleriyle önlendi.
+  - **Deterministik Sıralı Yeniden Numaralandırma (`renumberAndSynthesizeFootnotes`):** Bölüm genelindeki tüm dipnotlar `1..N` şeklinde sıralı ve deterministik olarak yeniden numaralandırıldı.
+  - **EPUB 3 `epub:type="noteref"` & `<aside epub:type="footnote">` Popup Sentezi:** Apple Books, KOReader, Kindle ve Kobo e-okuyucularında tıklandığında sayfa değiştirmeden yerinde açılan interaktif popup kart standardı uygulandı; popup desteklemeyen okuyucular için geri dönüş bağlantıları (`backlink`) korundu.
+  - **Regex & OCR Anomali Kalkanı:** Dipnot etiketlerinin (`[^pX_Y]`) regex temizliği ve TDK tamiri sırasında bozulmasını önleyen token maskeleme koruması eklendi.
+  - **Önizleme & Karşılaştırma Görünümü (`DiffViewer`):** Bölüm önizleme listesinde dipnot blokları mor renkli `📌 Dipnot Açıklaması` rozeti ile görsel olarak ayrıştırıldı.
+
+---
+
 ## [0.4.1] - 2026-08-28
 
 ### 🚀 Yeni Özellikler (Added)

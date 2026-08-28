@@ -11,6 +11,7 @@ import {
   Check,
   Languages,
   Image as ImageIcon,
+  Bookmark,
 } from 'lucide-react';
 import { EpubChapter, TextBlock, TaskType } from '../lib/types';
 import { computeTextDiff } from '../lib/turkish-ocr-rules';
@@ -275,6 +276,14 @@ const BlockItem: React.FC<BlockItemProps> = ({
         <div className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/40 text-xs font-semibold text-blue-800 dark:text-blue-300">
           <ImageIcon className="w-4 h-4 text-blue-500 shrink-0" />
           <span>🖼️ Kitap İçi Görsel / İllüstrasyon (EPUB içerisine yerleştirildi)</span>
+        </div>
+      ) : block.elementTag === 'aside' ? (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 text-xs font-medium text-purple-900 dark:text-purple-300">
+          <Bookmark className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+          <div className="flex-1 whitespace-pre-wrap">
+            <span className="font-semibold text-purple-700 dark:text-purple-400 block mb-0.5">📌 Dipnot Açıklaması:</span>
+            {block.correctedText || block.originalText}
+          </div>
         </div>
       ) : viewMode === 'split' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 leading-relaxed">

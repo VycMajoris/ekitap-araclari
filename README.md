@@ -7,7 +7,7 @@
 Tarayıcı üzerinde çalışan, gizlilik odaklı, Türkçe dilbilgisi ve yapay zeka destekli e-kitap araç seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.4.1-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.4.2-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 
@@ -42,6 +42,10 @@ PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitaplar
 - **🖼️ PDF Kitap Görselleri & İllüstrasyon Ayıklama Motoru:**
   - PDF içindeki resimleri, çizimleri ve haritaları ayıklayıp EPUB içinde ait olduğu sayfa/paragraf sırasına `<figure>` olarak yerleştirir.
   - Saydam PNG ve çizimler için beyaz zemin harmanlaması (`Alpha Blending`), RGBX sahte alfa onarımı ve CMYK renk uzayı desteğiyle resimlerin siyah veya beyaz çıkmasını engeller.
+- **📌 İnteraktif Açılır Pencere (Popup Footnote) ve EPUB 3 Dipnot Standardı:**
+  - PDF'lerdeki dipnot numaralarını (`¹`, `²`, `[1]`) ve sayfa altı dipnot tanımlarını otomatik tespit eder.
+  - Sayfa bazlı etiketleme ve deterministik sıralama ile EPUB 3 `epub:type="noteref"` ve `<aside epub:type="footnote">` standartlarında popup kartlara dönüştürür.
+  - Apple Books, KOReader, Kindle ve Kobo okuyucularda tıklanınca yerinde açılan interaktif dipnot deneyimi sunar.
 - Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, kelime içi gereksiz boşlukları engeller.
 - Sayfalar arası bölünmüş cümleleri (`söz` + `veriyorum."` ➔ `söz veriyorum."`) ve sayfa alt/üst lekelerini otomatik birleştirir.
 - İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini yapılandırır.

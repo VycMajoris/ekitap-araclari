@@ -8,6 +8,16 @@ export interface EpubMetadata {
   format?: 'epub' | 'pdf' | 'mobi';
   pageCount?: number;
   imageCount?: number;
+  footnoteCount?: number;
+}
+
+export interface FootnoteItem {
+  id: string; // e.g. "p45_1" or "fn-1"
+  rawTag: string; // e.g. "[^p45_1]" or "^p45_1"
+  number: number; // sequential number 1, 2, 3...
+  text: string; // footnote definition body text
+  chapterId?: string;
+  pageNumber?: number;
 }
 
 export interface EpubImageAsset {

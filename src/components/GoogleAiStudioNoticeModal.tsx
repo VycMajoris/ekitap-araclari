@@ -27,14 +27,14 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
 
   const handleClose = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.1', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.4.2', 'true');
     }
     onClose();
   };
 
   const handleGoToSettings = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.1', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.4.2', 'true');
     }
     onOpenGeminiSettings();
   };

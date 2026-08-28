@@ -1,8 +1,8 @@
-import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds, EpubImageAsset } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds, EpubImageAsset, FootnoteItem } from './types';
 import { createEpubFromChapters } from './epub-engine';
 import JSZip from 'jszip';
 
-export type { PdfCropBounds, EpubImageAsset } from './types';
+export type { PdfCropBounds, EpubImageAsset, FootnoteItem } from './types';
 
 export interface PdfParseProgress {
   currentPage: number;
@@ -49,6 +49,8 @@ interface TextLine {
   fontSize: number;
   text: string;
   isHeading?: boolean;
+  isFootnote?: boolean;
+  footnoteId?: string;
 }
 
 interface ExtractedParagraph {
@@ -57,7 +59,29 @@ interface ExtractedParagraph {
   pageNumber: number;
   isImageHtml?: boolean;
   imageAsset?: EpubImageAsset;
+  isFootnote?: boolean;
+  footnoteId?: string;
 }
+
+const SUPERSCRIPT_MAP: Record<string, string> = {
+  '¹': '1',
+  '²': '2',
+  '³': '3',
+  '⁴': '4',
+  '⁵': '5',
+  '⁶': '6',
+  '⁷': '7',
+  '⁸': '8',
+  '⁹': '9',
+  '⁰': '0',
+  'ⁱ': 'i',
+  'ⁿ': 'n',
+  '*': '1',
+  '†': '1',
+  '‡': '2',
+};
+
+const FOOTNOTE_START_REGEX = /^(?:\[\^?(\d{1,2}|[*†‡])\]|\^?(\d{1,2}|[*†‡])[\.\)]|\^?(\d{1,2}|[*†‡])(?=\s+[A-ZÇĞİÖŞÜa-zçğıöşü])|([¹²³⁴⁵⁶⁷⁸⁹*†‡])|(?:\b(?:[dD]ipnot|[nN]ote|[fF]ootnote)\s*(\d{1,2})?[:.]))\s*(.*)$/u;
 
 const FINISHED_WORD_OR_SUFFIX_REGEX = /(?:[dt][ıiuü]m|[dt][ıiuü]n|[dt][ıiuü]k|[dt][ıiuü]n[ıiuü]z|[dt][ıiuü]ler|m[ıiuü]şt[ıiuü]m|m[ıiuü]şt[ıiuü]n|m[ıiuü]şt[ıiuü]k|m[ıiuü]şt[ıiuü]ler|m[ıiuü]ş|m[ıiuü]şiz|m[ıiuü]şsiniz|m[ıiuü]şler|[ıiuü]?yor|[ıiuü]?yorum|[ıiuü]?yorsun|[ıiuü]?yoruz|[ıiuü]?yorsunuz|[ıiuü]?yorlar|[ae]c[ae]k|[ae]c[ae]ğ[ıi]m|[ae]c[ae]ksin|[ae]c[ae]ğiz|[ae]c[ae]ksiniz|[ae]c[ae]kl[ae]r|[ıiuü]r|[ae]r|m[ae]l[ıi]|m[ae]l[ıi]y[ıi]m|m[ae]l[ıi]sin|m[ae]l[ıi]yiz|s[ae]m|s[ae]n|s[ae]k|s[ae]niz|s[ae]l[ae]r|[ae]r[ae]k|[ıiuü]nc[ae]|d[ıiuü]ğ[ıi]|d[ıiuü]kt[ae]n|m[ae]d[ae]n|y[ae]n|[ae]n|d[ıiuü]kç[ae]|k[ae]n|[dt][ıiuü]r|[dt][ıiuü]|[dt][ae]n|[dt][ae]|l[ae]r|l[ae]ri|l[ae]re|l[ae]rd[ae]|l[ae]rd[ae]n|[ıiuü]n|[ıiuü]m|[ıiuü]z|s[ıiuü]|s[ıiuü]n[ıiuü]|s[ıiuü]n[ae]|s[ıiuü]nd[ae]|s[ıiuü]nd[ae]n|y[ae]|y[ıiuü]|n[ıiuü]n|n[ıiuü]|n[ae]|nd[ae]|nd[ae]n|'dur|'dür|'dır|'dir|'tur|'tür|'tır|'tir)$/i;
 
@@ -719,12 +743,26 @@ function isChapterHeadingLine(lineText: string, fontSize: number, medianFontSize
 function buildLinesFromItems(items: RawTextItem[]): TextLine[] {
   if (items.length === 0) return [];
 
-  const yTolerance = 1.5;
+  const yTolerance = 1.8;
   const lineGroups: RawTextItem[][] = [];
 
-  const sortedRaw = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
+  const normalItems: RawTextItem[] = [];
+  const superscriptCandidates: RawTextItem[] = [];
 
-  for (const it of sortedRaw) {
+  for (const it of items) {
+    const isSuperscriptCandidate =
+      it.fontSize <= 10.5 &&
+      /^[1-9]\d{0,1}$|^\[[1-9]\d{0,1}\]$|^[¹²³⁴⁵⁶⁷⁸⁹*†‡]$/.test(it.str.trim());
+    if (isSuperscriptCandidate) {
+      superscriptCandidates.push(it);
+    } else {
+      normalItems.push(it);
+    }
+  }
+
+  const sortedNormals = [...normalItems].sort((a, b) => a.y - b.y || a.x - b.x);
+
+  for (const it of sortedNormals) {
     let group = lineGroups.find((g) => {
       const avgY = g.reduce((sum, item) => sum + item.y, 0) / g.length;
       return Math.abs(avgY - it.y) <= yTolerance;
@@ -735,6 +773,40 @@ function buildLinesFromItems(items: RawTextItem[]): TextLine[] {
       lineGroups.push(group);
     }
     group.push(it);
+  }
+
+  for (const it of superscriptCandidates) {
+    let bestGroup: RawTextItem[] | null = null;
+    let minDistance = Infinity;
+
+    for (const g of lineGroups) {
+      const avgY = g.reduce((sum, item) => sum + item.y, 0) / g.length;
+      const yDiff = Math.abs(avgY - it.y);
+      if (yDiff <= 8.5) {
+        const minX = Math.min(...g.map((i) => i.x));
+        const maxX = Math.max(...g.map((i) => i.x + i.width));
+        if (it.x >= minX - 15 && it.x <= maxX + 25) {
+          if (yDiff < minDistance) {
+            minDistance = yDiff;
+            bestGroup = g;
+          }
+        }
+      }
+    }
+
+    if (bestGroup) {
+      bestGroup.push(it);
+    } else {
+      let group = lineGroups.find((g) => {
+        const avgY = g.reduce((sum, item) => sum + item.y, 0) / g.length;
+        return Math.abs(avgY - it.y) <= yTolerance;
+      });
+      if (!group) {
+        group = [];
+        lineGroups.push(group);
+      }
+      group.push(it);
+    }
   }
 
   const lines: TextLine[] = [];
@@ -777,8 +849,10 @@ function buildLinesFromItems(items: RawTextItem[]): TextLine[] {
 
       for (let i = 0; i < sub.length; i++) {
         const it = sub[i];
-        const str = it.str;
+        let str = it.str;
         if (!str) continue;
+
+        str = str.replace(/([¹²³⁴⁵⁶⁷⁸⁹*†‡])/g, (_m, ch) => `[^${SUPERSCRIPT_MAP[ch] || ch}]`);
 
         minX = Math.min(minX, it.x);
         maxX = Math.max(maxX, it.x + it.width);
@@ -795,6 +869,21 @@ function buildLinesFromItems(items: RawTextItem[]): TextLine[] {
         const gap = it.x - lastEndX;
         const avgFontSize = (lastFontSize + (it.fontSize || 12)) / 2 || 12;
         const spaceThreshold = Math.max(2.4, avgFontSize * 0.24);
+
+        const isSuperscriptItem =
+          i > 0 &&
+          it.fontSize <= lastFontSize * 0.88 &&
+          it.fontSize <= 11 &&
+          /^[1-9]\d{0,1}$|^\[[1-9]\d{0,1}\]$/.test(str.trim()) &&
+          gap <= 25;
+
+        if (isSuperscriptItem) {
+          const rawNum = str.replace(/[\[\]]/g, '').trim();
+          lineText = lineText.trimEnd() + `[^${rawNum}]`;
+          lastEndX = it.x + it.width;
+          lastFontSize = it.fontSize || lastFontSize;
+          continue;
+        }
 
         const hasTrailingSpace = lineText.endsWith(' ');
         const hasLeadingSpace = str.startsWith(' ');
@@ -958,6 +1047,101 @@ function reflowLinesToParagraphs(
 
   flushCurrent();
   return paragraphs;
+}
+
+export function extractFootnotesAndBodyFromPage(
+  lines: TextLine[],
+  pageNumber: number,
+  medianFontSize: number,
+  pageHeight: number
+): { bodyParagraphs: ExtractedParagraph[]; footnoteParagraphs: ExtractedParagraph[] } {
+  const bodyLines: TextLine[] = [];
+  const footnoteDefs: { num: string; id: string; textLines: string[] }[] = [];
+
+  let isInsideFootnoteArea = false;
+  let currentFootnote: { num: string; id: string; textLines: string[] } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const text = line.text.trim();
+    if (!text) continue;
+
+    const isNearBottom = line.y >= pageHeight * 0.45;
+    const isSmallerFont = line.fontSize <= medianFontSize * 0.94;
+    const isSeparatorLine = /^[-—_~=·•\s]{3,}$/.test(text);
+
+    if (isNearBottom && isSeparatorLine) {
+      isInsideFootnoteArea = true;
+      continue;
+    }
+
+    const fnMatch = isNearBottom ? text.match(FOOTNOTE_START_REGEX) : null;
+
+    if (fnMatch && (isSmallerFont || isInsideFootnoteArea)) {
+      isInsideFootnoteArea = true;
+      if (currentFootnote) {
+        footnoteDefs.push(currentFootnote);
+      }
+      const rawNum = fnMatch[1] || fnMatch[2] || fnMatch[3] || fnMatch[4] || fnMatch[5] || '1';
+      const cleanNum = SUPERSCRIPT_MAP[rawNum] || rawNum;
+      const fnId = `p${pageNumber}_${cleanNum}`;
+      currentFootnote = {
+        num: cleanNum,
+        id: fnId,
+        textLines: [fnMatch[6].trim()],
+      };
+      continue;
+    }
+
+    if (isInsideFootnoteArea && currentFootnote && isSmallerFont) {
+      currentFootnote.textLines.push(text);
+      continue;
+    }
+
+    if (!isInsideFootnoteArea) {
+      bodyLines.push(line);
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  if (currentFootnote) {
+    footnoteDefs.push(currentFootnote);
+  }
+
+  const scopedBodyLines = bodyLines.map((line) => {
+    let scopedText = line.text;
+
+    scopedText = scopedText.replace(/\[\^(\d{1,2}|[*†‡])\]/g, (_m, num) => {
+      const cleanNum = SUPERSCRIPT_MAP[num] || num;
+      return `[^p${pageNumber}_${cleanNum}]`;
+    });
+
+    for (const fn of footnoteDefs) {
+      const numPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ0-9.,?!:»"'])(?:\\s+|\\[|\\()${fn.num}(?:\\]|\\))?(?=\\s+[A-ZÇĞİÖŞÜa-zçğıöşü0-9]|$)`, 'g');
+      scopedText = scopedText.replace(numPattern, `$1[^${fn.id}]`);
+    }
+
+    return {
+      ...line,
+      text: scopedText,
+    };
+  });
+
+  const bodyParagraphs = reflowLinesToParagraphs(scopedBodyLines, pageNumber, medianFontSize);
+
+  const footnoteParagraphs: ExtractedParagraph[] = footnoteDefs.map((fn) => {
+    const fullFootnoteText = fn.textLines.join(' ').replace(/\s+/g, ' ').trim();
+    return {
+      text: `[^${fn.id}]: ${fullFootnoteText}`,
+      isHeading: false,
+      pageNumber,
+      isFootnote: true,
+      footnoteId: fn.id,
+    };
+  });
+
+  return { bodyParagraphs, footnoteParagraphs };
 }
 
 export async function parsePdf(
@@ -1145,8 +1329,14 @@ export async function parsePdf(
         );
       });
 
-      const textParagraphs = reflowLinesToParagraphs(filteredLines, pageNum, medianFontSize);
-      pageParagraphs.push(...textParagraphs);
+      const { bodyParagraphs, footnoteParagraphs } = extractFootnotesAndBodyFromPage(
+        filteredLines,
+        pageNum,
+        medianFontSize,
+        viewport.height
+      );
+      pageParagraphs.push(...bodyParagraphs);
+      pageParagraphs.push(...footnoteParagraphs);
     }
 
     if (pageImages.length > 0) {
@@ -1192,6 +1382,10 @@ export async function parsePdf(
         consolidatedParagraphs.push(p);
         continue;
       }
+      if (p.isFootnote || (p.text.startsWith('[^p') && p.text.includes(']:'))) {
+        consolidatedParagraphs.push(p);
+        continue;
+      }
 
       const trimmed = p.text.trim();
       if (!trimmed) continue;
@@ -1205,7 +1399,7 @@ export async function parsePdf(
 
       if (consolidatedParagraphs.length > 0 && !p.isHeading) {
         const lastP = consolidatedParagraphs[consolidatedParagraphs.length - 1];
-        if (!lastP.isHeading && !lastP.isImageHtml) {
+        if (!lastP.isHeading && !lastP.isImageHtml && !lastP.isFootnote) {
           const lastText = lastP.text.trim();
           const lastEndsWithPunct = /[.?!:»"']\s*$/.test(lastText);
           const currentStartsWithLower = /^[a-zçğıöşü]/.test(trimmed);
@@ -1227,7 +1421,7 @@ export async function parsePdf(
   }
 
   for (const p of consolidatedParagraphs) {
-    if (p.isImageHtml) {
+    if (p.isImageHtml || p.isFootnote) {
       if (!currentChapter) {
         currentChapter = {
           title: metadata.title || 'Bölüm 1',
@@ -1315,12 +1509,64 @@ export async function parsePdf(
   });
 
   const chapters: EpubChapter[] = [];
+  let totalBookFootnotes = 0;
 
   for (let cIdx = 0; cIdx < chaptersDrafts.length; cIdx++) {
     const draft = chaptersDrafts[cIdx];
     const chapterNum = cIdx + 1;
     const href = `OEBPS/chapter_${String(chapterNum).padStart(2, '0')}.xhtml`;
     const chapterId = `chapter_${chapterNum}`;
+
+    const chapterFootnotes: FootnoteItem[] = [];
+    let fnSeq = 1;
+    const tagToFootnoteMap = new Map<string, FootnoteItem>();
+
+    for (const p of draft.paragraphs) {
+      if (p.isFootnote || (p.text.startsWith('[^') && p.text.includes(']:'))) {
+        const match = p.text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
+        if (match) {
+          const tag = match[1];
+          const fnBody = match[2].trim();
+          if (!tagToFootnoteMap.has(tag)) {
+            const fnItem: FootnoteItem = {
+              id: `fn-${fnSeq}`,
+              rawTag: `[^${tag}]`,
+              number: fnSeq,
+              text: fnBody,
+              chapterId,
+              pageNumber: p.pageNumber,
+            };
+            tagToFootnoteMap.set(tag, fnItem);
+            chapterFootnotes.push(fnItem);
+            fnSeq++;
+          }
+        }
+      }
+    }
+
+    for (const p of draft.paragraphs) {
+      if (!p.isFootnote && !p.isImageHtml) {
+        const refMatches = Array.from(p.text.matchAll(/\[\^([^\]]+)\]/g));
+        for (const rm of refMatches) {
+          const tag = rm[1];
+          if (!tagToFootnoteMap.has(tag)) {
+            const fnItem: FootnoteItem = {
+              id: `fn-${fnSeq}`,
+              rawTag: `[^${tag}]`,
+              number: fnSeq,
+              text: '',
+              chapterId,
+              pageNumber: p.pageNumber,
+            };
+            tagToFootnoteMap.set(tag, fnItem);
+            chapterFootnotes.push(fnItem);
+            fnSeq++;
+          }
+        }
+      }
+    }
+
+    totalBookFootnotes += chapterFootnotes.length;
 
     const blocks: TextBlock[] = [];
     let htmlContent = `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="tr">\n<head>\n  <meta charset="utf-8" />\n  <title>${escapeXml(draft.title)}</title>\n  <link rel="stylesheet" type="text/css" href="styles.css" />\n</head>\n<body>\n  <section class="chapter">\n`;
@@ -1344,21 +1590,60 @@ export async function parsePdf(
         continue;
       }
 
+      if (p.isFootnote || (p.text.startsWith('[^') && p.text.includes(']:'))) {
+        const match = p.text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
+        const tag = match ? match[1] : (p.footnoteId || '');
+        const fnItem = tagToFootnoteMap.get(tag);
+        const fnNum = fnItem ? fnItem.number : 1;
+        const fnBody = match ? match[2].trim() : p.text;
+        const escapedFootnoteBody = escapeXml(fnBody);
+        const asideHtml = `<aside id="fn-${fnNum}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fnNum}" class="epub-footnote-backlink">${fnNum}.</a> ${escapedFootnoteBody}</p></aside>`;
+
+        blocks.push({
+          id: `${chapterNum}-${blockIdx++}`,
+          elementTag: 'aside',
+          originalHtml: asideHtml,
+          originalText: `[^${tag}]: ${fnBody}`,
+          correctedHtml: asideHtml,
+          correctedText: `[^${tag}]: ${fnBody}`,
+          status: 'completed',
+          diffCount: 0,
+        });
+        continue;
+      }
+
       const tag = p.isHeading ? 'h2' : 'p';
-      const escapedText = escapeXml(p.text);
-      const elementHtml = `<${tag}>${escapedText}</${tag}>`;
+      let formattedText = escapeXml(p.text);
+      formattedText = formattedText.replace(/\[\^([^\]]+)\]/g, (_m, refTag) => {
+        const fnItem = tagToFootnoteMap.get(refTag);
+        if (fnItem) {
+          return `<a href="#fn-${fnItem.number}" id="ref-${fnItem.number}" class="epub-noteref" epub:type="noteref"><sup>[${fnItem.number}]</sup></a>`;
+        }
+        return '';
+      });
+
+      const elementHtml = `<${tag}>${formattedText}</${tag}>`;
       htmlContent += `    ${elementHtml}\n`;
 
       blocks.push({
         id: `${chapterNum}-${blockIdx++}`,
         elementTag: tag,
-        originalHtml: escapedText,
+        originalHtml: formattedText,
         originalText: p.text,
-        correctedHtml: escapedText,
+        correctedHtml: formattedText,
         correctedText: p.text,
         status: 'pending',
         diffCount: 0,
       });
+    }
+
+    if (chapterFootnotes.length > 0) {
+      htmlContent += `    <section class="epub-footnotes" epub:type="footnotes">\n`;
+      for (const fn of chapterFootnotes) {
+        const escapedFootnoteBody = escapeXml(fn.text);
+        htmlContent += `      <aside id="fn-${fn.number}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fn.number}" class="epub-footnote-backlink">${fn.number}.</a> ${escapedFootnoteBody}</p></aside>\n`;
+      }
+      htmlContent += `    </section>\n`;
     }
 
     htmlContent += `  </section>\n</body>\n</html>`;
@@ -1377,6 +1662,10 @@ export async function parsePdf(
         fixedWords: 0,
       },
     });
+  }
+
+  if (totalBookFootnotes > 0) {
+    metadata.footnoteCount = totalBookFootnotes;
   }
 
   if (allExtractedImages.length > 0) {

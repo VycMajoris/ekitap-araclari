@@ -215,7 +215,7 @@ export default function Home() {
         isDevMode: storedDevMode,
       }));
 
-      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.4.1') === 'true';
+      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.4.2') === 'true';
       if (!hideNotice) {
         const timer = setTimeout(() => {
           setIsAiNoticeOpen(true);

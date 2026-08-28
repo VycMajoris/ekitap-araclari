@@ -1,5 +1,7 @@
 import JSZip from 'jszip';
-import { EpubMetadata, EpubChapter, TextBlock, EpubImageAsset } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, EpubImageAsset, FootnoteItem } from './types';
+
+export type { FootnoteItem } from './types';
 
 /**
  * Resolves relative paths inside an EPUB archive.
@@ -161,7 +163,7 @@ export function extractBlocksFromHtml(
   }
 
   const blocks: TextBlock[] = [];
-  const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure';
+  const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure, aside';
   const containerSelectors = 'div, section, article';
 
   // 1. Gather all potential text elements
@@ -205,6 +207,22 @@ export function extractBlocksFromHtml(
         originalText: '[Görsel]',
         correctedHtml: html,
         correctedText: '[Görsel]',
+        status: 'completed',
+        diffCount: 0,
+      });
+      continue;
+    }
+
+    if (tagName === 'aside') {
+      const html = el.outerHTML;
+      const text = el.textContent?.trim() || '';
+      blocks.push({
+        id: `${chapterIdx}-${blockIdx++}`,
+        elementTag: 'aside',
+        originalHtml: html,
+        originalText: text,
+        correctedHtml: html,
+        correctedText: text,
         status: 'completed',
         diffCount: 0,
       });
@@ -276,7 +294,7 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
       doc = parser.parseFromString(chapter.rawContent, 'text/html');
     }
 
-    const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure';
+    const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure, aside';
     const containerSelectors = 'div, section, article';
 
     const allElements = Array.from(
@@ -485,6 +503,35 @@ figcaption {
 }
 .chapter {
   margin-bottom: 3em;
+}
+a[epub|type~='noteref'], a.epub-noteref {
+  text-decoration: none;
+  font-size: 0.8em;
+  vertical-align: super;
+  line-height: 1;
+  color: #0284c7;
+  padding: 0 1px;
+  font-weight: 600;
+}
+section.epub-footnotes {
+  margin-top: 2.5em;
+  padding-top: 1.2em;
+  border-top: 1px solid #d1d5db;
+}
+aside[epub|type~='footnote'], aside.epub-footnote {
+  font-size: 0.88em;
+  line-height: 1.5;
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+  color: #374151;
+  text-align: justify;
+  text-justify: inter-word;
+}
+.epub-footnote-backlink {
+  font-weight: bold;
+  text-decoration: none;
+  margin-right: 0.35em;
+  color: #0284c7;
 }`;
   zip.file('OEBPS/styles.css', stylesCss);
 
@@ -604,4 +651,128 @@ function escapeXml(unsafe: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+export function renumberAndSynthesizeFootnotes(
+  rawBlocks: { text: string; isHeading?: boolean; isFootnote?: boolean; elementTag?: string }[],
+  chapterId: string = 'ch'
+): {
+  bodyBlocks: { tag: string; html: string; text: string }[];
+  footnoteBlocks: { id: string; number: number; html: string; text: string }[];
+  footnotes: FootnoteItem[];
+  chapterXhtml: string;
+} {
+  const footnoteDefs: { rawTag: string; cleanTag: string; text: string }[] = [];
+  const bodyParagraphs: { text: string; isHeading?: boolean; elementTag?: string }[] = [];
+
+  for (const block of rawBlocks) {
+    const text = block.text.trim();
+    if (block.isFootnote || block.elementTag === 'aside' || (text.startsWith('[^') && text.includes(']:'))) {
+      const match = text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
+      if (match) {
+        footnoteDefs.push({
+          rawTag: `[^${match[1]}]`,
+          cleanTag: match[1],
+          text: match[2].trim(),
+        });
+      } else {
+        footnoteDefs.push({
+          rawTag: `[^fn]`,
+          cleanTag: `fn_${footnoteDefs.length + 1}`,
+          text,
+        });
+      }
+    } else {
+      bodyParagraphs.push(block);
+    }
+  }
+
+  const tagToFootnoteMap = new Map<string, FootnoteItem>();
+  const footnotes: FootnoteItem[] = [];
+  let seq = 1;
+
+  for (const def of footnoteDefs) {
+    if (!tagToFootnoteMap.has(def.cleanTag)) {
+      const fnItem: FootnoteItem = {
+        id: `fn-${seq}`,
+        rawTag: def.rawTag,
+        number: seq,
+        text: def.text,
+        chapterId,
+      };
+      tagToFootnoteMap.set(def.cleanTag, fnItem);
+      footnotes.push(fnItem);
+      seq++;
+    }
+  }
+
+  for (const block of bodyParagraphs) {
+    const refMatches = Array.from(block.text.matchAll(/\[\^([^\]]+)\]/g));
+    for (const rm of refMatches) {
+      const tag = rm[1];
+      if (!tagToFootnoteMap.has(tag)) {
+        const fnItem: FootnoteItem = {
+          id: `fn-${seq}`,
+          rawTag: `[^${tag}]`,
+          number: seq,
+          text: '',
+          chapterId,
+        };
+        tagToFootnoteMap.set(tag, fnItem);
+        footnotes.push(fnItem);
+        seq++;
+      }
+    }
+  }
+
+  const bodyBlocks: { tag: string; html: string; text: string }[] = [];
+  let xhtmlBody = '';
+
+  for (const block of bodyParagraphs) {
+    const tag = block.isHeading ? (block.elementTag || 'h2') : (block.elementTag || 'p');
+    let escaped = escapeXml(block.text);
+    escaped = escaped.replace(/\[\^([^\]]+)\]/g, (_m, tagRef) => {
+      const fn = tagToFootnoteMap.get(tagRef);
+      if (fn) {
+        return `<a href="#fn-${fn.number}" id="ref-${fn.number}" class="epub-noteref" epub:type="noteref"><sup>[${fn.number}]</sup></a>`;
+      }
+      return '';
+    });
+
+    const elementHtml = `<${tag}>${escaped}</${tag}>`;
+    bodyBlocks.push({
+      tag,
+      html: elementHtml,
+      text: block.text,
+    });
+    xhtmlBody += `    ${elementHtml}\n`;
+  }
+
+  const footnoteBlocks: { id: string; number: number; html: string; text: string }[] = [];
+  let xhtmlFootnotes = '';
+
+  if (footnotes.length > 0) {
+    xhtmlFootnotes += `    <section class="epub-footnotes" epub:type="footnotes">\n`;
+    for (const fn of footnotes) {
+      const escapedBody = escapeXml(fn.text);
+      const asideHtml = `<aside id="fn-${fn.number}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fn.number}" class="epub-footnote-backlink">${fn.number}.</a> ${escapedBody}</p></aside>`;
+      footnoteBlocks.push({
+        id: fn.id,
+        number: fn.number,
+        html: asideHtml,
+        text: fn.text,
+      });
+      xhtmlFootnotes += `      ${asideHtml}\n`;
+    }
+    xhtmlFootnotes += `    </section>\n`;
+  }
+
+  const chapterXhtml = `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="tr">\n<head>\n  <meta charset="utf-8" />\n  <title>Bölüm</title>\n  <link rel="stylesheet" type="text/css" href="styles.css" />\n</head>\n<body>\n  <section class="chapter">\n${xhtmlBody}${xhtmlFootnotes}  </section>\n</body>\n</html>`;
+
+  return {
+    bodyBlocks,
+    footnoteBlocks,
+    footnotes,
+    chapterXhtml,
+  };
 }

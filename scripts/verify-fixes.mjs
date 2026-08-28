@@ -1,8 +1,8 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
-import { extractBlocksFromHtml, reconstructChapterHtml, createEpubFromChapters } from '../src/lib/epub-engine.ts';
-import { parsePdf, findRepresentativePdfPage } from '../src/lib/pdf-engine.ts';
+import { extractBlocksFromHtml, reconstructChapterHtml, createEpubFromChapters, renumberAndSynthesizeFootnotes } from '../src/lib/epub-engine.ts';
+import { parsePdf, findRepresentativePdfPage, extractFootnotesAndBodyFromPage } from '../src/lib/pdf-engine.ts';
 import { PDFDocument, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
@@ -676,6 +676,98 @@ if (fs.existsSync(testStatsPath)) {
   assert(typeof parsed.totalWordsFixed === 'number', 'totalWordsFixed must be a number');
   console.log('Global Stats storage format validated successfully!');
 }
+
+// 12. Test Footnote Tag Protection in Turkish OCR Regex & Anomaly Checking
+console.log('Testing Footnote Tag Protection in Regex & Anomaly checking...');
+const textWithFootnote = "Modern edebiyat kuramı[^p1_1] bu konuda yarm sabah çok önemli bir clünya görüşü sunar.";
+const cleanedFnText = applyTurkishRegexPreClean(textWithFootnote);
+assert(cleanedFnText.includes('[^p1_1]'), 'Footnote tag [^p1_1] must be preserved intact during regex cleaning');
+assert(cleanedFnText.includes('yarın sabah'), 'OCR error "yarm sabah" must still be repaired');
+assert(cleanedFnText.includes('dünya görüşü'), 'OCR error "clünya" must still be repaired');
+assert.strictEqual(hasOcrAnomaly("Düzgün bir cümle[^p45_1] ve devamı."), false, "Footnote tag must not trigger false OCR anomaly");
+
+const footnoteDefText = "[^p1_1]: Terry Eagleton, Edebiyat Kuramı Giriş, 1983.";
+const cleanedDefText = applyTurkishRegexPreClean(footnoteDefText);
+assert(cleanedDefText.startsWith('[^p1_1]:'), 'Footnote definition tag must remain preserved');
+console.log('Footnote Tag Protection tests passed successfully!');
+
+// 13. Test Footnote Renumbering and Interactive Popup EPUB 3 XHTML Synthesis
+console.log('Testing Footnote Renumbering and EPUB 3 Synthesis...');
+const sampleRawBlocks = [
+  { text: 'İlk paragraf metni burada yer almaktadır[^p45_1]. İkinci bir referans da var[^p45_2].', isHeading: false },
+  { text: 'İkinci paragrafta başka bir sayfadan gelen referans var[^p46_1].', isHeading: false },
+  { text: '[^p45_1]: Sayfa 45 birinci dipnot açıklaması.', isFootnote: true },
+  { text: '[^p45_2]: Sayfa 45 ikinci dipnot açıklaması.', isFootnote: true },
+  { text: '[^p46_1]: Sayfa 46 birinci dipnot açıklaması.', isFootnote: true }
+];
+
+const synthResult = renumberAndSynthesizeFootnotes(sampleRawBlocks, 'ch-1');
+assert.strictEqual(synthResult.footnotes.length, 3, 'Must extract and map 3 footnotes');
+assert.strictEqual(synthResult.footnotes[0].number, 1);
+assert.strictEqual(synthResult.footnotes[1].number, 2);
+assert.strictEqual(synthResult.footnotes[2].number, 3);
+
+// Verify body noteref markup
+assert(synthResult.bodyBlocks[0].html.includes('<a href="#fn-1" id="ref-1" class="epub-noteref" epub:type="noteref"><sup>[1]</sup></a>'), 'Must contain EPUB 3 noteref 1');
+assert(synthResult.bodyBlocks[0].html.includes('<a href="#fn-2" id="ref-2" class="epub-noteref" epub:type="noteref"><sup>[2]</sup></a>'), 'Must contain EPUB 3 noteref 2');
+assert(synthResult.bodyBlocks[1].html.includes('<a href="#fn-3" id="ref-3" class="epub-noteref" epub:type="noteref"><sup>[3]</sup></a>'), 'Must contain EPUB 3 noteref 3');
+
+// Verify aside footnote definitions
+assert(synthResult.chapterXhtml.includes('<aside id="fn-1" class="epub-footnote" epub:type="footnote"><p><a href="#ref-1" class="epub-footnote-backlink">1.</a> Sayfa 45 birinci dipnot açıklaması.</p></aside>'), 'Must synthesize valid EPUB 3 aside footnote 1');
+assert(synthResult.chapterXhtml.includes('<aside id="fn-2" class="epub-footnote" epub:type="footnote"><p><a href="#ref-2" class="epub-footnote-backlink">2.</a> Sayfa 45 ikinci dipnot açıklaması.</p></aside>'), 'Must synthesize valid EPUB 3 aside footnote 2');
+assert(synthResult.chapterXhtml.includes('<aside id="fn-3" class="epub-footnote" epub:type="footnote"><p><a href="#ref-3" class="epub-footnote-backlink">3.</a> Sayfa 46 birinci dipnot açıklaması.</p></aside>'), 'Must synthesize valid EPUB 3 aside footnote 3');
+assert(synthResult.chapterXhtml.includes('epub:type="footnotes"'), 'Must contain footnotes section with epub:type');
+console.log('Footnote Renumbering and EPUB 3 Synthesis tests passed successfully!');
+
+// 14. Test PDF Extraction with Footnote References and Bottom Definitions
+console.log('Testing PDF Page Footnote Extraction logic...');
+const mockPageLines = [
+  { y: 100, minX: 50, maxX: 500, height: 12, fontSize: 12, text: 'Bu araştırmada modern yaklaşımlar[^1] ele alınmıştır.' },
+  { y: 120, minX: 50, maxX: 480, height: 12, fontSize: 12, text: 'Ayrıca karşılaştırmalı yöntemler de kullanılmıştır.' },
+  { y: 550, minX: 50, maxX: 450, height: 9, fontSize: 9, text: '1. Ayrıntılı metodoloji için üçüncü bölüme bakınız.' }
+];
+
+const extractedPage = extractFootnotesAndBodyFromPage(mockPageLines, 12, 12, 600);
+assert.strictEqual(extractedPage.footnoteParagraphs.length, 1, 'Must extract 1 bottom footnote definition');
+assert.strictEqual(extractedPage.footnoteParagraphs[0].footnoteId, 'p12_1');
+assert(extractedPage.footnoteParagraphs[0].text.includes('[^p12_1]: Ayrıntılı metodoloji için üçüncü bölüme bakınız.'), 'Footnote definition text must be scoped to page');
+assert(extractedPage.bodyParagraphs[0].text.includes('[^p12_1]'), 'Body reference must be scoped to [^p12_1]');
+console.log('PDF Page Footnote Extraction logic passed successfully!');
+
+// 15. Test End-to-End PDF Generation with Footnotes and EPUB Output
+console.log('Testing End-to-End PDF-to-EPUB Footnote Generation...');
+const footnotePdfDoc = await PDFDocument.create();
+const fnPage = footnotePdfDoc.addPage([550, 700]);
+
+// Title & Body (ASCII safe for standard PDF Helvetica font)
+fnPage.drawText('CHAPTER 1: SCIENTIFIC METHODOLOGY', { x: 50, y: 640, size: 14, color: rgb(0, 0, 0) });
+fnPage.drawText('Modern scientific theories', { x: 50, y: 600, size: 12, color: rgb(0, 0, 0) });
+// Superscript 1 (placed right after theories at x=202)
+fnPage.drawText('1', { x: 202, y: 605, size: 8, color: rgb(0, 0, 0) });
+fnPage.drawText(' and epistemological foundations are examined.', { x: 210, y: 600, size: 12, color: rgb(0, 0, 0) });
+
+// Footnote definition at bottom (small font)
+fnPage.drawText('1. Karl Popper, The Logic of Scientific Discovery, 1934.', { x: 50, y: 80, size: 8.5, color: rgb(0, 0, 0) });
+
+const fnPdfBytes = await footnotePdfDoc.save();
+const parsedFnPdf = await parsePdf(fnPdfBytes.buffer.slice(fnPdfBytes.byteOffset, fnPdfBytes.byteOffset + fnPdfBytes.byteLength), {
+  preserveAllLines: true,
+  cropBounds: { topPercent: 0.02, bottomPercent: 0.02, leftPercent: 0, rightPercent: 0 }
+});
+
+assert(parsedFnPdf.chapters.length >= 1, 'Must generate at least 1 chapter');
+assert(parsedFnPdf.metadata.footnoteCount && parsedFnPdf.metadata.footnoteCount >= 1, 'Metadata must count at least 1 footnote');
+
+const ch1Content = parsedFnPdf.chapters[0].rawContent;
+assert(ch1Content.includes('epub:type="noteref"'), 'Chapter rawContent must contain epub:type="noteref"');
+assert(ch1Content.includes('epub:type="footnote"'), 'Chapter rawContent must contain epub:type="footnote"');
+assert(ch1Content.includes('Karl Popper, The Logic of Scientific Discovery'), 'Chapter must include footnote body text');
+
+const stylesInZip = await parsedFnPdf.zip.file('OEBPS/styles.css').async('text');
+assert(stylesInZip.includes('epub-noteref'), 'styles.css must include epub-noteref styling');
+assert(stylesInZip.includes('epub-footnote'), 'styles.css must include epub-footnote styling');
+console.log('End-to-End PDF-to-EPUB Footnote Generation test passed 100% successfully!');
+
 
 
 
