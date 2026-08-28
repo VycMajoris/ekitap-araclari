@@ -9,7 +9,7 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ### 🚀 Yeni Özellikler (Added)
 * **🌐 Birleşik Yapay Zekâ Sağlayıcı (API) Mimarisi:** Karmaşık ve iç içe geçmiş sekmeler kaldırılarak 8 büyük sağlayıcı tek çatı altında toplandı:
-  - 🟡 **Google AI Studio** (Gemini 3.7 / 3.6 Flash)
+  - 🟡 **Google AI Studio** (Gemini 3.7 Flash, 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite, 3.1 Pro Preview, 3 Flash Preview)
   - ⚡ **Groq** (Llama 3.3 70B, Qwen 3.8/3.6, DeepSeek R1, GPT-OSS)
   - 🟢 **OpenRouter** (Ücretsiz `:free` model havuzu)
   - 🟣 **OpenAI** (GPT-5.6 Sol/Terra/Luna, GPT-5.4 Mini, GPT-4o, o3-mini)

@@ -35,10 +35,15 @@ export const ANTIGRAVITY_MODELS: AntigravityModelInfo[] = [
 ];
 
 export const GEMINI_API_MODELS: AntigravityModelInfo[] = [
-  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (En Yeni, En Yüksek Zeka & Hız - Önerilen)' },
+  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (En Yeni & En Yüksek Hız - Önerilen)' },
   { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Hızlı & Kararlı)' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite (Hafif & Hızlı)' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash-Lite' },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview (Gelişmiş Mantık)' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Büyük Belgeler İçin)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
 ];
 
 export async function generatePkce(): Promise<{ verifier: string; challenge: string }> {
@@ -309,6 +314,10 @@ export async function callGeminiApiCorrection({
           if (activeModel === 'gemini-3.7-flash') {
             activeModel = 'gemini-3.6-flash';
           } else if (activeModel === 'gemini-3.6-flash') {
+            activeModel = 'gemini-3.5-flash';
+          } else if (activeModel === 'gemini-3.5-flash') {
+            activeModel = 'gemini-3.5-flash-lite';
+          } else if (activeModel === 'gemini-3.5-flash-lite') {
             activeModel = 'gemini-2.0-flash';
           }
           await new Promise((resolve) => setTimeout(resolve, delay));
