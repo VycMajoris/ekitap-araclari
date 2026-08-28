@@ -665,5 +665,18 @@ assert(reHtml.includes('<figure class="epub-figure"><img src="images/img_p1_1.jp
 assert(reHtml.includes('Paragraf 2 Düzeltildi'), 'Must contain updated paragraph 2 without shifting');
 console.log('Chapter Reconstruction with Figure blocks passed 100% successfully!');
 
+// 11. Test Global Stats API Storage Format
+console.log('Testing Global Stats Storage Format...');
+const testStatsPath = 'data/stats.json';
+if (fs.existsSync(testStatsPath)) {
+  const content = fs.readFileSync(testStatsPath, 'utf8');
+  const parsed = JSON.parse(content);
+  assert(typeof parsed.totalConverted === 'number', 'totalConverted must be a number');
+  assert(typeof parsed.totalTranslated === 'number', 'totalTranslated must be a number');
+  assert(typeof parsed.totalWordsFixed === 'number', 'totalWordsFixed must be a number');
+  console.log('Global Stats storage format validated successfully!');
+}
+
+
 
 

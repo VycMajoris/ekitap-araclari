@@ -27,14 +27,14 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
 
   const handleClose = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.0', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.4.1', 'true');
     }
     onClose();
   };
 
   const handleGoToSettings = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.0', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.4.1', 'true');
     }
     onOpenGeminiSettings();
   };
@@ -57,10 +57,10 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             </div>
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                v0.4.0 Sürüm Yenilikleri
+                v0.4.1 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
-                eKitap Araçları v0.4.0 Yenilikleri
+                eKitap Araçları v0.4.1 Yenilikleri
               </h3>
             </div>
           </div>
@@ -71,7 +71,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Neler Yeni? (v0.4.0)</span>
+                <span>Neler Yeni? (v0.4.1)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                 Son Güncelleme

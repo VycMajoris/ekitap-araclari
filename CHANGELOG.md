@@ -5,6 +5,18 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.4.1] - 2026-08-28
+
+### 🚀 Yeni Özellikler (Added)
+* **📊 Canlı Global İstatistik Sayacı (`/api/stats` & `GlobalStatsCards`):**
+  - Toplam dönüştürülen kitap, toplam çevrilen kitap ve onarılan kelime adetlerini takip eden kalıcı arka plan API'si ve sayfa altı istatistik paneli eklendi.
+  - Sayaçlar her kitap dönüştürme ve çeviri işleminde gerçek zamanlı olarak güncellenir.
+* **🖼️ Dokümantasyon & Ekran Görüntüsü İyileştirmeleri:**
+  - `README.md` içerisindeki arayüz ekran görüntüleri 2x2 kompakt tablo düzenine getirilerek sayfanın altındaki ilgili bölüme taşındı.
+  - Metinlerdeki yapay zekâ pazarlama kalıpları (AI slop) temizlendi, yalın ve teknik bir anlatım sağlandı.
+
+---
+
 ## [0.4.0] - 2026-08-28
 
 ### 🚀 Yeni Özellikler (Added)

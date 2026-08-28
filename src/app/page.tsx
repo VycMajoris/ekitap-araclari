@@ -13,6 +13,7 @@ import { ChapterList } from '@/components/ChapterList';
 import { DiffViewer } from '@/components/DiffViewer';
 import { GoogleAiStudioNoticeModal } from '@/components/GoogleAiStudioNoticeModal';
 import { PdfCropModal } from '@/components/PdfCropModal';
+import { GlobalStatsCards } from '@/components/GlobalStatsCards';
 import {
   EpubMetadata,
   EpubChapter,
@@ -214,7 +215,7 @@ export default function Home() {
         isDevMode: storedDevMode,
       }));
 
-      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.4.0') === 'true';
+      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.4.1') === 'true';
       if (!hideNotice) {
         const timer = setTimeout(() => {
           setIsAiNoticeOpen(true);
@@ -382,6 +383,12 @@ export default function Home() {
       if (result.chapters.length > 0) {
         setSelectedChapterId(result.chapters[0].id);
       }
+
+      fetch('/api/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'convert' }),
+      }).catch(() => {});
     } catch (err: unknown) {
       console.error('PDF ayrıştırma hatası:', err);
       const msg = err instanceof Error ? err.message : 'PDF dosyası ayrıştırılamadı.';
@@ -561,6 +568,15 @@ export default function Home() {
         controller.signal,
         metadata?.title
       );
+
+      fetch('/api/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: options.taskType === 'translate' ? 'translate' : 'convert',
+          fixedWords: stats.totalFixedWords,
+        }),
+      }).catch(() => {});
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         console.log('Kullanıcı durdurdu.');
@@ -717,10 +733,10 @@ export default function Home() {
         <div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-              v0.4.0
+              v0.4.1
             </span>
             <span>
-              <strong>Yenilik:</strong> İnteraktif PDF alan seçimi, Korumalı Mod (sıfır kayıp) ve kitap içi görsel/illüstrasyon ayıklama motoru eklendi.
+              <strong>Yenilik:</strong> Canlı global istatistik sayacı, interaktif PDF alan seçimi ve kitap içi görsel/illüstrasyon ayıklama motoru eklendi.
             </span>
           </div>
           <button
@@ -1084,42 +1100,46 @@ export default function Home() {
         )}
 
         {!metadata && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                1
+          <div className="space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  1
+                </div>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+                  PDF &amp; EPUB Karakter Birleşme Onarımı
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  PDF ve OCR kaynaklı harf birleşme ve bölünme hatalarını Türkçe dilbilgisi kuralları ve bağlamsal yapay zeka ile onarır.
+                </p>
               </div>
-              <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                PDF &amp; EPUB Karakter Birleşme Onarımı
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                PDF ve OCR kaynaklı harf birleşme ve bölünme hatalarını Türkçe dilbilgisi kuralları ve bağlamsal yapay zeka ile onarır.
-              </p>
+
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  2
+                </div>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+                  Orijinal Format ve Başlık Koruma
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Kitap içindeki HTML etiketlerini, dipnotları, bölüm başlıklarını ve içindekiler tablosunu bozmadan korur ve iki yana yaslar.
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  3
+                </div>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+                  Hızlı ve Yerel İşleme
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Tüm dönüştürme ve paketleme işlemleri doğrudan tarayıcınızda gerçekleşir. Kalıcı IndexedDB önbelleği ile token tasarrufu sağlar.
+                </p>
+              </div>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                2
-              </div>
-              <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                Orijinal Format ve Başlık Koruma
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Kitap içindeki HTML etiketlerini, dipnotları, bölüm başlıklarını ve içindekiler tablosunu bozmadan korur ve iki yana yaslar.
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                3
-              </div>
-              <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-                Hızlı ve Yerel İşleme
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Tüm dönüştürme ve paketleme işlemleri doğrudan tarayıcınızda gerçekleşir. Kalıcı IndexedDB önbelleği ile token tasarrufu sağlar.
-              </p>
-            </div>
+            <GlobalStatsCards />
           </div>
         )}
       </main>

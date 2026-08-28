@@ -7,45 +7,11 @@
 Tarayıcı üzerinde çalışan, gizlilik odaklı, Türkçe dilbilgisi ve yapay zeka destekli e-kitap araç seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.4.0-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.4.1-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 
-[Ekran Görüntüleri](#-ekran-görüntüleri) • [Özellikler](#-özellikler) • [Ücretsiz API Key Rehberi](#-ücretsiz-yapay-zekâ-api-key-nasıl-alınır) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
-
-</div>
-
----
-
-## 🖼️ Ekran Görüntüleri
-
-<div align="center">
-
-### 1. 🎛️ Ana İşlem & Dosya Yükleme Paneli
-Çeviri / OCR onarım modu, hız seçenekleri, canlı istatistik çubuğu ve e-okuyucuya gönderme paneli.
-
-<img src="docs/screenshots/01-upload-dashboard.png" alt="Ana İşlem Paneli" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
-
-<br/><br/>
-
-### 2. 📐 İnteraktif PDF Alan Seçimi & Korumalı Mod Modalı
-Dolu temsili sayfa önizlemesi, ayarlanabilir yeşil sınır kutusu, Korumalı Mod ve görsel ayıklama seçeneği.
-
-<img src="docs/screenshots/03-pdf-crop-modal.png" alt="PDF Alan Seçimi ve Korumalı Mod" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
-
-<br/><br/>
-
-### 3. 🔍 Canlı Bölüm Listesi & Yan Yana Karşılaştırma (Diff Viewer)
-Bölüm gezgini, orijinal ve işlenmiş metinlerin yan yana renkli fark vurgulamaları ve görsel figür blokları.
-
-<img src="docs/screenshots/02-diff-viewer-comparison.png" alt="Canlı Karşılaştırma ve Diff Önizleme" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
-
-<br/><br/>
-
-### 4. ⚙️ Birleşik Yapay Zekâ Sağlayıcıları ve Ayarlar
-Google AI Studio (Gemini 3.7 Flash), Groq, OpenRouter, OpenAI, DeepSeek, Together AI ve yerel Ollama yapılandırması.
-
-<img src="docs/screenshots/04-settings-providers.png" alt="Yapay Zeka Sağlayıcı Ayarları" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+[Özellikler](#-özellikler) • [Ekran Görüntüleri](#-ekran-görüntüleri) • [Ücretsiz API Key Rehberi](#-ücretsiz-yapay-zekâ-api-key-nasıl-alınır) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
 
 </div>
 
@@ -122,6 +88,16 @@ Ana sayfadan seçilebilen 3 farklı çalışma modu:
 
 ### 9. 🌓 Tema Desteği
 - Karanlık ve aydınlık tema desteği.
+
+---
+
+## 🖼️ Ekran Görüntüleri
+
+| 🎛️ Ana İşlem & Yükleme Paneli | 📐 İnteraktif PDF Alan Seçimi |
+| :---: | :---: |
+| <img src="docs/screenshots/01-upload-dashboard.png" width="100%" alt="Ana İşlem Paneli" /> | <img src="docs/screenshots/03-pdf-crop-modal.png" width="100%" alt="PDF Alan Seçimi ve Korumalı Mod" /> |
+| **🔍 Canlı Karşılaştırma & Diff Önizleme** | **⚙️ Birleşik Yapay Zekâ Sağlayıcıları** |
+| <img src="docs/screenshots/02-diff-viewer-comparison.png" width="100%" alt="Canlı Karşılaştırma ve Diff Önizleme" /> | <img src="docs/screenshots/04-settings-providers.png" width="100%" alt="Yapay Zeka Sağlayıcı Ayarları" /> |
 
 ---
 
