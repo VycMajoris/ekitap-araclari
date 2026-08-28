@@ -9,6 +9,13 @@ export interface EpubMetadata {
   pageCount?: number;
 }
 
+export interface PdfCropBounds {
+  topPercent: number; // 0 to 0.4
+  bottomPercent: number; // 0 to 0.4
+  leftPercent: number; // 0 to 0.4
+  rightPercent: number; // 0 to 0.4
+}
+
 export interface TextBlock {
   id: string;
   elementTag: string; // 'p', 'h1', 'h2', 'li', 'blockquote', etc.

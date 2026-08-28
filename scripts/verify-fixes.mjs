@@ -2,6 +2,8 @@ import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } f
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
 import { extractBlocksFromHtml, reconstructChapterHtml } from '../src/lib/epub-engine.ts';
+import { parsePdf, findRepresentativePdfPage } from '../src/lib/pdf-engine.ts';
+import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 import {
   buildTranslationUserPrompt,
@@ -536,3 +538,34 @@ const reconstructedHtml = reconstructChapterHtml({
 
 assert(reconstructedHtml.includes('First corrected sentence.'), 'Reconstructed HTML must include corrected text in div container');
 console.log('All EPUB div-container tests passed successfully!');
+
+// 7. Test PDF Area Selection, Representative Page Analysis & Crop Bounds
+console.log('Testing PDF Area Selection and Representative Page Analysis...');
+if (fs.existsSync('public/ornek-bozuk-turkce.pdf')) {
+  const pdfBuffer = fs.readFileSync('public/ornek-bozuk-turkce.pdf');
+  const repPage = await findRepresentativePdfPage(pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength));
+  
+  assert(repPage.totalPages >= 1, 'Total pages must be >= 1');
+  assert(repPage.pageNumber >= 1 && repPage.pageNumber <= repPage.totalPages, 'Representative page must be within document range');
+  assert(typeof repPage.recommendedCrop.topPercent === 'number', 'Recommended top crop must be number');
+  assert(typeof repPage.recommendedCrop.bottomPercent === 'number', 'Recommended bottom crop must be number');
+
+  // Test full page parsing (preserveAllLines: true)
+  const fullResult = await parsePdf(pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength), {
+    preserveAllLines: true,
+    cropBounds: { topPercent: 0, bottomPercent: 0, leftPercent: 0, rightPercent: 0 }
+  });
+
+  assert(fullResult.chapters.length >= 1, 'Parsed PDF must generate at least 1 chapter');
+  const totalFullBlocks = fullResult.chapters.reduce((acc, c) => acc + c.blocks.length, 0);
+  assert(totalFullBlocks >= 1, 'Full page PDF parsing must extract text blocks');
+
+  // Test customized crop bounds
+  const croppedResult = await parsePdf(pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength), {
+    cropBounds: { topPercent: 0.05, bottomPercent: 0.05, leftPercent: 0.02, rightPercent: 0.02 }
+  });
+
+  assert(croppedResult.chapters.length >= 1, 'Cropped PDF must generate chapters');
+  console.log('All PDF Area Selection and Crop Bounds tests passed successfully!');
+}
+

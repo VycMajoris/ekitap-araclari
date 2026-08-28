@@ -1,6 +1,8 @@
-import { EpubMetadata, EpubChapter, TextBlock } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds } from './types';
 import { createEpubFromChapters } from './epub-engine';
 import JSZip from 'jszip';
+
+export type { PdfCropBounds } from './types';
 
 export interface PdfParseProgress {
   currentPage: number;
@@ -13,7 +15,19 @@ export interface PdfParseOptions {
   pagesPerChapterFallback?: number;
   headerMarginPercent?: number;
   footerMarginPercent?: number;
+  cropBounds?: PdfCropBounds;
+  preserveAllLines?: boolean;
   onProgress?: (progress: PdfParseProgress) => void;
+}
+
+export interface PdfRepresentativePageInfo {
+  pageNumber: number;
+  totalPages: number;
+  width: number;
+  height: number;
+  recommendedCrop: PdfCropBounds;
+  textItemCount: number;
+  isScannedImageOnly: boolean;
 }
 
 interface RawTextItem {
@@ -44,7 +58,7 @@ interface ExtractedParagraph {
 
 const FINISHED_WORD_OR_SUFFIX_REGEX = /(?:[dt][ıiuü]m|[dt][ıiuü]n|[dt][ıiuü]k|[dt][ıiuü]n[ıiuü]z|[dt][ıiuü]ler|m[ıiuü]şt[ıiuü]m|m[ıiuü]şt[ıiuü]n|m[ıiuü]şt[ıiuü]k|m[ıiuü]şt[ıiuü]ler|m[ıiuü]ş|m[ıiuü]şiz|m[ıiuü]şsiniz|m[ıiuü]şler|[ıiuü]?yor|[ıiuü]?yorum|[ıiuü]?yorsun|[ıiuü]?yoruz|[ıiuü]?yorsunuz|[ıiuü]?yorlar|[ae]c[ae]k|[ae]c[ae]ğ[ıi]m|[ae]c[ae]ksin|[ae]c[ae]ğiz|[ae]c[ae]ksiniz|[ae]c[ae]kl[ae]r|[ıiuü]r|[ae]r|m[ae]l[ıi]|m[ae]l[ıi]y[ıi]m|m[ae]l[ıi]sin|m[ae]l[ıi]yiz|s[ae]m|s[ae]n|s[ae]k|s[ae]niz|s[ae]l[ae]r|[ae]r[ae]k|[ıiuü]nc[ae]|d[ıiuü]ğ[ıi]|d[ıiuü]kt[ae]n|m[ae]d[ae]n|y[ae]n|[ae]n|d[ıiuü]kç[ae]|k[ae]n|[dt][ıiuü]r|[dt][ıiuü]|[dt][ae]n|[dt][ae]|l[ae]r|l[ae]ri|l[ae]re|l[ae]rd[ae]|l[ae]rd[ae]n|[ıiuü]n|[ıiuü]m|[ıiuü]z|s[ıiuü]|s[ıiuü]n[ıiuü]|s[ıiuü]n[ae]|s[ıiuü]nd[ae]|s[ıiuü]nd[ae]n|y[ae]|y[ıiuü]|n[ıiuü]n|n[ıiuü]|n[ae]|nd[ae]|nd[ae]n|'dur|'dür|'dır|'dir|'tur|'tür|'tır|'tir)$/i;
 
-async function getPdfJs() {
+export async function getPdfJs() {
   if (typeof window === 'undefined') {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     return pdfjsLib;
@@ -62,45 +76,212 @@ async function getPdfJs() {
   return pdfjsLib;
 }
 
+async function analyzePdfPage(
+  pdfDoc: any,
+  pageNum: number
+): Promise<{
+  pageNumber: number;
+  totalPages: number;
+  width: number;
+  height: number;
+  textItemCount: number;
+  rawBounds: { minX: number; maxX: number; minY: number; maxY: number };
+  detectedCrop: PdfCropBounds;
+}> {
+  const totalPages = pdfDoc.numPages;
+  const safePageNum = Math.max(1, Math.min(totalPages, pageNum));
+
+  const page = await pdfDoc.getPage(safePageNum);
+  const viewport = page.getViewport({ scale: 1.0 });
+  const textContent = await page.getTextContent({ includeMarkedContent: true });
+
+  let minX = viewport.width;
+  let maxX = 0;
+  let minY = viewport.height;
+  let maxY = 0;
+  let textItemCount = 0;
+
+  for (const item of textContent.items) {
+    if (!('str' in item) || !item.str || !item.str.trim()) continue;
+    const transform = item.transform;
+    const tx = transform[4];
+    const ty = transform[5];
+    const fontSize = Math.abs(transform[3]) || item.height || 12;
+    const topY = viewport.height - ty;
+    const itemWidth = item.width || item.str.length * (fontSize * 0.5);
+    const itemHeight = item.height || fontSize;
+
+    minX = Math.min(minX, tx);
+    maxX = Math.max(maxX, tx + itemWidth);
+    minY = Math.min(minY, topY);
+    maxY = Math.max(maxY, topY + itemHeight);
+    textItemCount++;
+  }
+
+  const hasText = textItemCount > 0 && minX < maxX && minY < maxY;
+  const detectedCrop: PdfCropBounds = hasText
+    ? {
+        topPercent: Math.max(0, Math.min(0.25, Math.floor((minY / viewport.height) * 100) / 100)),
+        bottomPercent: Math.max(0, Math.min(0.25, Math.floor((1 - (maxY / viewport.height)) * 100) / 100)),
+        leftPercent: Math.max(0, Math.min(0.25, Math.floor((minX / viewport.width) * 100) / 100)),
+        rightPercent: Math.max(0, Math.min(0.25, Math.floor((1 - (maxX / viewport.width)) * 100) / 100)),
+      }
+    : { topPercent: 0, bottomPercent: 0, leftPercent: 0, rightPercent: 0 };
+
+  return {
+    pageNumber: safePageNum,
+    totalPages,
+    width: viewport.width,
+    height: viewport.height,
+    textItemCount,
+    rawBounds: { minX, maxX, minY, maxY },
+    detectedCrop,
+  };
+}
+
+export async function getPdfPageInfo(
+  fileData: ArrayBuffer | File,
+  pageNum: number
+): Promise<{
+  pageNumber: number;
+  totalPages: number;
+  width: number;
+  height: number;
+  textItemCount: number;
+  rawBounds: { minX: number; maxX: number; minY: number; maxY: number };
+  detectedCrop: PdfCropBounds;
+}> {
+  let buffer: ArrayBuffer;
+  if (fileData instanceof File) {
+    buffer = await fileData.arrayBuffer();
+  } else {
+    buffer = fileData;
+  }
+
+  const pdfjsLib = await getPdfJs();
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buffer.slice(0)),
+    useSystemFonts: true,
+  });
+  const pdfDoc = await loadingTask.promise;
+  return analyzePdfPage(pdfDoc, pageNum);
+}
+
+export async function findRepresentativePdfPage(
+  fileData: ArrayBuffer | File
+): Promise<PdfRepresentativePageInfo> {
+  let buffer: ArrayBuffer;
+  if (fileData instanceof File) {
+    buffer = await fileData.arrayBuffer();
+  } else {
+    buffer = fileData;
+  }
+
+  const pdfjsLib = await getPdfJs();
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buffer.slice(0)),
+    useSystemFonts: true,
+  });
+  const pdfDoc = await loadingTask.promise;
+  const totalPages = pdfDoc.numPages;
+
+  if (totalPages <= 1) {
+    const info = await analyzePdfPage(pdfDoc, 1);
+    return {
+      pageNumber: 1,
+      totalPages: 1,
+      width: info.width,
+      height: info.height,
+      recommendedCrop: info.detectedCrop,
+      textItemCount: info.textItemCount,
+      isScannedImageOnly: info.textItemCount === 0,
+    };
+  }
+
+  const candidates = new Set<number>();
+  candidates.add(Math.max(1, Math.round(totalPages * 0.2)));
+  candidates.add(Math.max(1, Math.round(totalPages * 0.35)));
+  candidates.add(Math.max(1, Math.round(totalPages * 0.5)));
+  candidates.add(Math.max(1, Math.round(totalPages * 0.65)));
+  candidates.add(Math.max(1, Math.round(totalPages * 0.8)));
+  if (totalPages >= 5) candidates.add(5);
+  if (totalPages >= 10) candidates.add(10);
+  candidates.add(1);
+
+  let bestPage = Math.round(totalPages * 0.5) || 1;
+  let maxTextItems = -1;
+  let bestInfo: Awaited<ReturnType<typeof analyzePdfPage>> | null = null;
+
+  for (const pageNum of Array.from(candidates).sort((a, b) => a - b)) {
+    if (pageNum > totalPages || pageNum < 1) continue;
+    try {
+      const info = await analyzePdfPage(pdfDoc, pageNum);
+      if (info.textItemCount > maxTextItems) {
+        maxTextItems = info.textItemCount;
+        bestPage = pageNum;
+        bestInfo = info;
+      }
+    } catch (e) {
+      console.warn(`Sayfa ${pageNum} analizi atlandı:`, e);
+    }
+  }
+
+  if (!bestInfo) {
+    bestInfo = await analyzePdfPage(pdfDoc, 1);
+  }
+
+  return {
+    pageNumber: bestPage,
+    totalPages,
+    width: bestInfo.width,
+    height: bestInfo.height,
+    recommendedCrop: bestInfo.detectedCrop,
+    textItemCount: bestInfo.textItemCount,
+    isScannedImageOnly: maxTextItems === 0,
+  };
+}
+
 function isHeaderOrFooter(
   line: TextLine,
   pageHeight: number,
   headerMargin: number,
   footerMargin: number,
   medianFontSize: number,
-  pageNumber?: number
+  pageNumber?: number,
+  preserveAllLines?: boolean
 ): boolean {
-  const topLimit = Math.max(48, pageHeight * headerMargin);
-  const bottomLimit = Math.min(pageHeight - 48, pageHeight * (1 - footerMargin));
+  if (preserveAllLines) {
+    return false;
+  }
+
+  const topLimit = pageHeight * headerMargin;
+  const bottomLimit = pageHeight * (1 - footerMargin);
 
   const isTop = line.y <= topLimit;
   const isBottom = line.y >= bottomLimit;
-  const isWideMargin = line.y <= Math.max(65, pageHeight * 0.16) || line.y >= Math.min(pageHeight - 65, pageHeight * 0.84);
+  const isOutsideMargins = isTop || isBottom;
 
   const trimmed = line.text.trim();
 
-  if (isWideMargin || isTop || isBottom) {
+  if (isOutsideMargins) {
     if (/^[-—~–•*[\]()]?\s*\d{1,4}\.?\s*[-—~–•*[\]()]?$/i.test(trimmed)) return true;
     if (/^[-—~–•*[\]()]?\s*[IVXLCDMivxlcdm]{1,8}\.?\s*[-—~–•*[\]()]?$/i.test(trimmed)) return true;
     if (/^(?:sayfa|page|s\.)\s*\d{1,4}\.?$/i.test(trimmed)) return true;
     if (pageNumber !== undefined && new RegExp(`^[-—~–•*[\\]()\\s]*${pageNumber}\\.?[ -—~–•*[\\]()\\s]*$`).test(trimmed)) return true;
-  }
 
-  if (isTop) {
-    if (trimmed.length < 120) {
+    if (isTop && trimmed.length <= 80 && !/[.?!]$/.test(trimmed)) {
       return true;
     }
-  }
-
-  if (isBottom) {
-    if (trimmed.length < 90) {
+    if (isBottom && trimmed.length <= 60 && !/[.?!]$/.test(trimmed)) {
       return true;
     }
   }
 
   if (line.fontSize <= medianFontSize * 1.15 && /^\d{1,4}\.?$/.test(trimmed)) {
-    if (pageNumber !== undefined && Math.abs(parseInt(trimmed, 10) - pageNumber) <= 5) {
-      return true;
+    if (pageNumber !== undefined && Math.abs(parseInt(trimmed, 10) - pageNumber) <= 1) {
+      if (line.y <= Math.max(topLimit, pageHeight * 0.1) || line.y >= Math.min(bottomLimit, pageHeight * 0.9)) {
+        return true;
+      }
     }
   }
 
@@ -422,8 +603,12 @@ export async function parsePdf(
   pageCount: number;
 }> {
   const pagesPerChapterFallback = options?.pagesPerChapterFallback || 15;
-  const headerMargin = options?.headerMarginPercent || 0.08;
-  const footerMargin = options?.footerMarginPercent || 0.08;
+  const crop: PdfCropBounds = options?.cropBounds || {
+    topPercent: options?.headerMarginPercent ?? 0.04,
+    bottomPercent: options?.footerMarginPercent ?? 0.04,
+    leftPercent: 0,
+    rightPercent: 0,
+  };
 
   let buffer: ArrayBuffer;
   let fileName = 'Kitap';
@@ -444,7 +629,7 @@ export async function parsePdf(
 
   const pdfjsLib = await getPdfJs();
   const loadingTask = pdfjsLib.getDocument({
-    data: new Uint8Array(buffer),
+    data: new Uint8Array(buffer.slice(0)),
     useSystemFonts: true,
   });
 
@@ -517,9 +702,27 @@ export async function parsePdf(
     fontSizes.sort((a, b) => a - b);
     const medianFontSize = fontSizes.length > 0 ? fontSizes[Math.floor(fontSizes.length / 2)] : 12;
 
-    const filteredLines = pageLines.filter(
-      (line) => !isHeaderOrFooter(line, viewport.height, headerMargin, footerMargin, medianFontSize, pageNum)
-    );
+    const topCutoff = viewport.height * crop.topPercent;
+    const bottomCutoff = viewport.height * (1 - crop.bottomPercent);
+    const leftCutoff = viewport.width * crop.leftPercent;
+    const rightCutoff = viewport.width * (1 - crop.rightPercent);
+
+    const filteredLines = pageLines.filter((line) => {
+      if (!options?.preserveAllLines) {
+        if (line.y < topCutoff || line.y > bottomCutoff) return false;
+        if (line.maxX < leftCutoff || line.minX > rightCutoff) return false;
+      }
+
+      return !isHeaderOrFooter(
+        line,
+        viewport.height,
+        crop.topPercent,
+        crop.bottomPercent,
+        medianFontSize,
+        pageNum,
+        options?.preserveAllLines
+      );
+    });
 
     const pageParagraphs = reflowLinesToParagraphs(filteredLines, pageNum, medianFontSize);
     allPageParagraphs.push({ page: pageNum, paragraphs: pageParagraphs });

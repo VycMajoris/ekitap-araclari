@@ -12,6 +12,7 @@ import { StatsBar } from '@/components/StatsBar';
 import { ChapterList } from '@/components/ChapterList';
 import { DiffViewer } from '@/components/DiffViewer';
 import { GoogleAiStudioNoticeModal } from '@/components/GoogleAiStudioNoticeModal';
+import { PdfCropModal } from '@/components/PdfCropModal';
 import {
   EpubMetadata,
   EpubChapter,
@@ -23,6 +24,7 @@ import {
   AntigravityAuthData,
   TaskType,
   TranslationStyle,
+  PdfCropBounds,
 } from '@/lib/types';
 import { parseEpub, packageEpub } from '@/lib/epub-engine';
 import { parsePdf } from '@/lib/pdf-engine';
@@ -97,6 +99,8 @@ export default function Home() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<LlmProvider | undefined>(undefined);
   const [isAiNoticeOpen, setIsAiNoticeOpen] = useState(false);
   const [isSendToDeviceOpen, setIsSendToDeviceOpen] = useState(false);
+  const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null);
+  const [isPdfCropModalOpen, setIsPdfCropModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -285,6 +289,14 @@ export default function Home() {
         uploadedFile.name.toLowerCase().endsWith('.mobi') ||
         uploadedFile.type === 'application/x-mobipocket-ebook';
 
+      if (isPdf) {
+        setPendingPdfFile(uploadedFile);
+        setIsPdfCropModalOpen(true);
+        setIsLoadingFile(false);
+        setLoadingMessage('');
+        return;
+      }
+
       let loadedZip: JSZip;
       let loadedMeta: EpubMetadata;
       let loadedChapters: EpubChapter[];
@@ -292,16 +304,6 @@ export default function Home() {
       if (isMobi) {
         setLoadingMessage('MOBI dosyası okunuyor ve ayrıştırılıyor...');
         const result = await parseMobi(uploadedFile);
-        loadedZip = result.zip;
-        loadedMeta = result.metadata;
-        loadedChapters = result.chapters;
-      } else if (isPdf) {
-        setLoadingMessage('PDF sayfaları ayrıştırılıyor ve EPUB yapısına dönüştürülüyor...');
-        const result = await parsePdf(uploadedFile, {
-          onProgress: (p) => {
-            if (p.message) setLoadingMessage(p.message);
-          },
-        });
         loadedZip = result.zip;
         loadedMeta = result.metadata;
         loadedChapters = result.chapters;
@@ -339,6 +341,58 @@ export default function Home() {
       setIsLoadingFile(false);
       setLoadingMessage('');
     }
+  };
+
+  const handlePdfCropConfirm = async (cropBounds: PdfCropBounds, preserveAllLines: boolean) => {
+    if (!pendingPdfFile) return;
+    const uploadedFile = pendingPdfFile;
+    setIsPdfCropModalOpen(false);
+    setIsLoadingFile(true);
+    setErrorMessage(null);
+    setLoadingMessage('PDF sayfaları seçilen marj sınırlarına göre ayrıştırılıyor...');
+
+    try {
+      const result = await parsePdf(uploadedFile, {
+        cropBounds,
+        preserveAllLines,
+        onProgress: (p) => {
+          if (p.message) setLoadingMessage(p.message);
+        },
+      });
+
+      setFile(uploadedFile);
+      setZip(result.zip);
+      setMetadata(result.metadata);
+      setChapters(result.chapters);
+
+      const totalBlocks = result.chapters.reduce((acc, c) => acc + c.blocks.length, 0);
+      setStats({
+        totalChapters: result.chapters.length,
+        completedChapters: 0,
+        totalBlocks,
+        processedBlocks: 0,
+        totalFixedWords: 0,
+        elapsedSeconds: 0,
+      });
+
+      if (result.chapters.length > 0) {
+        setSelectedChapterId(result.chapters[0].id);
+      }
+    } catch (err: unknown) {
+      console.error('PDF ayrıştırma hatası:', err);
+      const msg = err instanceof Error ? err.message : 'PDF dosyası ayrıştırılamadı.';
+      setErrorMessage(msg);
+    } finally {
+      setIsLoadingFile(false);
+      setLoadingMessage('');
+      setPendingPdfFile(null);
+    }
+  };
+
+  const handlePdfCropClose = () => {
+    setIsPdfCropModalOpen(false);
+    setPendingPdfFile(null);
+    setIsLoadingFile(false);
   };
 
   const handleLoadDemo = async () => {
@@ -1094,6 +1148,13 @@ export default function Home() {
         onClose={() => setIsSendToDeviceOpen(false)}
         getEpubBlob={handleGetEpubBlob}
         fileName={file?.name || 'kitap.epub'}
+      />
+
+      <PdfCropModal
+        isOpen={isPdfCropModalOpen}
+        file={pendingPdfFile}
+        onClose={handlePdfCropClose}
+        onConfirm={handlePdfCropConfirm}
       />
 
       {options.isDevMode && (
