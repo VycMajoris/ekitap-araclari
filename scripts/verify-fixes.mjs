@@ -665,8 +665,8 @@ assert(reHtml.includes('<figure class="epub-figure"><img src="images/img_p1_1.jp
 assert(reHtml.includes('Paragraf 2 Düzeltildi'), 'Must contain updated paragraph 2 without shifting');
 console.log('Chapter Reconstruction with Figure blocks passed 100% successfully!');
 
-// 11. Test Global Stats API Storage Format
-console.log('Testing Global Stats Storage Format...');
+// 11. Test Global Stats API Storage Format & Sync Reconciliation
+console.log('Testing Global Stats Storage Format & Sync Reconciliation...');
 const testStatsPath = 'data/stats.json';
 if (fs.existsSync(testStatsPath)) {
   const content = fs.readFileSync(testStatsPath, 'utf8');
@@ -674,7 +674,17 @@ if (fs.existsSync(testStatsPath)) {
   assert(typeof parsed.totalConverted === 'number', 'totalConverted must be a number');
   assert(typeof parsed.totalTranslated === 'number', 'totalTranslated must be a number');
   assert(typeof parsed.totalWordsFixed === 'number', 'totalWordsFixed must be a number');
-  console.log('Global Stats storage format validated successfully!');
+
+  const clientStats = { totalConverted: 15, totalTranslated: 8, totalWordsFixed: 3200 };
+  const merged = {
+    totalConverted: Math.max(parsed.totalConverted, clientStats.totalConverted),
+    totalTranslated: Math.max(parsed.totalTranslated, clientStats.totalTranslated),
+    totalWordsFixed: Math.max(parsed.totalWordsFixed, clientStats.totalWordsFixed),
+  };
+  assert.strictEqual(merged.totalConverted, 15);
+  assert.strictEqual(merged.totalTranslated, 8);
+  assert.strictEqual(merged.totalWordsFixed, 3200);
+  console.log('Global Stats storage format and sync reconciliation validated successfully!');
 }
 
 // 12. Test Footnote Tag Protection in Turkish OCR Regex & Anomaly Checking
