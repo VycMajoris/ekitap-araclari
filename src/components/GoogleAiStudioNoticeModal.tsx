@@ -57,10 +57,10 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             </div>
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                v0.4.1 Sürüm Yenilikleri
+                v0.4.2 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
-                eKitap Araçları v0.4.1 Yenilikleri
+                eKitap Araçları v0.4.2 Yenilikleri
               </h3>
             </div>
           </div>
@@ -71,13 +71,19 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Neler Yeni? (v0.4.1)</span>
+                <span>Neler Yeni? (v0.4.2)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                 Son Güncelleme
               </span>
             </div>
             <ul className="text-[11px] text-zinc-700 dark:text-zinc-200 space-y-2 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>İnteraktif Açılır Pencere (Popup Footnote) &amp; EPUB 3 Dipnotları:</strong> PDF&apos;lerdeki dipnot numaralarını (¹, ², [1]) ve sayfa altı açıklamalarını otomatik algılayıp Apple Books, KOReader, Kindle ve Kobo için yerinde açılan interaktif popup kartlara dönüştürme eklendi.
+                </span>
+              </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
@@ -94,12 +100,6 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
                   <strong>Birleşik API Paneli:</strong> Google AI Studio (Gemini 3.7 Flash), Groq, OpenRouter, OpenAI, DeepSeek ve yerel Ollama tek çatı altında toplandı.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Hız ve Kota Koruması:</strong> Google AI Studio için 15 RPM, Groq için 30 RPM ücretsiz kota koruması ve otomatik 429 kurtarma eklendi.
                 </span>
               </li>
             </ul>

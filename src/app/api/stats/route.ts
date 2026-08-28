@@ -76,19 +76,38 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const action = body.action as 'convert' | 'translate' | 'fix';
+    const action = body.action as 'convert' | 'translate' | 'fix' | 'sync';
     const fixedWords = Number(body.fixedWords) || 0;
+    const clientConverted = Number(body.totalConverted) || 0;
+    const clientTranslated = Number(body.totalTranslated) || 0;
+    const clientWordsFixed = Number(body.totalWordsFixed) || 0;
 
     const stats = readStats();
 
-    if (action === 'convert') {
-      stats.totalConverted += 1;
-    } else if (action === 'translate') {
-      stats.totalTranslated += 1;
-    }
+    if (action === 'sync') {
+      stats.totalConverted = Math.max(stats.totalConverted, clientConverted);
+      stats.totalTranslated = Math.max(stats.totalTranslated, clientTranslated);
+      stats.totalWordsFixed = Math.max(stats.totalWordsFixed, clientWordsFixed);
+    } else {
+      if (action === 'convert') {
+        stats.totalConverted += 1;
+      } else if (action === 'translate') {
+        stats.totalTranslated += 1;
+      }
 
-    if (fixedWords > 0) {
-      stats.totalWordsFixed += fixedWords;
+      if (fixedWords > 0) {
+        stats.totalWordsFixed += fixedWords;
+      }
+
+      if (clientConverted > 0) {
+        stats.totalConverted = Math.max(stats.totalConverted, clientConverted);
+      }
+      if (clientTranslated > 0) {
+        stats.totalTranslated = Math.max(stats.totalTranslated, clientTranslated);
+      }
+      if (clientWordsFixed > 0) {
+        stats.totalWordsFixed = Math.max(stats.totalWordsFixed, clientWordsFixed);
+      }
     }
 
     stats.lastUpdated = new Date().toISOString();
@@ -100,6 +119,7 @@ export async function POST(req: NextRequest) {
         totalConverted: stats.totalConverted,
         totalTranslated: stats.totalTranslated,
         totalWordsFixed: stats.totalWordsFixed,
+        lastUpdated: stats.lastUpdated,
       },
     });
   } catch (err) {

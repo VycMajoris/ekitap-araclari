@@ -9,42 +9,100 @@ interface GlobalStatsData {
   totalWordsFixed: number;
 }
 
+const LOCAL_STORAGE_KEY = 'ekitap_global_stats_persistent';
+
 export const GlobalStatsCards: React.FC = () => {
-  const [stats, setStats] = useState<GlobalStatsData>({
-    totalConverted: 0,
-    totalTranslated: 0,
-    totalWordsFixed: 0,
+  const [stats, setStats] = useState<GlobalStatsData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return {
+            totalConverted: Number(parsed.totalConverted) || 0,
+            totalTranslated: Number(parsed.totalTranslated) || 0,
+            totalWordsFixed: Number(parsed.totalWordsFixed) || 0,
+          };
+        }
+      } catch {}
+    }
+    return {
+      totalConverted: 0,
+      totalTranslated: 0,
+      totalWordsFixed: 0,
+    };
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    const fetchStats = async () => {
+    const syncAndFetchStats = async () => {
       try {
+        let localStats: GlobalStatsData = { totalConverted: 0, totalTranslated: 0, totalWordsFixed: 0 };
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (raw) {
+              const p = JSON.parse(raw);
+              localStats = {
+                totalConverted: Number(p.totalConverted) || 0,
+                totalTranslated: Number(p.totalTranslated) || 0,
+                totalWordsFixed: Number(p.totalWordsFixed) || 0,
+              };
+            }
+          } catch {}
+        }
+
         const res = await fetch('/api/stats');
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.stats && isMounted) {
-            setStats(data.stats);
+            const serverStats = data.stats;
+            const merged: GlobalStatsData = {
+              totalConverted: Math.max(serverStats.totalConverted || 0, localStats.totalConverted || 0),
+              totalTranslated: Math.max(serverStats.totalTranslated || 0, localStats.totalTranslated || 0),
+              totalWordsFixed: Math.max(serverStats.totalWordsFixed || 0, localStats.totalWordsFixed || 0),
+            };
+
+            setStats(merged);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
+            }
+
+            if (
+              merged.totalConverted > (serverStats.totalConverted || 0) ||
+              merged.totalTranslated > (serverStats.totalTranslated || 0) ||
+              merged.totalWordsFixed > (serverStats.totalWordsFixed || 0)
+            ) {
+              fetch('/api/stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'sync',
+                  totalConverted: merged.totalConverted,
+                  totalTranslated: merged.totalTranslated,
+                  totalWordsFixed: merged.totalWordsFixed,
+                }),
+              }).catch(() => {});
+            }
           }
         }
       } catch {
-        // Fallback to initial values gracefully
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchStats();
+    syncAndFetchStats();
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('ekitap_stats_updated', fetchStats);
+      window.addEventListener('ekitap_stats_updated', syncAndFetchStats);
     }
 
     return () => {
       isMounted = false;
       if (typeof window !== 'undefined') {
-        window.removeEventListener('ekitap_stats_updated', fetchStats);
+        window.removeEventListener('ekitap_stats_updated', syncAndFetchStats);
       }
     };
   }, []);
