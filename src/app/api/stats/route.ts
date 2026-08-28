@@ -9,6 +9,12 @@ interface GlobalStats {
   lastUpdated: string;
 }
 
+interface KVNamespace {
+  get(key: string, type?: 'text' | 'json' | 'arrayBuffer' | 'stream'): Promise<any>;
+  put(key: string, value: string | ArrayBuffer | ReadableStream, options?: { expiration?: number; expirationTtl?: number; metadata?: any }): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 const DEFAULT_STATS: GlobalStats = {
   totalConverted: 0,
   totalTranslated: 0,
@@ -30,6 +36,27 @@ function getStoragePath(): string {
 
 let inMemoryStats: GlobalStats = { ...DEFAULT_STATS };
 
+function getCloudflareKv(req?: NextRequest): KVNamespace | null {
+  try {
+    if (typeof globalThis !== 'undefined') {
+      const g = globalThis as any;
+      if (g.STATS_KV && typeof g.STATS_KV.get === 'function') return g.STATS_KV;
+      if (g.env?.STATS_KV && typeof g.env.STATS_KV.get === 'function') return g.env.STATS_KV;
+      if (g.__env__?.STATS_KV && typeof g.__env__.STATS_KV.get === 'function') return g.__env__.STATS_KV;
+    }
+    if (typeof process !== 'undefined' && process.env) {
+      const p = process.env as any;
+      if (p.STATS_KV && typeof p.STATS_KV.get === 'function') return p.STATS_KV;
+    }
+    if (req) {
+      const r = req as any;
+      if (r.env?.STATS_KV && typeof r.env.STATS_KV.get === 'function') return r.env.STATS_KV;
+      if (r.context?.env?.STATS_KV && typeof r.context.env.STATS_KV.get === 'function') return r.context.env.STATS_KV;
+    }
+  } catch {}
+  return null;
+}
+
 function readStats(): GlobalStats {
   try {
     const filePath = getStoragePath();
@@ -50,6 +77,27 @@ function readStats(): GlobalStats {
   return inMemoryStats;
 }
 
+async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
+  const kv = getCloudflareKv(req);
+  if (kv) {
+    try {
+      const kvData = await kv.get('stats', 'json');
+      if (kvData && typeof kvData === 'object') {
+        inMemoryStats = {
+          totalConverted: Number(kvData.totalConverted) || DEFAULT_STATS.totalConverted,
+          totalTranslated: Number(kvData.totalTranslated) || DEFAULT_STATS.totalTranslated,
+          totalWordsFixed: Number(kvData.totalWordsFixed) || DEFAULT_STATS.totalWordsFixed,
+          lastUpdated: kvData.lastUpdated || new Date().toISOString(),
+        };
+        return inMemoryStats;
+      }
+    } catch (err) {
+      console.warn('Cloudflare KV okuma hatası, yerel depolamaya geçiliyor:', err);
+    }
+  }
+  return readStats();
+}
+
 function writeStats(stats: GlobalStats): void {
   inMemoryStats = stats;
   try {
@@ -60,8 +108,20 @@ function writeStats(stats: GlobalStats): void {
   }
 }
 
-export async function GET() {
-  const stats = readStats();
+async function writeStatsAsync(stats: GlobalStats, req?: NextRequest): Promise<void> {
+  writeStats(stats);
+  const kv = getCloudflareKv(req);
+  if (kv) {
+    try {
+      await kv.put('stats', JSON.stringify(stats));
+    } catch (err) {
+      console.warn('Cloudflare KV yazma hatası:', err);
+    }
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const stats = await readStatsAsync(req);
   return NextResponse.json({
     success: true,
     stats: {
@@ -82,7 +142,7 @@ export async function POST(req: NextRequest) {
     const clientTranslated = Number(body.totalTranslated) || 0;
     const clientWordsFixed = Number(body.totalWordsFixed) || 0;
 
-    const stats = readStats();
+    const stats = await readStatsAsync(req);
 
     if (action === 'sync') {
       stats.totalConverted = Math.max(stats.totalConverted, clientConverted);
@@ -111,7 +171,7 @@ export async function POST(req: NextRequest) {
     }
 
     stats.lastUpdated = new Date().toISOString();
-    writeStats(stats);
+    await writeStatsAsync(stats, req);
 
     return NextResponse.json({
       success: true,
