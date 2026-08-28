@@ -12,9 +12,9 @@ import {
   Maximize2,
   FileText,
   AlertCircle,
-  HelpCircle,
   X,
   BookOpen,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   PdfCropBounds,
@@ -27,7 +27,7 @@ interface PdfCropModalProps {
   isOpen: boolean;
   file: File | null;
   onClose: () => void;
-  onConfirm: (cropBounds: PdfCropBounds, preserveAllLines: boolean) => void;
+  onConfirm: (cropBounds: PdfCropBounds, preserveAllLines: boolean, extractImages: boolean) => void;
 }
 
 export const PdfCropModal: React.FC<PdfCropModalProps> = ({
@@ -49,6 +49,7 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
     rightPercent: 0.01,
   });
   const [preserveAllLines, setPreserveAllLines] = useState<boolean>(false);
+  const [extractImages, setExtractImages] = useState<boolean>(false);
   const [activePreset, setActivePreset] = useState<'auto' | 'full' | 'novel' | 'wide' | 'custom'>('auto');
   const [showGuide, setShowGuide] = useState<boolean>(false);
 
@@ -190,7 +191,7 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
   };
 
   const handleConfirm = () => {
-    onConfirm(cropBounds, preserveAllLines);
+    onConfirm(cropBounds, preserveAllLines, extractImages);
   };
 
   if (!isOpen) return null;
@@ -293,6 +294,15 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
                   </span>
                   <p className="text-zinc-600 dark:text-zinc-400">
                     Satır sonlarındaki heceleme tirelerinin (<em>"yapı- lamaz"</em>) birleşebilmesi için sağ marjı harfleri kesmeyecek şekilde tutun. Bölüm başlıklarının da yeşil alan içinde kaldığından emin olun.
+                  </p>
+                </div>
+
+                <div className="bg-white/80 dark:bg-zinc-800/80 border border-blue-500/20 rounded-xl p-3 space-y-1 shadow-2xs md:col-span-2">
+                  <span className="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                    🖼️ 5. Kitap İçi Görseller ve İllüstrasyonlar
+                  </span>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    Kitabınızda resimler, çizimler, diyagramlar veya haritalar varsa <strong>&ldquo;Görselleri Dahil Et&rdquo;</strong> kutucuğunu işaretleyin. Resimler e-kitaba otomatik gömülür ve ait olduğu sayfa/paragraf sırasına yerleştirilir.
                   </p>
                 </div>
               </div>
@@ -520,6 +530,56 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
               </div>
             </div>
 
+            {/* Advanced Toggles: Korumalı Mod & Görseller */}
+            <div className="space-y-2.5">
+              {/* Korumalı Mod */}
+              <div className="p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={preserveAllLines}
+                    onChange={(e) => setPreserveAllLines(e.target.checked)}
+                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <strong className="text-zinc-900 dark:text-zinc-100 font-bold">Korumalı Mod (Filtreleri Kapat)</strong>
+                      <span className="text-[9px] font-extrabold uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-md">
+                        Sıfır Kayıp
+                      </span>
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-400 text-[11px] leading-relaxed">
+                      Sayfa başı/sonu kısa diyalog ve cümlelerin silinmesini engeller; seçili alandaki her satırı %100 alır.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Kitap Görsellerini Dahil Et */}
+              <div className="p-3 rounded-2xl bg-blue-500/5 dark:bg-blue-950/20 border border-blue-500/20 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={extractImages}
+                    onChange={(e) => setExtractImages(e.target.checked)}
+                    className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                      <strong className="text-zinc-900 dark:text-zinc-100 font-bold">Kitap Görsellerini ve İllüstrasyonları Dahil Et</strong>
+                      <span className="text-[9px] font-extrabold uppercase bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-md">
+                        Görsel
+                      </span>
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-400 text-[11px] leading-relaxed">
+                      PDF içindeki resimleri, çizimleri ve haritaları ayıklayıp EPUB içinde ilgili sayfa/paragraf konumuna otomatik yerleştirir.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* Custom Sliders */}
             <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -607,34 +667,12 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
                     min="0"
                     max="0.20"
                     step="0.01"
-                    value={cropBounds.rightPercent}
-                    onChange={(e) => updateBound('rightPercent', parseFloat(e.target.value))}
+                    value={0.20 - cropBounds.rightPercent}
+                    onChange={(e) => updateBound('rightPercent', 0.20 - parseFloat(e.target.value))}
                     className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 text-xs">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preserveAllLines}
-                  onChange={(e) => setPreserveAllLines(e.target.checked)}
-                  className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <strong className="text-zinc-900 dark:text-zinc-100 font-bold">Korumalı Mod (Filtreleri Devre Dışı Bırak)</strong>
-                    <span className="text-[9px] font-extrabold uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-md">
-                      Sıfır Kayıp
-                    </span>
-                  </div>
-                  <p className="text-zinc-600 dark:text-zinc-400 text-[11px] leading-relaxed">
-                    Sayfa başındaki ve sonundaki kısa diyalog veya cümlelerin (<em>&ldquo;dedi ve gitti.&rdquo;</em>, <em>&ldquo;— Kim var?&rdquo;</em>) yanlışlıkla üstbilgi/altbilgi sanılıp silinmesini engeller. Yeşil kutu içindeki her satırı %100 olduğu gibi alır.
-                  </p>
-                </div>
-              </label>
             </div>
 
           </div>

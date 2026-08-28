@@ -1,8 +1,9 @@
 import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
-import { extractBlocksFromHtml, reconstructChapterHtml } from '../src/lib/epub-engine.ts';
+import { extractBlocksFromHtml, reconstructChapterHtml, createEpubFromChapters } from '../src/lib/epub-engine.ts';
 import { parsePdf, findRepresentativePdfPage } from '../src/lib/pdf-engine.ts';
+import { PDFDocument, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 import {
@@ -567,5 +568,102 @@ if (fs.existsSync('public/ornek-bozuk-turkce.pdf')) {
 
   assert(croppedResult.chapters.length >= 1, 'Cropped PDF must generate chapters');
   console.log('All PDF Area Selection and Crop Bounds tests passed successfully!');
+
+  // Test extractImages option on PDF parsing
+  const imgResult = await parsePdf(pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength), {
+    extractImages: true,
+    cropBounds: { topPercent: 0.04, bottomPercent: 0.04, leftPercent: 0, rightPercent: 0 }
+  });
+  assert(imgResult.chapters.length >= 1, 'PDF parsing with extractImages must succeed');
+  console.log('PDF Image Extraction test passed successfully!');
 }
+
+// 8. Test EPUB Packaging with Image Assets
+console.log('Testing createEpubFromChapters with embedded images...');
+const sampleMeta = { title: 'Resimli Kitap', creator: 'Test Yazar', language: 'tr' };
+const sampleChapters = [
+  {
+    id: 'ch1',
+    href: 'OEBPS/chapter_01.xhtml',
+    title: 'Bölüm 1',
+    rawContent: '<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Bölüm 1</title></head><body><section><p>Metin</p><figure class="epub-figure"><img src="images/img_test.jpg" alt="Test Görseli" /></figure></section></body></html>',
+    blocks: [],
+    isSelected: true,
+    status: 'completed',
+    stats: { totalBlocks: 1, processedBlocks: 1, fixedWords: 0 }
+  }
+];
+const dummyImageData = new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]);
+const sampleImages = [
+  {
+    id: 'img_test',
+    href: 'OEBPS/images/img_test.jpg',
+    data: dummyImageData,
+    mediaType: 'image/jpeg',
+    isCover: false
+  }
+];
+
+const epubZipWithImages = await createEpubFromChapters(sampleMeta, sampleChapters, sampleImages);
+const imgFileInZip = epubZipWithImages.file('OEBPS/images/img_test.jpg');
+assert(imgFileInZip !== null, 'Image must be written to OEBPS/images/ inside EPUB zip');
+
+const opfContent = await epubZipWithImages.file('OEBPS/content.opf').async('text');
+assert(opfContent.includes('href="images/img_test.jpg"'), 'Manifest in content.opf must register image href');
+assert(opfContent.includes('media-type="image/jpeg"'), 'Manifest in content.opf must register image media-type');
+console.log('All EPUB Image Asset tests passed successfully!');
+
+// 9. Test End-to-End PDF Image Extraction and Embedding
+console.log('Testing End-to-End PDF Image Extraction and Block Integration...');
+const testPdfDoc = await PDFDocument.create();
+const testPdfPage = testPdfDoc.addPage([400, 600]);
+testPdfPage.drawText('Chapter 1: The Adventure Begins', { x: 50, y: 550, size: 16, color: rgb(0, 0, 0) });
+const pngAssetBytes = fs.readFileSync('public/icon.png');
+const embeddedPng = await testPdfDoc.embedPng(pngAssetBytes);
+testPdfPage.drawImage(embeddedPng, { x: 50, y: 350, width: 200, height: 150 });
+testPdfPage.drawText('Illustration caption text below.', { x: 50, y: 320, size: 12, color: rgb(0, 0, 0) });
+
+const generatedPdfBytes = await testPdfDoc.save();
+const parsedWithImages = await parsePdf(generatedPdfBytes.buffer.slice(generatedPdfBytes.byteOffset, generatedPdfBytes.byteOffset + generatedPdfBytes.byteLength), {
+  extractImages: true,
+  preserveAllLines: true,
+});
+
+assert.strictEqual(parsedWithImages.metadata.imageCount, 1, 'Extracted metadata must count 1 image');
+assert(parsedWithImages.chapters.length >= 1, 'Must generate at least 1 chapter');
+
+const hasFigureBlock = parsedWithImages.chapters[0].blocks.some((b) => b.elementTag === 'figure' && b.originalHtml.includes('<img src="images/'));
+assert(hasFigureBlock, 'Chapter must contain a figure block with img tag');
+
+const zipHasImage = parsedWithImages.zip.file('OEBPS/images/img_p1_1.jpg') !== null;
+assert(zipHasImage, 'EPUB zip must contain the extracted image file OEBPS/images/img_p1_1.jpg');
+
+const zipOpf = await parsedWithImages.zip.file('OEBPS/content.opf').async('text');
+assert(zipOpf.includes('href="images/img_p1_1.jpg"'), 'content.opf manifest must declare images/img_p1_1.jpg');
+console.log('End-to-End PDF Image Extraction test passed 100% successfully!');
+
+// 10. Test Figure Block Reconstruction in EPUB Chapters
+console.log('Testing Figure Block Preservation in Chapter Reconstruction...');
+const chapterWithFigure = {
+  id: 'ch-fig',
+  href: 'OEBPS/ch_fig.xhtml',
+  title: 'Resimli Bölüm',
+  rawContent: '<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Resimli Bölüm</title></head><body><section><p>Paragraf 1</p><figure class="epub-figure"><img src="images/img_p1_1.jpg" alt="test" /></figure><p>Paragraf 2</p></section></body></html>',
+  blocks: [
+    { id: '1-0', elementTag: 'p', originalHtml: 'Paragraf 1', originalText: 'Paragraf 1', correctedHtml: 'Paragraf 1 Düzeltildi', correctedText: 'Paragraf 1 Düzeltildi', status: 'completed', diffCount: 1 },
+    { id: '1-1', elementTag: 'figure', originalHtml: '<figure class="epub-figure"><img src="images/img_p1_1.jpg" alt="test" /></figure>', originalText: '[Görsel]', correctedHtml: '<figure class="epub-figure"><img src="images/img_p1_1.jpg" alt="test" /></figure>', correctedText: '[Görsel]', status: 'completed', diffCount: 0 },
+    { id: '1-2', elementTag: 'p', originalHtml: 'Paragraf 2', originalText: 'Paragraf 2', correctedHtml: 'Paragraf 2 Düzeltildi', correctedText: 'Paragraf 2 Düzeltildi', status: 'completed', diffCount: 1 }
+  ],
+  isSelected: true,
+  status: 'completed',
+  stats: { totalBlocks: 3, processedBlocks: 3, fixedWords: 2 }
+};
+
+const reHtml = reconstructChapterHtml(chapterWithFigure);
+assert(reHtml.includes('Paragraf 1 Düzeltildi'), 'Must contain updated paragraph 1');
+assert(reHtml.includes('<figure class="epub-figure"><img src="images/img_p1_1.jpg" alt="test" /></figure>'), 'Must preserve figure block intact');
+assert(reHtml.includes('Paragraf 2 Düzeltildi'), 'Must contain updated paragraph 2 without shifting');
+console.log('Chapter Reconstruction with Figure blocks passed 100% successfully!');
+
+
 

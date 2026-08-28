@@ -1,8 +1,8 @@
-import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds, EpubImageAsset } from './types';
 import { createEpubFromChapters } from './epub-engine';
 import JSZip from 'jszip';
 
-export type { PdfCropBounds } from './types';
+export type { PdfCropBounds, EpubImageAsset } from './types';
 
 export interface PdfParseProgress {
   currentPage: number;
@@ -17,6 +17,7 @@ export interface PdfParseOptions {
   footerMarginPercent?: number;
   cropBounds?: PdfCropBounds;
   preserveAllLines?: boolean;
+  extractImages?: boolean;
   onProgress?: (progress: PdfParseProgress) => void;
 }
 
@@ -54,6 +55,8 @@ interface ExtractedParagraph {
   text: string;
   isHeading: boolean;
   pageNumber: number;
+  isImageHtml?: boolean;
+  imageAsset?: EpubImageAsset;
 }
 
 const FINISHED_WORD_OR_SUFFIX_REGEX = /(?:[dt][ıiuü]m|[dt][ıiuü]n|[dt][ıiuü]k|[dt][ıiuü]n[ıiuü]z|[dt][ıiuü]ler|m[ıiuü]şt[ıiuü]m|m[ıiuü]şt[ıiuü]n|m[ıiuü]şt[ıiuü]k|m[ıiuü]şt[ıiuü]ler|m[ıiuü]ş|m[ıiuü]şiz|m[ıiuü]şsiniz|m[ıiuü]şler|[ıiuü]?yor|[ıiuü]?yorum|[ıiuü]?yorsun|[ıiuü]?yoruz|[ıiuü]?yorsunuz|[ıiuü]?yorlar|[ae]c[ae]k|[ae]c[ae]ğ[ıi]m|[ae]c[ae]ksin|[ae]c[ae]ğiz|[ae]c[ae]ksiniz|[ae]c[ae]kl[ae]r|[ıiuü]r|[ae]r|m[ae]l[ıi]|m[ae]l[ıi]y[ıi]m|m[ae]l[ıi]sin|m[ae]l[ıi]yiz|s[ae]m|s[ae]n|s[ae]k|s[ae]niz|s[ae]l[ae]r|[ae]r[ae]k|[ıiuü]nc[ae]|d[ıiuü]ğ[ıi]|d[ıiuü]kt[ae]n|m[ae]d[ae]n|y[ae]n|[ae]n|d[ıiuü]kç[ae]|k[ae]n|[dt][ıiuü]r|[dt][ıiuü]|[dt][ae]n|[dt][ae]|l[ae]r|l[ae]ri|l[ae]re|l[ae]rd[ae]|l[ae]rd[ae]n|[ıiuü]n|[ıiuü]m|[ıiuü]z|s[ıiuü]|s[ıiuü]n[ıiuü]|s[ıiuü]n[ae]|s[ıiuü]nd[ae]|s[ıiuü]nd[ae]n|y[ae]|y[ıiuü]|n[ıiuü]n|n[ıiuü]|n[ae]|nd[ae]|nd[ae]n|'dur|'dür|'dır|'dir|'tur|'tür|'tır|'tir)$/i;
@@ -239,6 +242,370 @@ export async function findRepresentativePdfPage(
     textItemCount: bestInfo.textItemCount,
     isScannedImageOnly: maxTextItems === 0,
   };
+}
+
+function encodeBmpImage(
+  width: number,
+  height: number,
+  rawData: Uint8Array | Uint8ClampedArray,
+  channels: number
+): Uint8Array {
+  const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+  const pixelArraySize = rowSize * height;
+  const fileSize = 54 + pixelArraySize;
+
+  const buffer = new Uint8Array(fileSize);
+  const view = new DataView(buffer.buffer);
+
+  buffer[0] = 0x42;
+  buffer[1] = 0x4D;
+  view.setUint32(2, fileSize, true);
+  view.setUint32(10, 54, true);
+
+  view.setUint32(14, 40, true);
+  view.setInt32(18, width, true);
+  view.setInt32(22, -height, true);
+  view.setUint16(26, 1, true);
+  view.setUint16(28, 24, true);
+  view.setUint32(30, 0, true);
+  view.setUint32(34, pixelArraySize, true);
+  view.setInt32(38, 2835, true);
+  view.setInt32(42, 2835, true);
+
+  let offset = 54;
+  const totalPixels = width * height;
+
+  let isAllZeroAlpha = false;
+  let hasRealAlpha = false;
+  if (channels === 4 && rawData.length >= totalPixels * 4) {
+    let nonZeroAlpha = 0;
+    let non255Alpha = 0;
+    for (let p = 3; p < totalPixels * 4; p += 4) {
+      if (rawData[p] !== 0) nonZeroAlpha++;
+      if (rawData[p] !== 255) non255Alpha++;
+    }
+    isAllZeroAlpha = nonZeroAlpha === 0;
+    hasRealAlpha = !isAllZeroAlpha && non255Alpha > 0;
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const srcIdx = (y * width + x) * channels;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+
+      if (channels === 1) {
+        const v = rawData[srcIdx] ?? 0;
+        r = v;
+        g = v;
+        b = v;
+      } else if (channels === 3) {
+        r = rawData[srcIdx] ?? 0;
+        g = rawData[srcIdx + 1] ?? 0;
+        b = rawData[srcIdx + 2] ?? 0;
+      } else if (channels === 4) {
+        const rawR = rawData[srcIdx] ?? 0;
+        const rawG = rawData[srcIdx + 1] ?? 0;
+        const rawB = rawData[srcIdx + 2] ?? 0;
+        const rawA = isAllZeroAlpha ? 255 : (rawData[srcIdx + 3] ?? 255);
+
+        if (hasRealAlpha && rawA < 255) {
+          const normA = rawA / 255;
+          r = Math.round(rawR * normA + 255 * (1 - normA));
+          g = Math.round(rawG * normA + 255 * (1 - normA));
+          b = Math.round(rawB * normA + 255 * (1 - normA));
+        } else {
+          r = rawR;
+          g = rawG;
+          b = rawB;
+        }
+      }
+
+      buffer[offset++] = b;
+      buffer[offset++] = g;
+      buffer[offset++] = r;
+    }
+    const padding = rowSize - width * 3;
+    for (let p = 0; p < padding; p++) {
+      buffer[offset++] = 0;
+    }
+  }
+
+  return buffer;
+}
+
+async function extractImagesFromPage(
+  page: any,
+  pageNum: number,
+  pdfjsLib: any,
+  imageCounterRef: { count: number }
+): Promise<EpubImageAsset[]> {
+  const images: EpubImageAsset[] = [];
+  try {
+    const ops = await page.getOperatorList();
+    const fnArray = ops.fnArray;
+    const argsArray = ops.argsArray;
+
+    const isImageOp = (fn: number) => {
+      if (!pdfjsLib.OPS) return false;
+      return (
+        fn === pdfjsLib.OPS.paintImageXObject ||
+        fn === pdfjsLib.OPS.paintInlineImageXObject ||
+        fn === pdfjsLib.OPS.paintInlineImageXObjectGroup ||
+        fn === pdfjsLib.OPS.paintImageMaskXObject ||
+        fn === pdfjsLib.OPS.paintImageMaskXObjectGroup ||
+        fn === pdfjsLib.OPS.paintSolidColorImageMask ||
+        fn === pdfjsLib.OPS.paintImageXObjectRepeat ||
+        fn === pdfjsLib.OPS.paintImageMaskXObjectRepeat ||
+        fn === pdfjsLib.OPS.paintJpegXObject
+      );
+    };
+
+    for (let i = 0; i < fnArray.length; i++) {
+      const fn = fnArray[i];
+      const args = argsArray[i];
+
+      if (isImageOp(fn)) {
+        if (!args || args.length === 0) continue;
+        const arg0 = args[0];
+        if (!arg0) continue;
+
+        try {
+          let imgObj: any = null;
+
+          if (typeof arg0 === 'object' && arg0 !== null) {
+            imgObj = arg0;
+          } else if (typeof arg0 === 'string') {
+            const objId = arg0;
+            imgObj = await new Promise<any>((resolve) => {
+              let settled = false;
+              const timer = setTimeout(() => {
+                if (!settled) {
+                  settled = true;
+                  resolve(null);
+                }
+              }, 10000);
+
+              const done = (data: any) => {
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(timer);
+                  resolve(data);
+                }
+              };
+
+              const isCommon =
+                objId.startsWith('g_') ||
+                (page.commonObjs && typeof page.commonObjs.has === 'function' && page.commonObjs.has(objId));
+              const objStore = isCommon ? page.commonObjs : page.objs;
+
+              if (objStore && typeof objStore.get === 'function') {
+                objStore.get(objId, done);
+              } else if (page.objs && typeof page.objs.get === 'function') {
+                page.objs.get(objId, done);
+              } else if (page.commonObjs && typeof page.commonObjs.get === 'function') {
+                page.commonObjs.get(objId, done);
+              } else {
+                done(null);
+              }
+            });
+          }
+
+          if (!imgObj) continue;
+
+          const width =
+            imgObj.width ||
+            (imgObj.bitmap && imgObj.bitmap.width) ||
+            (imgObj.image && imgObj.image.width) ||
+            (imgObj.canvas && imgObj.canvas.width) ||
+            imgObj.naturalWidth ||
+            0;
+          const height =
+            imgObj.height ||
+            (imgObj.bitmap && imgObj.bitmap.height) ||
+            (imgObj.image && imgObj.image.height) ||
+            (imgObj.canvas && imgObj.canvas.height) ||
+            imgObj.naturalHeight ||
+            0;
+
+          if (!width || !height || width < 25 || height < 25) continue;
+
+          let imgBytes: Uint8Array | null = null;
+          const mediaType = typeof document !== 'undefined' ? 'image/jpeg' : 'image/bmp';
+
+          if (typeof document !== 'undefined') {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d', { willReadFrequently: true });
+              if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                let drawn = false;
+
+                const drawableSource =
+                  imgObj.bitmap ||
+                  (imgObj.image && typeof imgObj.image === 'object' ? imgObj.image : null) ||
+                  (imgObj.canvas && typeof imgObj.canvas === 'object' ? imgObj.canvas : null) ||
+                  (typeof ImageBitmap !== 'undefined' && imgObj instanceof ImageBitmap ? imgObj : null) ||
+                  (typeof HTMLImageElement !== 'undefined' && imgObj instanceof HTMLImageElement ? imgObj : null) ||
+                  (typeof HTMLCanvasElement !== 'undefined' && imgObj instanceof HTMLCanvasElement ? imgObj : null) ||
+                  (typeof OffscreenCanvas !== 'undefined' && imgObj instanceof OffscreenCanvas ? imgObj : null);
+
+                if (drawableSource) {
+                  try {
+                    ctx.drawImage(drawableSource, 0, 0, width, height);
+                    drawn = true;
+                  } catch (drawErr) {
+                    console.warn('Canvas drawImage hatası, piksel işleme deneniyor:', drawErr);
+                  }
+                }
+
+                if (!drawn && imgObj.data) {
+                  const raw = imgObj.data;
+                  const imgData = ctx.createImageData(width, height);
+                  const totalPixels = width * height;
+                  const isCMYK = imgObj.isCMYK || imgObj.colorSpace === 'DeviceCMYK' || imgObj.kind === 4;
+                  const isMask =
+                    imgObj.isMask ||
+                    fn === pdfjsLib.OPS.paintImageMaskXObject ||
+                    fn === pdfjsLib.OPS.paintImageMaskXObjectGroup ||
+                    fn === pdfjsLib.OPS.paintSolidColorImageMask;
+                  const inverseDecode = imgObj.inverseDecode === true;
+
+                  if (isCMYK && raw.length >= totalPixels * 4) {
+                    for (let p = 0, q = 0; p < totalPixels * 4; p += 4, q += 4) {
+                      const c = raw[p] / 255;
+                      const m = raw[p + 1] / 255;
+                      const y = raw[p + 2] / 255;
+                      const k = raw[p + 3] / 255;
+                      imgData.data[q] = Math.round(255 * (1 - c) * (1 - k));
+                      imgData.data[q + 1] = Math.round(255 * (1 - m) * (1 - k));
+                      imgData.data[q + 2] = Math.round(255 * (1 - y) * (1 - k));
+                      imgData.data[q + 3] = 255;
+                    }
+                  } else if (raw.length >= totalPixels * 4) {
+                    let nonZeroAlpha = 0;
+                    let non255Alpha = 0;
+                    for (let p = 3; p < totalPixels * 4; p += 4) {
+                      if (raw[p] !== 0) nonZeroAlpha++;
+                      if (raw[p] !== 255) non255Alpha++;
+                    }
+                    const isAllZeroAlpha = nonZeroAlpha === 0;
+                    const hasAlpha = !isAllZeroAlpha && non255Alpha > 0;
+
+                    for (let p = 0, q = 0; p < totalPixels * 4; p += 4, q += 4) {
+                      const r = raw[p];
+                      const g = raw[p + 1];
+                      const b = raw[p + 2];
+                      const a = isAllZeroAlpha ? 255 : raw[p + 3];
+
+                      if (hasAlpha && a < 255) {
+                        const normA = a / 255;
+                        imgData.data[q] = Math.round(r * normA + 255 * (1 - normA));
+                        imgData.data[q + 1] = Math.round(g * normA + 255 * (1 - normA));
+                        imgData.data[q + 2] = Math.round(b * normA + 255 * (1 - normA));
+                        imgData.data[q + 3] = 255;
+                      } else {
+                        imgData.data[q] = r;
+                        imgData.data[q + 1] = g;
+                        imgData.data[q + 2] = b;
+                        imgData.data[q + 3] = 255;
+                      }
+                    }
+                  } else if (raw.length >= totalPixels * 3) {
+                    for (let p = 0, q = 0; p < totalPixels * 3; p += 3, q += 4) {
+                      imgData.data[q] = raw[p];
+                      imgData.data[q + 1] = raw[p + 1];
+                      imgData.data[q + 2] = raw[p + 2];
+                      imgData.data[q + 3] = 255;
+                    }
+                  } else if (raw.length >= totalPixels) {
+                    for (let p = 0, q = 0; p < totalPixels; p++, q += 4) {
+                      const v = raw[p];
+                      imgData.data[q] = v;
+                      imgData.data[q + 1] = v;
+                      imgData.data[q + 2] = v;
+                      imgData.data[q + 3] = 255;
+                    }
+                  } else if (raw.length >= Math.ceil(width / 8) * height) {
+                    const bytesPerRow = Math.ceil(width / 8);
+                    const defaultOneIsWhite = !isMask;
+                    const oneIsWhite = inverseDecode ? !defaultOneIsWhite : defaultOneIsWhite;
+
+                    let q = 0;
+                    for (let y = 0; y < height; y++) {
+                      const rowOffset = y * bytesPerRow;
+                      for (let x = 0; x < width; x++) {
+                        const byteIdx = rowOffset + (x >> 3);
+                        const bitIdx = 7 - (x & 7);
+                        const bitVal = byteIdx < raw.length ? (raw[byteIdx] >> bitIdx) & 1 : 0;
+                        const isWhite = bitVal === 1 ? oneIsWhite : !oneIsWhite;
+                        const v = isWhite ? 255 : 0;
+                        imgData.data[q] = v;
+                        imgData.data[q + 1] = v;
+                        imgData.data[q + 2] = v;
+                        imgData.data[q + 3] = 255;
+                        q += 4;
+                      }
+                    }
+                  }
+                  ctx.putImageData(imgData, 0, 0);
+                }
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                const base64Data = dataUrl.split(',')[1];
+                if (base64Data) {
+                  const binaryStr = atob(base64Data);
+                  const len = binaryStr.length;
+                  const bytes = new Uint8Array(len);
+                  for (let b = 0; b < len; b++) {
+                    bytes[b] = binaryStr.charCodeAt(b);
+                  }
+                  imgBytes = bytes;
+                }
+              }
+            } catch (canvasErr) {
+              console.warn('Canvas görsel dönüştürme hatası:', canvasErr);
+            }
+          } else {
+            if (imgObj.data instanceof Uint8Array || imgObj.data instanceof Uint8ClampedArray) {
+              const channels =
+                imgObj.data.length >= width * height * 4
+                  ? 4
+                  : imgObj.data.length >= width * height * 3
+                  ? 3
+                  : 1;
+              imgBytes = encodeBmpImage(width, height, imgObj.data, channels);
+            } else {
+              imgBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+            }
+          }
+
+          if (imgBytes && imgBytes.length > 0) {
+            imageCounterRef.count++;
+            const imgId = `img_p${pageNum}_${imageCounterRef.count}`;
+            const href = `OEBPS/images/${imgId}.jpg`;
+            images.push({
+              id: imgId,
+              href,
+              data: imgBytes,
+              mediaType: 'image/jpeg',
+              isCover: pageNum === 1 && imageCounterRef.count === 1 && width > 300,
+            });
+          }
+        } catch (imgErr) {
+          console.warn(`Görsel ayrıştırılamadı (Sayfa ${pageNum}):`, imgErr);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`Sayfa ${pageNum} görsel tarama uyarısı:`, err);
+  }
+  return images;
 }
 
 function isHeaderOrFooter(
@@ -656,6 +1023,8 @@ export async function parsePdf(
 
   const allPageParagraphs: { page: number; paragraphs: ExtractedParagraph[] }[] = [];
   const fontSizes: number[] = [];
+  const allExtractedImages: EpubImageAsset[] = [];
+  const imageCounterRef = { count: 0 };
 
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     options?.onProgress?.({
@@ -667,6 +1036,12 @@ export async function parsePdf(
 
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale: 1.0 });
+
+    let pageImages: EpubImageAsset[] = [];
+    if (options?.extractImages) {
+      pageImages = await extractImagesFromPage(page, pageNum, pdfjsLib, imageCounterRef);
+    }
+
     const textContent = await page.getTextContent({ includeMarkedContent: true });
 
     const rawItems: RawTextItem[] = [];
@@ -695,36 +1070,98 @@ export async function parsePdf(
       fontSizes.push(fontSize);
     }
 
-    if (rawItems.length === 0) continue;
-
-    const pageLines = buildLinesFromItems(rawItems);
-
-    fontSizes.sort((a, b) => a - b);
-    const medianFontSize = fontSizes.length > 0 ? fontSizes[Math.floor(fontSizes.length / 2)] : 12;
-
-    const topCutoff = viewport.height * crop.topPercent;
-    const bottomCutoff = viewport.height * (1 - crop.bottomPercent);
-    const leftCutoff = viewport.width * crop.leftPercent;
-    const rightCutoff = viewport.width * (1 - crop.rightPercent);
-
-    const filteredLines = pageLines.filter((line) => {
-      if (!options?.preserveAllLines) {
-        if (line.y < topCutoff || line.y > bottomCutoff) return false;
-        if (line.maxX < leftCutoff || line.minX > rightCutoff) return false;
+    if (options?.extractImages && pageImages.length === 0 && rawItems.length === 0 && typeof document !== 'undefined') {
+      try {
+        const renderCanvas = document.createElement('canvas');
+        renderCanvas.width = viewport.width;
+        renderCanvas.height = viewport.height;
+        const renderCtx = renderCanvas.getContext('2d');
+        if (renderCtx) {
+          renderCtx.fillStyle = '#ffffff';
+          renderCtx.fillRect(0, 0, viewport.width, viewport.height);
+          const renderTask = page.render({
+            canvas: renderCanvas,
+            canvasContext: renderCtx,
+            viewport: viewport,
+          });
+          await renderTask.promise;
+          const dataUrl = renderCanvas.toDataURL('image/jpeg', 0.92);
+          const base64Data = dataUrl.split(',')[1];
+          if (base64Data) {
+            const binaryStr = atob(base64Data);
+            const len = binaryStr.length;
+            const bytes = new Uint8Array(len);
+            for (let b = 0; b < len; b++) {
+              bytes[b] = binaryStr.charCodeAt(b);
+            }
+            imageCounterRef.count++;
+            const imgId = `img_p${pageNum}_${imageCounterRef.count}`;
+            const href = `OEBPS/images/${imgId}.jpg`;
+            pageImages.push({
+              id: imgId,
+              href,
+              data: bytes,
+              mediaType: 'image/jpeg',
+              isCover: pageNum === 1 && imageCounterRef.count === 1,
+            });
+          }
+        }
+      } catch (pageRenderErr) {
+        console.warn(`Sayfa ${pageNum} görsel tarama yedeği uyarısı:`, pageRenderErr);
       }
+    }
 
-      return !isHeaderOrFooter(
-        line,
-        viewport.height,
-        crop.topPercent,
-        crop.bottomPercent,
-        medianFontSize,
-        pageNum,
-        options?.preserveAllLines
-      );
-    });
+    if (pageImages.length > 0) {
+      allExtractedImages.push(...pageImages);
+    }
 
-    const pageParagraphs = reflowLinesToParagraphs(filteredLines, pageNum, medianFontSize);
+    const pageParagraphs: ExtractedParagraph[] = [];
+
+    if (rawItems.length > 0) {
+      const pageLines = buildLinesFromItems(rawItems);
+
+      fontSizes.sort((a, b) => a - b);
+      const medianFontSize = fontSizes.length > 0 ? fontSizes[Math.floor(fontSizes.length / 2)] : 12;
+
+      const topCutoff = viewport.height * crop.topPercent;
+      const bottomCutoff = viewport.height * (1 - crop.bottomPercent);
+      const leftCutoff = viewport.width * crop.leftPercent;
+      const rightCutoff = viewport.width * (1 - crop.rightPercent);
+
+      const filteredLines = pageLines.filter((line) => {
+        if (!options?.preserveAllLines) {
+          if (line.y < topCutoff || line.y > bottomCutoff) return false;
+          if (line.maxX < leftCutoff || line.minX > rightCutoff) return false;
+        }
+
+        return !isHeaderOrFooter(
+          line,
+          viewport.height,
+          crop.topPercent,
+          crop.bottomPercent,
+          medianFontSize,
+          pageNum,
+          options?.preserveAllLines
+        );
+      });
+
+      const textParagraphs = reflowLinesToParagraphs(filteredLines, pageNum, medianFontSize);
+      pageParagraphs.push(...textParagraphs);
+    }
+
+    if (pageImages.length > 0) {
+      for (const img of pageImages) {
+        const relHref = img.href.replace(/^OEBPS\//, '');
+        pageParagraphs.push({
+          text: `<figure class="epub-figure"><img src="${escapeXml(relHref)}" alt="Görsel (Sayfa ${pageNum})" /></figure>`,
+          isHeading: false,
+          pageNumber: pageNum,
+          isImageHtml: true,
+          imageAsset: img,
+        });
+      }
+    }
+
     allPageParagraphs.push({ page: pageNum, paragraphs: pageParagraphs });
   }
 
@@ -751,6 +1188,11 @@ export async function parsePdf(
   for (let i = 0; i < allPageParagraphs.length; i++) {
     const pageData = allPageParagraphs[i];
     for (const p of pageData.paragraphs) {
+      if (p.isImageHtml) {
+        consolidatedParagraphs.push(p);
+        continue;
+      }
+
       const trimmed = p.text.trim();
       if (!trimmed) continue;
 
@@ -763,7 +1205,7 @@ export async function parsePdf(
 
       if (consolidatedParagraphs.length > 0 && !p.isHeading) {
         const lastP = consolidatedParagraphs[consolidatedParagraphs.length - 1];
-        if (!lastP.isHeading) {
+        if (!lastP.isHeading && !lastP.isImageHtml) {
           const lastText = lastP.text.trim();
           const lastEndsWithPunct = /[.?!:»"']\s*$/.test(lastText);
           const currentStartsWithLower = /^[a-zçğıöşü]/.test(trimmed);
@@ -785,6 +1227,20 @@ export async function parsePdf(
   }
 
   for (const p of consolidatedParagraphs) {
+    if (p.isImageHtml) {
+      if (!currentChapter) {
+        currentChapter = {
+          title: metadata.title || 'Bölüm 1',
+          startPage: p.pageNumber,
+          endPage: p.pageNumber,
+          paragraphs: [],
+        };
+      }
+      currentChapter.paragraphs.push(p);
+      currentChapter.endPage = p.pageNumber;
+      continue;
+    }
+
     if (p.isHeading && p.text.length < 80) {
       const normalizedTitle = collapseLetterSpacing(p.text.trim());
       const isMajorChapterBreak =
@@ -871,6 +1327,23 @@ export async function parsePdf(
 
     let blockIdx = 0;
     for (const p of draft.paragraphs) {
+      if (p.isImageHtml) {
+        const figureHtml = p.text;
+        htmlContent += `    ${figureHtml}\n`;
+
+        blocks.push({
+          id: `${chapterNum}-${blockIdx++}`,
+          elementTag: 'figure',
+          originalHtml: figureHtml,
+          originalText: '[Görsel]',
+          correctedHtml: figureHtml,
+          correctedText: '[Görsel]',
+          status: 'completed',
+          diffCount: 0,
+        });
+        continue;
+      }
+
       const tag = p.isHeading ? 'h2' : 'p';
       const escapedText = escapeXml(p.text);
       const elementHtml = `<${tag}>${escapedText}</${tag}>`;
@@ -906,7 +1379,11 @@ export async function parsePdf(
     });
   }
 
-  const zip = await createEpubFromChapters(metadata, chapters);
+  if (allExtractedImages.length > 0) {
+    metadata.imageCount = allExtractedImages.length;
+  }
+
+  const zip = await createEpubFromChapters(metadata, chapters, allExtractedImages);
 
   return {
     zip,

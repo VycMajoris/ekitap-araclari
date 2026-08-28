@@ -7,6 +7,15 @@ export interface EpubMetadata {
   coverImage?: string;
   format?: 'epub' | 'pdf' | 'mobi';
   pageCount?: number;
+  imageCount?: number;
+}
+
+export interface EpubImageAsset {
+  id: string;
+  href: string; // e.g. "OEBPS/images/img_01.jpg"
+  data: Uint8Array | ArrayBuffer;
+  mediaType: string; // e.g. "image/jpeg" or "image/png"
+  isCover?: boolean;
 }
 
 export interface PdfCropBounds {

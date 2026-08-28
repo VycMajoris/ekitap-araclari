@@ -2,111 +2,152 @@
 
 # 📚 eKitap Araçları (eBook Tools)
 
-**Akıllı EPUB & PDF Düzenleyici, OCR Onarıcı ve Format Dönüştürücü**
+**EPUB & PDF Düzenleyici, OCR Onarıcı ve Format Dönüştürücü**
 
-%100 Tarayıcı Üzerinde Çalışan, Gizlilik Odaklı, Türkçe Dilbilgisi ve Yapay Zeka Destekli eKitap Araç Seti.
+Tarayıcı üzerinde çalışan, gizlilik odaklı, Türkçe dilbilgisi ve yapay zeka destekli e-kitap araç seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.3.1-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.4.0-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 
-[Özellikler](#-özellikler) • [Ücretsiz API Key Rehberi](#-ücretsiz-yapay-zekâ-api-key-nasıl-alınır) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
+[Ekran Görüntüleri](#-ekran-görüntüleri) • [Özellikler](#-özellikler) • [Ücretsiz API Key Rehberi](#-ücretsiz-yapay-zekâ-api-key-nasıl-alınır) • [Cihaza Gönder Rehberi](#-cihaza-gönder-rehberi-kindle--koreader) • [Çalışma Modları](#-işleme-ve-hız-modları) • [Docker & Kurulum](#-hızlı-başlangıç) • [Değişiklikler](CHANGELOG.md) • [Lisans](#-lisans)
 
 </div>
 
 ---
 
-## 🌟 Neden eKitap Araçları?
+## 🖼️ Ekran Görüntüleri
+
+<div align="center">
+
+### 1. 🎛️ Ana İşlem & Dosya Yükleme Paneli
+Çeviri / OCR onarım modu, hız seçenekleri, canlı istatistik çubuğu ve e-okuyucuya gönderme paneli.
+
+<img src="docs/screenshots/01-upload-dashboard.png" alt="Ana İşlem Paneli" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+<br/><br/>
+
+### 2. 📐 İnteraktif PDF Alan Seçimi & Korumalı Mod Modalı
+Dolu temsili sayfa önizlemesi, ayarlanabilir yeşil sınır kutusu, Korumalı Mod ve görsel ayıklama seçeneği.
+
+<img src="docs/screenshots/03-pdf-crop-modal.png" alt="PDF Alan Seçimi ve Korumalı Mod" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+<br/><br/>
+
+### 3. 🔍 Canlı Bölüm Listesi & Yan Yana Karşılaştırma (Diff Viewer)
+Bölüm gezgini, orijinal ve işlenmiş metinlerin yan yana renkli fark vurgulamaları ve görsel figür blokları.
+
+<img src="docs/screenshots/02-diff-viewer-comparison.png" alt="Canlı Karşılaştırma ve Diff Önizleme" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+<br/><br/>
+
+### 4. ⚙️ Birleşik Yapay Zekâ Sağlayıcıları ve Ayarlar
+Google AI Studio (Gemini 3.7 Flash), Groq, OpenRouter, OpenAI, DeepSeek, Together AI ve yerel Ollama yapılandırması.
+
+<img src="docs/screenshots/04-settings-providers.png" alt="Yapay Zeka Sağlayıcı Ayarları" width="90%" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+</div>
+
+---
+
+## 📌 Neden eKitap Araçları?
 
 PDF formatındaki kitapları EPUB'a çevirirken veya taranmış (OCR) e-kitapları okurken sıkça karşılaşılan:
 - **Karakter Birleşmeleri**: `rn → m` (*yarm → yarın*, *kamı → karnı*, *öğmeci → öğrenci*), `cl → d`, `vv → w`
 - **Satır Sonu Bölünmeleri**: `yapı- lamaz → yapılamaz`, `baş- ladı → başladı`, `geliş- tirme → geliştirme`
 - **Parantez İçi ve Ara Söz Tireleri**: Ara sözlerdeki (`- ... -` veya `— ... —`) ve diyalog tirelerinin yanlışlıkla silinmesi
 - **Bölük Pörçük Başlıklar**: Normal metinlerin başlık sanılması, gerçek bölüm başlıklarının kaybolması
-- **Sunucu Yükleme Limitleri**: Vercel veya sunucu taraflı 4.5MB payload sınırları ve zaman aşımı sorunları
+- **Sunucu Yükleme Limitleri**: Vercel veya sunucu taraflı payload sınırları ve zaman aşımı sorunları
 
-**eKitap Araçları**, tüm bu sorunları **%100 istemci tarafında (tarayıcıda)** çözen modern, açık kaynaklı bir web uygulamasıdır. Kitap dosyanız hiçbir sunucuya yüklenmez.
+**eKitap Araçları**, tüm bu sorunları **%100 istemci tarafında (tarayıcıda)** çözen açık kaynaklı bir web uygulamasıdır. Kitap dosyanız hiçbir sunucuya yüklenmez.
 
 ---
 
 ## 🚀 Özellikler
 
 ### 1. 📖 İstemci Taraflı PDF & MOBI ➔ EPUB / MOBI Dönüştürücü
-- `pdfjs-dist` ve yerel PalmDOC/MOBI ikili motoruyla doğrudan tarayıcınızda çalışır.
+- `pdfjs-dist` ve yerel PalmDOC/MOBI motoruyla doğrudan tarayıcınızda çalışır.
 - EPUB, PDF ve **MOBI** formatındaki kitapları açabilir, onarabilir ve hem **EPUB** hem de eski Kindle cihazları için **MOBI** olarak dışa aktarabilir.
-- Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, gereksiz kelime içi boşlukları engeller.
-- Sayfalar arası bölünmüş cümleleri (`söz` + `veriyorum."` ➔ `söz veriyorum."`) ve sayfa alt/üst çöp lekelerini otomatik birleştirir.
-- İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini akıllıca ayırır.
+- **📐 İnteraktif Görsel PDF Alan Seçimi & Korumalı Mod (`PdfCropModal`):**
+  - PDF yüklendiğinde kitabın ortalarından en zengin metin sayfasını otomatik tespit edip tuvalde önizler.
+  - Üstbilgi, altbilgi ve sayfa numaralarını kesmek için yeşil sınır kutusu ve kaydırıcılarla manuel alan seçimi sunar.
+  - **Korumalı Mod:** Sayfa başı/sonundaki kısa diyalogların silinmesini engeller; seçili bölgedeki her satırı doğrudan alır.
+- **🖼️ PDF Kitap Görselleri & İllüstrasyon Ayıklama Motoru:**
+  - PDF içindeki resimleri, çizimleri ve haritaları ayıklayıp EPUB içinde ait olduğu sayfa/paragraf sırasına `<figure>` olarak yerleştirir.
+  - Saydam PNG ve çizimler için beyaz zemin harmanlaması (`Alpha Blending`), RGBX sahte alfa onarımı ve CMYK renk uzayı desteğiyle resimlerin siyah veya beyaz çıkmasını engeller.
+- Fiziksel glif mesafesi (gap analysis) ile harf aralıklarını korur, kelime içi gereksiz boşlukları engeller.
+- Sayfalar arası bölünmüş cümleleri (`söz` + `veriyorum."` ➔ `söz veriyorum."`) ve sayfa alt/üst lekelerini otomatik birleştirir.
+- İçindekiler tablosunu (*TOC*) tek parça halinde korur ve kitap bölümlerini yapılandırır.
 
 ### 2. 📚 74.000+ Kelimelik TDK Sözlüğü & Morfolojik OCR Motoru
 - `sozluk.gov.tr` resmi veri tabanından derlenen 74.000+ kelimelik çevrimdışı Türkçe sözlük ile çalışır.
-- Dinamik ek çözücü (*Suffix Peeler*) ve ünsüz yumuşaması motoru ile ayrık harfleri (`k i t a p` ➔ `kitap`, `T ar i h i` ➔ `Tarihi`, `g e l i y o r d u` ➔ `geliyordu`) 0 milisaniyede onarır.
+- Dinamik ek çözücü (*Suffix Peeler*) ve ünsüz yumuşaması motoru ile ayrık harfleri (`k i t a p` ➔ `kitap`, `T ar i h i` ➔ `Tarihi`, `g e l i y o r d u` ➔ `geliyordu`) anında onarır.
 - Çift yönlü harf bağlama ile `İyi ş anslar` ➔ `İyi şanslar` ve `dedi k aynı` ➔ `dedik aynı` hatalarını çözer.
 - Bağımsız geçerli kelimeleri (`en iyi`, `hep iyi`, `tek işi`, `o gün`, `Onu mu`) koruyarak hatalı birleşmeleri (false positive) engeller.
 - Unicode değiştirme karakterlerini (`\uFFFD` / ) ve bozuk noktalama işaretlerini (`.,,`) temizler.
 
 ### 3. 🌐 Bağlamsal Yapay Zekâ Kitap Çeviri Motoru
-- 14 kaynak dilden 12 hedef dile (Türkçe, İngilizce, Almanca, Fransızca, İspanyolca vb.) tam kitap çevirisi.
+- 14 kaynak dilden 12 hedef dile (Türkçe, İngilizce, Almanca, Fransızca, İspanyolca vb.) kitap çevirisi.
 - **Edebi & Akıcı Roman, Akademik ve Günlük Dil** üslup seçenekleri.
 - **Kayan Bağlam Belleği (Rolling Memory):** Önceki paragrafların çevirisini hafızada tutarak karakter ses tonunu, hitap şekillerini ve zamir tutarlılığını korur.
-- **Özel Karakter & Terim Sözlüğü (Glossary):** Kitaba özel kurgusal terimlerin ve karakter isimlerinin kitap boyunca %100 tutarlı çevrilmesini sağlar.
+- **Özel Karakter & Terim Sözlüğü (Glossary):** Kitaba özel terimlerin ve karakter isimlerinin kitap boyunca tutarlı çevrilmesini sağlar.
 
 ### 4. 🧠 Çoklu Yapay Zeka (LLM) Sağlayıcı Desteği
-- **Google AI Studio (Gemini 3.7 Flash / 3.6 Flash)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı. Günde **1.500 istek / gün** tamamen ücretsizdir.
+- **Google AI Studio (Gemini 3.7 Flash / 3.6 Flash)**: Doğrudan resmi Gemini API anahtarı (`AIzaSy...`) ile bağlantı. Günde **1.500 istek / gün** ücretsiz kullanım kotası sunar.
 - **OpenAI Uyumlu API (Özel)**: OpenAI (GPT-4o / mini), DeepSeek (deepseek-chat), Groq (Llama 3.3 70B), Ollama (Lokal) ve herhangi bir özel LLM uç noktası desteği.
-- **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B ve Mistral modelleriyle sıfır maliyetli kullanım.
+- **OpenRouter Free Modeller**: Llama 3.3 70B, Qwen 2.5 72B ve Mistral modelleriyle kullanım.
 
 ### 5. ⚡ 2 Aşamalı Hız ve İşleme Mimarisi (2-Phase Pipeline)
-Ana sayfadan tek tıkla seçilebilen 3 farklı çalışma modu:
+Ana sayfadan seçilebilen 3 farklı çalışma modu:
 - ⚡ **Akıllı Hibrit (Önerilen)**:
-  - *1. Aşama (1 Saniye):* Tüm kitap duraksamadan Regex & TDK motorundan geçer, %85'i anında temizlenir.
-  - *2. Aşama (~15-30 Saniye):* Regex'in çözemediği  karakterleri ve ağır bozulmalar genel havuzda toplanıp 10k-12k karakterlik büyük paketlerle paralel AI'a gönderilir.
-- 🚀 **Yıldırım Hızı (Regex)**: 0 saniyede tamamlanır, API anahtarı gerektirmez.
-- 🧠 **Tam Derin Tarama**: Tüm paragrafları istisnasız seçili yapay zeka ile derinlemesine tarar.
+  - *1. Aşama:* Tüm kitap Regex & TDK motorundan geçer, büyük bölümü anında temizlenir.
+  - *2. Aşama:* Regex'in çözemediği bozulmalar genel havuzda toplanıp 10k-12k karakterlik paketlerle paralel AI modeline gönderilir.
+- 🚀 **Yıldırım Hızı (Regex)**: API anahtarı gerektirmeden anında tamamlanır.
+- 🧠 **Tam Derin Tarama**: Tüm paragrafları seçili yapay zeka modeliyle inceler.
 
 ### 6. 📱 Cihaza Gönder (Send-to-Kindle & KOReader Wi-Fi)
-- **Send to Kindle**: `@kindle.com` adresinize Gmail/SMTP veya Resend ile doğrudan tek tıkla e-posta gönderimi.
+- **Send to Kindle**: `@kindle.com` adresinize Gmail/SMTP veya Resend ile doğrudan e-posta gönderimi.
 - **KOReader Wi-Fi Aktarımı**: Yerel ağ üzerinden KOReader yüklü e-okuyucunuza (Kindle, Kobo, PocketBook, reMarkable) kablosuz dosya yükleme.
 - **QR Kod & Yerel İndirme**: E-okuyucunun web tarayıcısından tek tıkla indirme imkanı.
 
 ### 7. 💾 Kalıcı IndexedDB Önbelleği
 - İşlem durdurulduğunda veya sayfa yenilendiğinde tamamlanan paragraflar tarayıcı IndexedDB deposunda saklanır.
-- Aynı kitap tekrar işlendiğinde daha önce taranan bloklar için tekrar token harcanmaz.
+- Aynı kitap tekrar işlendiğinde daha önce taranan bloklar için tekrar istek yapılmaz.
 
 ### 8. 🛠️ Geliştirici (Developer) Modu
-- Ayarlardan tek tıkla açılıp kapatılabilen sade / gelişmiş görünüm.
+- Ayarlardan açılıp kapatılabilen sade / gelişmiş görünüm.
 - Canlı regex ve LLM değişiklik günlüğü (*Diff Console*), JSON dışa aktarma.
 - Özel Sistem Talimatı (*System Prompt*) düzenleyici, eşzamanlılık (*concurrency*) ve paket boyutu ayarı.
 
-### 9. 🌓 Karanlık ve Aydınlık Tema
-- Göz yormayan modern karanlık mod ve aydınlık tema desteği (parlama önleyici script ile).
+### 9. 🌓 Tema Desteği
+- Karanlık ve aydınlık tema desteği.
 
 ---
 
 ## 🔑 Ücretsiz Yapay Zekâ API Key Nasıl Alınır?
 
-eKitap Araçları'nda yapay zekâ destekli OCR onarımı ve roman/kitap çevirisi yapmak için **tamamen ücretsiz ($0)** API anahtarı kullanabilirsiniz. Kredi kartı bilgisi gerekmez ve asla fatura çıkmaz.
+Yapay zekâ destekli OCR onarımı ve kitap çevirisi için ücretsiz API anahtarı kullanabilirsiniz:
 
-### 🌟 Seçenek 1: Google AI Studio (Önerilen & En Güçlü)
+### 🌟 Seçenek 1: Google AI Studio (Önerilen)
 Google, **Gemini 3.7 Flash** ve **Gemini 3.6 Flash** modellerini bireysel kullanım için **günde 1.500 istek (yaklaşık 15-20 tam kitap çevirisi)** ücretsiz olarak sunar.
 
 1. **[aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)** adresine gidin.
 2. Google (Gmail) hesabınızla giriş yapın.
-3. Mavi renkli **"Create API key"** (API Anahtarı Oluştur) butonuna tıklayın.
+3. **"Create API key"** (API Anahtarı Oluştur) butonuna tıklayın.
 4. Çıkan listeden bir proje seçin veya *"Create API key in new project"* deyin.
-5. Oluşturulan `AIzaSy...` ile başlayan anahtarınızı **Kopyalayın**.
-6. **eKitap Araçları** sitesinde sağ üstteki **⚙️ Ayarlar**'ı açın.
-7. **Google AI Studio** sekmesine yapıştırın ve **Kaydet**'e basın.
+5. Oluşturulan `AIzaSy...` ile başlayan anahtarınızı kopyalayın.
+6. **eKitap Araçları** sitesinde sağ üstteki **⚙️ Ayarlar** panelini açın.
+7. **Google AI Studio** sekmesine yapıştırın ve **Kaydet** butonuna basın.
 
-> **💡 Not:** Günlük limit dolduğunda fatura kesilmez; sistem `429 (Kota Doldu)` hatası vererek durur ve gece yarısı/süre dolunca kotanız otomatik yenilenir.
+> **💡 Not:** Günlük limit dolduğunda fatura kesilmez; sistem `429 (Kota Doldu)` bildirimi verir ve süre dolunca kotanız otomatik yenilenir.
 
 ---
 
-### 🌐 Seçenek 2: OpenRouter (Llama 3.3 70B & Qwen 2.5)
-Tamamen ücretsiz açık kaynaklı modelleri kullanmak isterseniz:
+### 🌐 Seçenek 2: OpenRouter (Llama 3.3 70B vb.)
+Açık kaynaklı modelleri kullanmak için:
 
-1. **[openrouter.ai](https://openrouter.ai/)** adresine gidin ve ücretsiz bir hesap açın.
+1. **[openrouter.ai](https://openrouter.ai/)** adresine gidin ve hesap açın.
 2. **Keys** sekmesinden **"Create Key"** butonuna basarak yeni bir anahtar oluşturun.
 3. eKitap Araçları **Ayarlar > OpenRouter** sekmesine anahtarınızı yapıştırın.
 4. Model olarak `:free` uzantılı ücretsiz modelleri (örneğin `meta-llama/llama-3.3-70b-instruct:free`) seçin.
@@ -114,12 +155,12 @@ Tamamen ücretsiz açık kaynaklı modelleri kullanmak isterseniz:
 ---
 
 ### ⚡ Seçenek 3: Groq / OpenAI / DeepSeek / Ollama (Özel & Hızlı API)
-Ultra yüksek hız veya yerel model çalıştırmak isterseniz:
+Alternatif sağlayıcılar veya yerel model kullanmak için:
 
-1. **Groq (Süper Hızlı & Ücretsiz):** [console.groq.com/keys](https://console.groq.com/keys) üzerinden ücretsiz API key alın.
+1. **Groq (Hızlı & Ücretsiz):** [console.groq.com/keys](https://console.groq.com/keys) üzerinden ücretsiz API key alın.
 2. eKitap Araçları **Ayarlar > OpenAI / Özel** sekmesine gidin.
 3. Üstteki hızlı şablonlardan **Groq**'a tıklayın. Model otomatik olarak `Llama 3.3 70B Versatile` seçilecektir.
-4. Anahtarınızı yapıştırıp **Kaydet**'e basın. (Ayrıca DeepSeek, OpenAI veya yerel Ollama sunucusu da tek tıkla seçilebilir).
+4. Anahtarınızı yapıştırıp **Kaydet** butonuna basın. (Ayrıca DeepSeek, OpenAI veya yerel Ollama sunucusu da seçilebilir).
 
 ---
 

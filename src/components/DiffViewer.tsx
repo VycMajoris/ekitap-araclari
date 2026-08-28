@@ -10,6 +10,7 @@ import {
   Copy,
   Check,
   Languages,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { EpubChapter, TextBlock, TaskType } from '../lib/types';
 import { computeTextDiff } from '../lib/turkish-ocr-rules';
@@ -270,7 +271,12 @@ const BlockItem: React.FC<BlockItemProps> = ({
       </div>
 
       {/* Content Rendering */}
-      {viewMode === 'split' ? (
+      {block.elementTag === 'figure' ? (
+        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/40 text-xs font-semibold text-blue-800 dark:text-blue-300">
+          <ImageIcon className="w-4 h-4 text-blue-500 shrink-0" />
+          <span>🖼️ Kitap İçi Görsel / İllüstrasyon (EPUB içerisine yerleştirildi)</span>
+        </div>
+      ) : viewMode === 'split' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 leading-relaxed">
           {/* Left: Original */}
           <div

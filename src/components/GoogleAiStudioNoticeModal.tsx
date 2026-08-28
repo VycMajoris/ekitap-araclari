@@ -57,7 +57,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             </div>
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                v0.3.3 Sürüm Yenilikleri
+                v0.3.4 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
                 eKitap Araçları &amp; Yapay Zekâ Yenilikleri
@@ -71,7 +71,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Neler Yeni? (v0.3.3)</span>
+                <span>Neler Yeni? (v0.3.4)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                 Son Güncelleme
@@ -81,25 +81,19 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Tek ve Birleşik API Paneli:</strong> Google AI Studio, Groq, OpenRouter, OpenAI, DeepSeek, Together ve yerel Ollama tek tıkla seçilebilir hale getirildi.
+                  <strong>İnteraktif PDF Alanı &amp; Korumalı Mod:</strong> Sayfa marj sınırlarını manuel yeşil kutuyla seçme ve kısa satırları koruma modu eklendi.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Tüm Gemini 3.x Serisi:</strong> Gemini 3.7 Flash, 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite, 3.1 Pro ve 3 Flash Preview eklendi.
+                  <strong>PDF Görsel &amp; İllüstrasyon Çıkarma:</strong> Kitap içi resimleri ve haritaları tam renk kalitesiyle (True RGB) EPUB&apos;a gömme özelliği eklendi.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Groq (Llama 3.3 70B &amp; Qwen):</strong> Ultra yüksek işlem hızı ve dakikalık 30 RPM ücretsiz kota koruması entegre edildi.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>OpenAI Frontier Serisi:</strong> GPT-5.6 Sol, Terra, Luna ve GPT-5.4 Mini modelleri dahil edildi.
+                  <strong>Birleşik API Paneli &amp; Gemini 3.7:</strong> Google AI Studio, Groq, OpenRouter, OpenAI, DeepSeek ve yerel Ollama desteği.
                 </span>
               </li>
             </ul>

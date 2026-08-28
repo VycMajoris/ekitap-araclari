@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { EpubMetadata, EpubChapter, TextBlock } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, EpubImageAsset } from './types';
 
 /**
  * Resolves relative paths inside an EPUB archive.
@@ -161,7 +161,7 @@ export function extractBlocksFromHtml(
   }
 
   const blocks: TextBlock[] = [];
-  const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
+  const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure';
   const containerSelectors = 'div, section, article';
 
   // 1. Gather all potential text elements
@@ -193,6 +193,21 @@ export function extractBlocksFromHtml(
 
     // Check if element has non-text nodes like math, pre, code that shouldn't be touched
     if (el.querySelector('pre, code, math, svg')) {
+      continue;
+    }
+
+    if (tagName === 'figure') {
+      const html = el.outerHTML;
+      blocks.push({
+        id: `${chapterIdx}-${blockIdx++}`,
+        elementTag: 'figure',
+        originalHtml: html,
+        originalText: '[Görsel]',
+        correctedHtml: html,
+        correctedText: '[Görsel]',
+        status: 'completed',
+        diffCount: 0,
+      });
       continue;
     }
 
@@ -261,7 +276,7 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
       doc = parser.parseFromString(chapter.rawContent, 'text/html');
     }
 
-    const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt';
+    const primarySelectors = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, dd, dt, figure';
     const containerSelectors = 'div, section, article';
 
     const allElements = Array.from(
@@ -287,6 +302,11 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
         continue;
       }
 
+      if (tagName === 'figure') {
+        elements.push(el);
+        continue;
+      }
+
       const text = el.textContent?.trim() || '';
       if (text.length < 2) continue;
 
@@ -299,6 +319,11 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
         const block = chapter.blocks[blockIndex];
         const targetTag = block.elementTag || el.tagName.toLowerCase();
         const safeHtml = block.correctedHtml || el.innerHTML;
+
+        if (block.elementTag === 'figure' && el.tagName.toLowerCase() === 'figure') {
+          blockIndex++;
+          continue;
+        }
 
         try {
           if (targetTag !== el.tagName.toLowerCase()) {
@@ -389,7 +414,8 @@ export async function packageEpub(
 
 export async function createEpubFromChapters(
   metadata: EpubMetadata,
-  chapters: EpubChapter[]
+  chapters: EpubChapter[],
+  images?: EpubImageAsset[]
 ): Promise<JSZip> {
   const zip = new JSZip();
 
@@ -439,6 +465,23 @@ p {
 }
 p:first-of-type, h1 + p, h2 + p, h3 + p {
   text-indent: 0;
+}
+figure.epub-figure {
+  margin: 1.5em 0;
+  padding: 0;
+  text-align: center;
+}
+figure.epub-figure img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+  margin: 0 auto;
+}
+figcaption {
+  font-size: 0.85em;
+  color: #666666;
+  margin-top: 0.5em;
+  text-align: center;
 }
 .chapter {
   margin-bottom: 3em;
@@ -514,6 +557,14 @@ ${navList}    </ol>
     spineItemrefs += `    <itemref idref="${ch.id}" />\n`;
   });
 
+  if (images && images.length > 0) {
+    images.forEach((img) => {
+      const relHref = img.href.replace(/^OEBPS\//, '');
+      const coverAttr = img.isCover ? ' properties="cover-image"' : '';
+      manifestItems += `    <item id="${img.id}" href="${relHref}" media-type="${img.mediaType}"${coverAttr} />\n`;
+    });
+  }
+
   const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0" xml:lang="${lang}">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
@@ -532,6 +583,12 @@ ${manifestItems}  </manifest>
 ${spineItemrefs}  </spine>
 </package>`;
   zip.file('OEBPS/content.opf', contentOpf);
+
+  if (images && images.length > 0) {
+    for (const img of images) {
+      zip.file(img.href, img.data);
+    }
+  }
 
   for (const ch of chapters) {
     zip.file(ch.href, ch.rawContent);
