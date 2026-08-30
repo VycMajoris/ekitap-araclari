@@ -5,6 +5,24 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.5.0] - 2026-08-30
+
+### 🚀 Yeni Özellikler ve Mimari İyileştirmeler (Added & Fixed)
+* **⚡ Sıfır Kaymalı EPUB Bölüm Onarım Motoru (`src/lib/epub-engine.ts`):**
+  - Satır sonu heceleme tireleri (`-`) birleştirildiğinde oluşan DOM indeks kayması giderildi.
+  - Birleştirilen ikinci paragraflar `isMergedIntoPrevious` bayrağı ile işaretlenip DOM ağacından temizlenerek bölümdeki tüm paragrafların 1:1 sırası ve hizalaması korundu.
+* **🌐 Cloudflare Pages Native Edge Functions Sayaç Motoru (`functions/api/stats.ts`):**
+  - Sunucu dosya sistemine yazan geçici yapılar tamamen kaldırılarak Cloudflare Edge üzerinde çalışan yerel `functions/api/stats.ts` mimarisine geçildi.
+  - İstemciden manipüle edilebilir sahte senkronizasyon kodları temizlendi; sadece gerçek kitap dönüştürme ve çeviri işlemleri KV sayacını günceller.
+  - CORS preflight (`onRequestOptions`) desteği eklendi.
+* **🇹🇷 Türkçe Şapkalı Harf ve Yerel Casing Hassasiyeti (`src/lib/turkish-ocr-rules.ts`):**
+  - Edebi Türkçe eserlerdeki şapkalı ünlüler (*hâlâ, kâğıt, rüzgâr, hikâye, resmî, millî, mekân*) OCR anomali filtresinden çıkarılarak gereksiz yapay zekâ çağrıları engellendi.
+  - Türkçe büyük/küçük harf dönüşümleri `.toLocaleUpperCase('tr-TR')` standardına bağlanarak `DİĞER` kelimesinin `DIGER` şeklinde bozulması çözüldü.
+* **📑 PDF Dipnot Yanlış Pozitif Filtresi (`src/lib/pdf-engine.ts`):**
+  - Ana metin içindeki `"Cilt 1 sayfa 20"` gibi sıradan rakamların dipnot sanılması engellendi; yalnızca üstsimge ve köşeli parantezli dipnotlar ayrıştırıldı.
+
+---
+
 ## [0.4.2] - 2026-08-28
 
 ### 🚀 Yeni Özellikler (Added)

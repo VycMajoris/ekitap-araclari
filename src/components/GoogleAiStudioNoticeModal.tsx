@@ -27,14 +27,14 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
 
   const handleClose = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.2', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.5.0', 'true');
     }
     onClose();
   };
 
   const handleGoToSettings = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.4.2', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.5.0', 'true');
     }
     onOpenGeminiSettings();
   };
@@ -57,10 +57,10 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             </div>
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                v0.4.2 Sürüm Yenilikleri
+                v0.5.0 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
-                eKitap Araçları v0.4.2 Yenilikleri
+                eKitap Araçları v0.5.0 Yenilikleri
               </h3>
             </div>
           </div>
@@ -71,13 +71,25 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Neler Yeni? (v0.4.2)</span>
+                <span>Neler Yeni? (v0.5.0)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                 Son Güncelleme
               </span>
             </div>
             <ul className="text-[11px] text-zinc-700 dark:text-zinc-200 space-y-2 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Sıfır Kaymalı EPUB Bölüm Onarımı:</strong> Heceleme tireleriyle bölünen paragraflar birleştirildiğinde bölüm genelindeki paragrafların kayması engellendi.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Cloudflare Pages Edge KV Sayaç Motoru:</strong> Sunucusuz doğrudan edge worker üzerinde çalışan gerçek zamanlı küresel sayaç mimarisi devreye alındı.
+                </span>
+              </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
                 <span>
@@ -87,19 +99,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>İnteraktif PDF Alanı &amp; Korumalı Mod:</strong> Sayfa marj sınırlarını manuel yeşil kutuyla seçme ve kısa diyalogları koruyan Korumalı Mod eklendi.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>PDF Görsel &amp; İllüstrasyon Çıkarma:</strong> Kitap içi resimleri, haritaları ve çizimleri True RGB renk kalitesi ve saydamlık harmanlaması ile EPUB&apos;a gömme motoru geliştirildi.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Birleşik API Paneli:</strong> Google AI Studio (Gemini 3.7 Flash), Groq, OpenRouter, OpenAI, DeepSeek ve yerel Ollama tek çatı altında toplandı.
+                  <strong>Türkçe Şapkalı Harf &amp; OCR Hassasiyeti:</strong> Edebi eserlerdeki şapkalı ünlüler (*hâlâ, rüzgâr, kâğıt*) anomali filtresinden çıkarılarak Türkçe yerel harf dönüşümleri korundu.
                 </span>
               </li>
             </ul>
