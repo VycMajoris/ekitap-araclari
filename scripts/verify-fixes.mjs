@@ -778,6 +778,33 @@ assert(stylesInZip.includes('epub-noteref'), 'styles.css must include epub-noter
 assert(stylesInZip.includes('epub-footnote'), 'styles.css must include epub-footnote styling');
 console.log('End-to-End PDF-to-EPUB Footnote Generation test passed 100% successfully!');
 
+// 16. Test Global Stats API and Baseline Seeding
+console.log('Testing Global Stats API and Baseline Seeding...');
+const { BASELINE_STATS, GET, POST } = await import('../src/app/api/stats/route.ts');
+assert.strictEqual(BASELINE_STATS.totalConverted, 142, 'Baseline converted must be 142');
+assert.strictEqual(BASELINE_STATS.totalTranslated, 68, 'Baseline translated must be 68');
+assert.strictEqual(BASELINE_STATS.totalWordsFixed, 24500, 'Baseline fixed words must be 24500');
+
+const initialGetReq = new Request('http://localhost:3000/api/stats');
+const initialGetRes = await GET(initialGetReq);
+const initialGetData = await initialGetRes.json();
+assert.strictEqual(initialGetData.success, true);
+assert(initialGetData.stats.totalConverted >= 142, 'Stats totalConverted must be >= baseline 142');
+assert(initialGetData.stats.totalTranslated >= 68, 'Stats totalTranslated must be >= baseline 68');
+assert(initialGetData.stats.totalWordsFixed >= 24500, 'Stats totalWordsFixed must be >= baseline 24500');
+
+const convertPostReq = new Request('http://localhost:3000/api/stats', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'convert', fixedWords: 15 })
+});
+const convertPostRes = await POST(convertPostReq);
+const convertPostData = await convertPostRes.json();
+assert.strictEqual(convertPostData.success, true);
+assert(convertPostData.stats.totalConverted >= initialGetData.stats.totalConverted + 1, 'totalConverted must increment by at least 1');
+assert(convertPostData.stats.totalWordsFixed >= initialGetData.stats.totalWordsFixed + 15, 'totalWordsFixed must increment by at least 15');
+console.log('Global Stats API and Baseline Seeding tests passed 100% successfully!');
+
 
 
 

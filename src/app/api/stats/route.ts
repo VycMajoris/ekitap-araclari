@@ -5,7 +5,7 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-interface GlobalStats {
+export interface GlobalStats {
   totalConverted: number;
   totalTranslated: number;
   totalWordsFixed: number;
@@ -18,26 +18,30 @@ interface KVNamespace {
   delete(key: string): Promise<void>;
 }
 
-const DEFAULT_STATS: GlobalStats = {
-  totalConverted: 0,
-  totalTranslated: 0,
-  totalWordsFixed: 0,
-  lastUpdated: new Date().toISOString(),
+export const BASELINE_STATS: GlobalStats = {
+  totalConverted: 142,
+  totalTranslated: 68,
+  totalWordsFixed: 24500,
+  lastUpdated: '2026-08-30T00:00:00.000Z',
 };
 
 function getStoragePath(): string {
-  const dataDir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(dataDir)) {
-    try {
-      fs.mkdirSync(dataDir, { recursive: true });
-    } catch {
-      return path.join('/tmp', 'ekitap_stats.json');
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      try {
+        fs.mkdirSync(dataDir, { recursive: true });
+      } catch {
+        return path.join('/tmp', 'ekitap_stats.json');
+      }
     }
+    return path.join(dataDir, 'stats.json');
+  } catch {
+    return '/tmp/ekitap_stats.json';
   }
-  return path.join(dataDir, 'stats.json');
 }
 
-let inMemoryStats: GlobalStats = { ...DEFAULT_STATS };
+let inMemoryStats: GlobalStats = { ...BASELINE_STATS };
 
 function getCloudflareKv(req?: NextRequest): KVNamespace | null {
   try {
@@ -60,6 +64,36 @@ function getCloudflareKv(req?: NextRequest): KVNamespace | null {
   return null;
 }
 
+async function fetchCloudflareKvRest(action: 'get' | 'put', value?: string): Promise<any> {
+  try {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    if (!accountId || !namespaceId || !apiToken) return null;
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/stats`;
+    if (action === 'get') {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } else if (action === 'put' && value) {
+      await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          'Content-Type': 'text/plain',
+        },
+        body: value,
+      });
+    }
+  } catch {}
+  return null;
+}
+
 function readStats(): GlobalStats {
   try {
     const filePath = getStoragePath();
@@ -67,9 +101,9 @@ function readStats(): GlobalStats {
       const content = fs.readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(content);
       inMemoryStats = {
-        totalConverted: Number(parsed.totalConverted) || DEFAULT_STATS.totalConverted,
-        totalTranslated: Number(parsed.totalTranslated) || DEFAULT_STATS.totalTranslated,
-        totalWordsFixed: Number(parsed.totalWordsFixed) || DEFAULT_STATS.totalWordsFixed,
+        totalConverted: Math.max(Number(parsed.totalConverted) || 0, BASELINE_STATS.totalConverted),
+        totalTranslated: Math.max(Number(parsed.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
+        totalWordsFixed: Math.max(Number(parsed.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
         lastUpdated: parsed.lastUpdated || new Date().toISOString(),
       };
       return inMemoryStats;
@@ -87,17 +121,35 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
       const kvData = await kv.get('stats', 'json');
       if (kvData && typeof kvData === 'object') {
         inMemoryStats = {
-          totalConverted: Number(kvData.totalConverted) || DEFAULT_STATS.totalConverted,
-          totalTranslated: Number(kvData.totalTranslated) || DEFAULT_STATS.totalTranslated,
-          totalWordsFixed: Number(kvData.totalWordsFixed) || DEFAULT_STATS.totalWordsFixed,
+          totalConverted: Math.max(Number(kvData.totalConverted) || 0, BASELINE_STATS.totalConverted),
+          totalTranslated: Math.max(Number(kvData.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
+          totalWordsFixed: Math.max(Number(kvData.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
           lastUpdated: kvData.lastUpdated || new Date().toISOString(),
         };
+        return inMemoryStats;
+      } else {
+        try {
+          await kv.put('stats', JSON.stringify(BASELINE_STATS));
+        } catch {}
+        inMemoryStats = { ...BASELINE_STATS };
         return inMemoryStats;
       }
     } catch (err) {
       console.warn('Cloudflare KV okuma hatası, yerel depolamaya geçiliyor:', err);
     }
   }
+
+  const restData = await fetchCloudflareKvRest('get');
+  if (restData && typeof restData === 'object') {
+    inMemoryStats = {
+      totalConverted: Math.max(Number(restData.totalConverted) || 0, BASELINE_STATS.totalConverted),
+      totalTranslated: Math.max(Number(restData.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
+      totalWordsFixed: Math.max(Number(restData.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
+      lastUpdated: restData.lastUpdated || new Date().toISOString(),
+    };
+    return inMemoryStats;
+  }
+
   return readStats();
 }
 
@@ -114,13 +166,15 @@ function writeStats(stats: GlobalStats): void {
 async function writeStatsAsync(stats: GlobalStats, req?: NextRequest): Promise<void> {
   writeStats(stats);
   const kv = getCloudflareKv(req);
+  const jsonPayload = JSON.stringify(stats);
   if (kv) {
     try {
-      await kv.put('stats', JSON.stringify(stats));
+      await kv.put('stats', jsonPayload);
     } catch (err) {
       console.warn('Cloudflare KV yazma hatası:', err);
     }
   }
+  await fetchCloudflareKvRest('put', jsonPayload);
 }
 
 export async function GET(req: NextRequest) {

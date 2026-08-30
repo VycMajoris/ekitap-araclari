@@ -11,6 +11,12 @@ interface GlobalStatsData {
 
 const LOCAL_STORAGE_KEY = 'ekitap_global_stats_persistent';
 
+const BASELINE_STATS: GlobalStatsData = {
+  totalConverted: 142,
+  totalTranslated: 68,
+  totalWordsFixed: 24500,
+};
+
 export const GlobalStatsCards: React.FC = () => {
   const [stats, setStats] = useState<GlobalStatsData>(() => {
     if (typeof window !== 'undefined') {
@@ -19,18 +25,14 @@ export const GlobalStatsCards: React.FC = () => {
         if (stored) {
           const parsed = JSON.parse(stored);
           return {
-            totalConverted: Number(parsed.totalConverted) || 0,
-            totalTranslated: Number(parsed.totalTranslated) || 0,
-            totalWordsFixed: Number(parsed.totalWordsFixed) || 0,
+            totalConverted: Math.max(Number(parsed.totalConverted) || 0, BASELINE_STATS.totalConverted),
+            totalTranslated: Math.max(Number(parsed.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
+            totalWordsFixed: Math.max(Number(parsed.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
           };
         }
       } catch {}
     }
-    return {
-      totalConverted: 0,
-      totalTranslated: 0,
-      totalWordsFixed: 0,
-    };
+    return BASELINE_STATS;
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,16 +40,16 @@ export const GlobalStatsCards: React.FC = () => {
     let isMounted = true;
     const syncAndFetchStats = async () => {
       try {
-        let localStats: GlobalStatsData = { totalConverted: 0, totalTranslated: 0, totalWordsFixed: 0 };
+        let localStats: GlobalStatsData = { ...BASELINE_STATS };
         if (typeof window !== 'undefined') {
           try {
             const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (raw) {
               const p = JSON.parse(raw);
               localStats = {
-                totalConverted: Number(p.totalConverted) || 0,
-                totalTranslated: Number(p.totalTranslated) || 0,
-                totalWordsFixed: Number(p.totalWordsFixed) || 0,
+                totalConverted: Math.max(Number(p.totalConverted) || 0, BASELINE_STATS.totalConverted),
+                totalTranslated: Math.max(Number(p.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
+                totalWordsFixed: Math.max(Number(p.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
               };
             }
           } catch {}
@@ -59,9 +61,9 @@ export const GlobalStatsCards: React.FC = () => {
           if (data.success && data.stats && isMounted) {
             const serverStats = data.stats;
             const merged: GlobalStatsData = {
-              totalConverted: Math.max(serverStats.totalConverted || 0, localStats.totalConverted || 0),
-              totalTranslated: Math.max(serverStats.totalTranslated || 0, localStats.totalTranslated || 0),
-              totalWordsFixed: Math.max(serverStats.totalWordsFixed || 0, localStats.totalWordsFixed || 0),
+              totalConverted: Math.max(serverStats.totalConverted || 0, localStats.totalConverted, BASELINE_STATS.totalConverted),
+              totalTranslated: Math.max(serverStats.totalTranslated || 0, localStats.totalTranslated, BASELINE_STATS.totalTranslated),
+              totalWordsFixed: Math.max(serverStats.totalWordsFixed || 0, localStats.totalWordsFixed, BASELINE_STATS.totalWordsFixed),
             };
 
             setStats(merged);
