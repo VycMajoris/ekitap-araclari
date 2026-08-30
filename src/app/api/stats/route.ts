@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,7 +26,14 @@ export const DEFAULT_STATS: GlobalStats = {
 
 let inMemoryStats: GlobalStats = { ...DEFAULT_STATS };
 
-function getCloudflareKv(req?: NextRequest): KVNamespace | null {
+async function getCloudflareKv(req?: NextRequest): Promise<KVNamespace | null> {
+  try {
+    const ctx = await getCloudflareContext({ async: true });
+    if (ctx?.env && (ctx.env as any).STATS_KV && typeof (ctx.env as any).STATS_KV.get === 'function') {
+      return (ctx.env as any).STATS_KV;
+    }
+  } catch {}
+
   try {
     const sym = Symbol.for('__cloudflare-context__');
     const symCtx = (globalThis as any)[sym];
@@ -84,8 +92,8 @@ async function fetchCloudflareKvRest(action: 'get' | 'put', value?: string): Pro
 }
 
 async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
-  const kv = getCloudflareKv(req);
-  if (kv) {
+  const kv = await getCloudflareKv(req);
+  if (kv && typeof kv.get === 'function') {
     try {
       const kvData = await kv.get('stats', 'json');
       if (kvData && typeof kvData === 'object') {
@@ -124,9 +132,9 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
 
 async function writeStatsAsync(stats: GlobalStats, req?: NextRequest): Promise<void> {
   inMemoryStats = stats;
-  const kv = getCloudflareKv(req);
+  const kv = await getCloudflareKv(req);
   const jsonPayload = JSON.stringify(stats);
-  if (kv) {
+  if (kv && typeof kv.put === 'function') {
     try {
       await kv.put('stats', jsonPayload);
     } catch (err) {
