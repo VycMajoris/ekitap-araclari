@@ -27,11 +27,18 @@ let inMemoryStats: GlobalStats = { ...DEFAULT_STATS };
 
 function getCloudflareKv(req?: NextRequest): KVNamespace | null {
   try {
+    const sym = Symbol.for('__cloudflare-context__');
+    const symCtx = (globalThis as any)[sym];
+    if (symCtx?.env?.STATS_KV && typeof symCtx.env.STATS_KV.get === 'function') {
+      return symCtx.env.STATS_KV;
+    }
+
     if (typeof globalThis !== 'undefined') {
       const g = globalThis as any;
       if (g.STATS_KV && typeof g.STATS_KV.get === 'function') return g.STATS_KV;
       if (g.env?.STATS_KV && typeof g.env.STATS_KV.get === 'function') return g.env.STATS_KV;
       if (g.__env__?.STATS_KV && typeof g.__env__.STATS_KV.get === 'function') return g.__env__.STATS_KV;
+      if (g.__cf_env__?.STATS_KV && typeof g.__cf_env__.STATS_KV.get === 'function') return g.__cf_env__.STATS_KV;
     }
     if (typeof process !== 'undefined' && process.env) {
       const p = process.env as any;
