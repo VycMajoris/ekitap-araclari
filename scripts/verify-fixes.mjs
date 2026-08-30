@@ -665,31 +665,45 @@ assert(reHtml.includes('<figure class="epub-figure"><img src="images/img_p1_1.jp
 assert(reHtml.includes('Paragraf 2 Düzeltildi'), 'Must contain updated paragraph 2 without shifting');
 console.log('Chapter Reconstruction with Figure blocks passed 100% successfully!');
 
-// 11. Test Global Stats API Storage Format & Sync Reconciliation
-console.log('Testing Global Stats Storage Format & Sync Reconciliation...');
-const testStatsPath = 'data/stats.json';
-if (fs.existsSync(testStatsPath)) {
-  const content = fs.readFileSync(testStatsPath, 'utf8');
-  const parsed = JSON.parse(content);
-  assert(typeof parsed.totalConverted === 'number', 'totalConverted must be a number');
-  assert(typeof parsed.totalTranslated === 'number', 'totalTranslated must be a number');
-  assert(typeof parsed.totalWordsFixed === 'number', 'totalWordsFixed must be a number');
+// 11. Test Cloudflare Pages Function with Real KV Storage Protocol
+console.log('Testing Cloudflare Pages Function KV Storage Protocol...');
+const { onRequestGet: cfGet, onRequestPost: cfPost } = await import('../functions/api/stats.ts');
 
-  const clientStats = {
-    totalConverted: parsed.totalConverted + 5,
-    totalTranslated: parsed.totalTranslated + 2,
-    totalWordsFixed: parsed.totalWordsFixed + 500,
-  };
-  const merged = {
-    totalConverted: Math.max(parsed.totalConverted, clientStats.totalConverted),
-    totalTranslated: Math.max(parsed.totalTranslated, clientStats.totalTranslated),
-    totalWordsFixed: Math.max(parsed.totalWordsFixed, clientStats.totalWordsFixed),
-  };
-  assert.strictEqual(merged.totalConverted, parsed.totalConverted + 5);
-  assert.strictEqual(merged.totalTranslated, parsed.totalTranslated + 2);
-  assert.strictEqual(merged.totalWordsFixed, parsed.totalWordsFixed + 500);
-  console.log('Global Stats storage format and sync reconciliation validated successfully!');
-}
+const mockKvStore = new Map();
+const mockKv = {
+  get: async (key) => mockKvStore.get(key) || null,
+  put: async (key, val) => { mockKvStore.set(key, val); }
+};
+
+// 1. Initial GET on empty KV -> must seed baseline 142/68/24500 and write to KV
+const cfGetRes1 = await cfGet({ env: { STATS_KV: mockKv }, request: new Request('http://localhost/api/stats') });
+const cfGetData1 = await cfGetRes1.json();
+assert.strictEqual(cfGetData1.success, true);
+assert.strictEqual(cfGetData1.stats.totalConverted, 142);
+assert.strictEqual(cfGetData1.stats.totalTranslated, 68);
+assert.strictEqual(cfGetData1.stats.totalWordsFixed, 24500);
+assert(mockKvStore.has('stats'), 'KV must be seeded with stats key on first read');
+
+// 2. POST convert -> must increment totalConverted in KV
+const cfPostRes1 = await cfPost({
+  env: { STATS_KV: mockKv },
+  request: new Request('http://localhost/api/stats', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'convert', fixedWords: 25 })
+  })
+});
+const cfPostData1 = await cfPostRes1.json();
+assert.strictEqual(cfPostData1.success, true);
+assert.strictEqual(cfPostData1.stats.totalConverted, 143);
+assert.strictEqual(cfPostData1.stats.totalWordsFixed, 24525);
+
+// 3. Second GET -> must reflect KV persisted data
+const cfGetRes2 = await cfGet({ env: { STATS_KV: mockKv }, request: new Request('http://localhost/api/stats') });
+const cfGetData2 = await cfGetRes2.json();
+assert.strictEqual(cfGetData2.stats.totalConverted, 143);
+assert.strictEqual(cfGetData2.stats.totalWordsFixed, 24525);
+console.log('Cloudflare Pages Function KV Storage Protocol passed 100% successfully!');
 
 // 12. Test Footnote Tag Protection in Turkish OCR Regex & Anomaly Checking
 console.log('Testing Footnote Tag Protection in Regex & Anomaly checking...');

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,22 +22,6 @@ export const BASELINE_STATS: GlobalStats = {
   totalWordsFixed: 24500,
   lastUpdated: '2026-08-30T00:00:00.000Z',
 };
-
-function getStoragePath(): string {
-  try {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      try {
-        fs.mkdirSync(dataDir, { recursive: true });
-      } catch {
-        return path.join('/tmp', 'ekitap_stats.json');
-      }
-    }
-    return path.join(dataDir, 'stats.json');
-  } catch {
-    return '/tmp/ekitap_stats.json';
-  }
-}
 
 let inMemoryStats: GlobalStats = { ...BASELINE_STATS };
 
@@ -94,26 +76,6 @@ async function fetchCloudflareKvRest(action: 'get' | 'put', value?: string): Pro
   return null;
 }
 
-function readStats(): GlobalStats {
-  try {
-    const filePath = getStoragePath();
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const parsed = JSON.parse(content);
-      inMemoryStats = {
-        totalConverted: Math.max(Number(parsed.totalConverted) || 0, BASELINE_STATS.totalConverted),
-        totalTranslated: Math.max(Number(parsed.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
-        totalWordsFixed: Math.max(Number(parsed.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
-        lastUpdated: parsed.lastUpdated || new Date().toISOString(),
-      };
-      return inMemoryStats;
-    }
-  } catch (err) {
-    console.warn('Stats dosya okuma uyarısı:', err);
-  }
-  return inMemoryStats;
-}
-
 async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
   const kv = getCloudflareKv(req);
   if (kv) {
@@ -135,7 +97,7 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
         return inMemoryStats;
       }
     } catch (err) {
-      console.warn('Cloudflare KV okuma hatası, yerel depolamaya geçiliyor:', err);
+      console.warn('Cloudflare KV okuma hatası:', err);
     }
   }
 
@@ -150,21 +112,11 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
     return inMemoryStats;
   }
 
-  return readStats();
-}
-
-function writeStats(stats: GlobalStats): void {
-  inMemoryStats = stats;
-  try {
-    const filePath = getStoragePath();
-    fs.writeFileSync(filePath, JSON.stringify(stats, null, 2), 'utf8');
-  } catch (err) {
-    console.warn('Stats dosya yazma uyarısı:', err);
-  }
+  return inMemoryStats;
 }
 
 async function writeStatsAsync(stats: GlobalStats, req?: NextRequest): Promise<void> {
-  writeStats(stats);
+  inMemoryStats = stats;
   const kv = getCloudflareKv(req);
   const jsonPayload = JSON.stringify(stats);
   if (kv) {
