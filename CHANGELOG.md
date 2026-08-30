@@ -18,8 +18,8 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
   - **Regex & OCR Anomali Kalkanı:** Dipnot etiketlerinin (`[^pX_Y]`) regex temizliği ve TDK tamiri sırasında bozulmasını önleyen token maskeleme koruması eklendi.
   - **Önizleme & Karşılaştırma Görünümü (`DiffViewer`):** Bölüm önizleme listesinde dipnot blokları mor renkli `📌 Dipnot Açıklaması` rozeti ile görsel olarak ayrıştırıldı.
 * **🌐 Cloudflare KV Global Sayaç ve Otomatik Taban Senkronizasyonu (`/api/stats` & `STATS_KV`):**
-  - Cihazdan bağımsız, sıfırlanmayan merkezi Cloudflare KV veritabanı entegrasyonu tamamlandı.
-  - **Otomatik Taban Tohumlama (Baseline Seeding):** Çerezler silinse veya farklı bir cihazdan (telefon/tablet) ilk kez girilse dahi sayaçların sıfıra düşmesini engelleyen taban tohumlama (142 Dönüştürülen, 68 Çevrilen, 24.500 Kelime) ve canlı artış mekanizması eklendi.
+  - Cihazdan bağımsız çalışan merkezi Cloudflare KV veritabanı entegrasyonu tamamlandı.
+  - **Taban Başlangıç Değerleri (Baseline Seeding):** İlk kurulumda veya yerel depolama temizlendiğinde sayaçların sıfırlanmaması için taban değerler (142 Dönüştürülen, 68 Çevrilen, 24.500 Kelime) doğrudan KV'ye tohum olarak kaydedildi.
   - **Evrensel Geri Çekilme (REST & In-Memory):** KV binding'i bulunmayan ortamlarda Cloudflare REST API ve yerel depolama yedeklemesi sağlandı.
 
 ---
@@ -95,7 +95,7 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ### 🛠️ Düzeltmeler (Hotfixes)
 * **🔄 Google AI Studio Otomatik Model Devretme (Auto-Failover):** Google sunucuları `gemini-3.7-flash` modelinde geçici yoğunluk (`503 / High Demand`) verdiğinde işlem durdurulmadan otomatik olarak `gemini-3.6-flash` veya `gemini-2.0-flash` modeline geçilerek çevirinin kesintisiz tamamlanması sağlandı.
-* **🛡️ Otomatik Sağlayıcı Kurtarma (Auto Provider Recovery):** Kullanıcının tarayıcısında eski `antigravity` ayarı kalmış olsa dahi başlatma anında ve API anahtarı girildiğinde otomatik olarak `gemini_api` (AI Studio) moduna geçirilmesi sağlandı.
+* **🛡️ Otomatik Sağlayıcı Kurtarma (Auto Provider Recovery):** Tarayıcıda eski `antigravity` ayarı kayıtlı olsa bile API anahtarı girildiğinde doğrudan `gemini_api` (AI Studio) moduna geçilmesi sağlandı.
 * **⚡ Başlık Çevirisi Kilitlenmesini Engelleme:** `refineChapterTitlesWithAi` fonksiyonuna 10 saniyelik zaman aşımı koruması eklendi; başlık çevirisinde oluşabilecek bir gecikmenin kitap paragraflarının çevirisini kilitlemesi engellendi.
 * **📊 Canlı İlerleme ve Debug Hata Görünürlüğü:** Tüm API ve LLM hata yanıtları anında hem arayüz bildirimine hem de `DebugConsole` çekmecesine işlendi.
 
