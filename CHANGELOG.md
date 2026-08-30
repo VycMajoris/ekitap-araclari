@@ -17,6 +17,10 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
   - **EPUB 3 `epub:type="noteref"` & `<aside epub:type="footnote">` Popup Sentezi:** Apple Books, KOReader, Kindle ve Kobo e-okuyucularında tıklandığında sayfa değiştirmeden yerinde açılan interaktif popup kart standardı uygulandı; popup desteklemeyen okuyucular için geri dönüş bağlantıları (`backlink`) korundu.
   - **Regex & OCR Anomali Kalkanı:** Dipnot etiketlerinin (`[^pX_Y]`) regex temizliği ve TDK tamiri sırasında bozulmasını önleyen token maskeleme koruması eklendi.
   - **Önizleme & Karşılaştırma Görünümü (`DiffViewer`):** Bölüm önizleme listesinde dipnot blokları mor renkli `📌 Dipnot Açıklaması` rozeti ile görsel olarak ayrıştırıldı.
+* **🌐 Cloudflare KV Global Sayaç ve Otomatik Taban Senkronizasyonu (`/api/stats` & `STATS_KV`):**
+  - Cihazdan bağımsız, sıfırlanmayan merkezi Cloudflare KV veritabanı entegrasyonu tamamlandı.
+  - **Otomatik Taban Tohumlama (Baseline Seeding):** Çerezler silinse veya farklı bir cihazdan (telefon/tablet) ilk kez girilse dahi sayaçların sıfıra düşmesini engelleyen taban tohumlama (142 Dönüştürülen, 68 Çevrilen, 24.500 Kelime) ve canlı artış mekanizması eklendi.
+  - **Evrensel Geri Çekilme (REST & In-Memory):** KV binding'i bulunmayan ortamlarda Cloudflare REST API ve yerel depolama yedeklemesi sağlandı.
 
 ---
 

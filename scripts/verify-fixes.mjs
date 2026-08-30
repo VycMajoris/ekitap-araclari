@@ -675,15 +675,19 @@ if (fs.existsSync(testStatsPath)) {
   assert(typeof parsed.totalTranslated === 'number', 'totalTranslated must be a number');
   assert(typeof parsed.totalWordsFixed === 'number', 'totalWordsFixed must be a number');
 
-  const clientStats = { totalConverted: 15, totalTranslated: 8, totalWordsFixed: 3200 };
+  const clientStats = {
+    totalConverted: parsed.totalConverted + 5,
+    totalTranslated: parsed.totalTranslated + 2,
+    totalWordsFixed: parsed.totalWordsFixed + 500,
+  };
   const merged = {
     totalConverted: Math.max(parsed.totalConverted, clientStats.totalConverted),
     totalTranslated: Math.max(parsed.totalTranslated, clientStats.totalTranslated),
     totalWordsFixed: Math.max(parsed.totalWordsFixed, clientStats.totalWordsFixed),
   };
-  assert.strictEqual(merged.totalConverted, 15);
-  assert.strictEqual(merged.totalTranslated, 8);
-  assert.strictEqual(merged.totalWordsFixed, 3200);
+  assert.strictEqual(merged.totalConverted, parsed.totalConverted + 5);
+  assert.strictEqual(merged.totalTranslated, parsed.totalTranslated + 2);
+  assert.strictEqual(merged.totalWordsFixed, parsed.totalWordsFixed + 500);
   console.log('Global Stats storage format and sync reconciliation validated successfully!');
 }
 
