@@ -11,12 +11,6 @@ interface GlobalStatsData {
 
 const LOCAL_STORAGE_KEY = 'ekitap_global_stats_persistent';
 
-const BASELINE_STATS: GlobalStatsData = {
-  totalConverted: 142,
-  totalTranslated: 68,
-  totalWordsFixed: 24500,
-};
-
 export const GlobalStatsCards: React.FC = () => {
   const [stats, setStats] = useState<GlobalStatsData>(() => {
     if (typeof window !== 'undefined') {
@@ -25,67 +19,38 @@ export const GlobalStatsCards: React.FC = () => {
         if (stored) {
           const parsed = JSON.parse(stored);
           return {
-            totalConverted: Math.max(Number(parsed.totalConverted) || 0, BASELINE_STATS.totalConverted),
-            totalTranslated: Math.max(Number(parsed.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
-            totalWordsFixed: Math.max(Number(parsed.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
+            totalConverted: Number(parsed.totalConverted) || 0,
+            totalTranslated: Number(parsed.totalTranslated) || 0,
+            totalWordsFixed: Number(parsed.totalWordsFixed) || 0,
           };
         }
       } catch {}
     }
-    return BASELINE_STATS;
+    return {
+      totalConverted: 0,
+      totalTranslated: 0,
+      totalWordsFixed: 0,
+    };
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    const syncAndFetchStats = async () => {
+    const fetchStats = async () => {
       try {
-        let localStats: GlobalStatsData = { ...BASELINE_STATS };
-        if (typeof window !== 'undefined') {
-          try {
-            const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (raw) {
-              const p = JSON.parse(raw);
-              localStats = {
-                totalConverted: Math.max(Number(p.totalConverted) || 0, BASELINE_STATS.totalConverted),
-                totalTranslated: Math.max(Number(p.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
-                totalWordsFixed: Math.max(Number(p.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
-              };
-            }
-          } catch {}
-        }
-
         const res = await fetch('/api/stats');
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.stats && isMounted) {
-            const serverStats = data.stats;
-            const merged: GlobalStatsData = {
-              totalConverted: Math.max(serverStats.totalConverted || 0, localStats.totalConverted, BASELINE_STATS.totalConverted),
-              totalTranslated: Math.max(serverStats.totalTranslated || 0, localStats.totalTranslated, BASELINE_STATS.totalTranslated),
-              totalWordsFixed: Math.max(serverStats.totalWordsFixed || 0, localStats.totalWordsFixed, BASELINE_STATS.totalWordsFixed),
+            const serverStats = {
+              totalConverted: Number(data.stats.totalConverted) || 0,
+              totalTranslated: Number(data.stats.totalTranslated) || 0,
+              totalWordsFixed: Number(data.stats.totalWordsFixed) || 0,
             };
 
-            setStats(merged);
+            setStats(serverStats);
             if (typeof window !== 'undefined') {
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
-            }
-
-            if (
-              merged.totalConverted > (serverStats.totalConverted || 0) ||
-              merged.totalTranslated > (serverStats.totalTranslated || 0) ||
-              merged.totalWordsFixed > (serverStats.totalWordsFixed || 0)
-            ) {
-              fetch('/api/stats', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'sync',
-                  totalConverted: merged.totalConverted,
-                  totalTranslated: merged.totalTranslated,
-                  totalWordsFixed: merged.totalWordsFixed,
-                }),
-              }).catch(() => {});
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverStats));
             }
           }
         }
@@ -95,16 +60,16 @@ export const GlobalStatsCards: React.FC = () => {
       }
     };
 
-    syncAndFetchStats();
+    fetchStats();
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('ekitap_stats_updated', syncAndFetchStats);
+      window.addEventListener('ekitap_stats_updated', fetchStats);
     }
 
     return () => {
       isMounted = false;
       if (typeof window !== 'undefined') {
-        window.removeEventListener('ekitap_stats_updated', syncAndFetchStats);
+        window.removeEventListener('ekitap_stats_updated', fetchStats);
       }
     };
   }, []);

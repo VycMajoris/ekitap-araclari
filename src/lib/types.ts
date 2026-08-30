@@ -44,6 +44,7 @@ export interface TextBlock {
   correctedText: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
   diffCount: number;
+  isMergedIntoPrevious?: boolean;
 }
 
 export interface EpubChapter {

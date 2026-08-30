@@ -16,13 +16,13 @@ const WB = '(?<![a-zA-ZçğıöşüÇĞİÖŞÜ])';
 const WE = '(?![a-zA-ZçğıöşüÇĞİÖŞÜ])';
 
 function replaceCasePreserving(match: string, target: string): string {
-  if (match === match.toUpperCase()) {
-    return target.toUpperCase();
+  if (match === match.toLocaleUpperCase('tr-TR')) {
+    return target.toLocaleUpperCase('tr-TR');
   }
-  if (match[0] === match[0].toUpperCase() && match[0] !== match[0].toLowerCase()) {
-    return target.charAt(0).toUpperCase() + target.slice(1);
+  if (match[0] === match[0].toLocaleUpperCase('tr-TR') && match[0] !== match[0].toLocaleLowerCase('tr-TR')) {
+    return target.charAt(0).toLocaleUpperCase('tr-TR') + target.slice(1).toLocaleLowerCase('tr-TR');
   }
-  return target.toLowerCase();
+  return target.toLocaleLowerCase('tr-TR');
 }
 
 /**
@@ -734,8 +734,8 @@ const OCR_ANOMALY_PATTERNS: RegExp[] = [
   /\s+[,.!?:;]/,
   /\w+\s+['’]\w+/,
   /\.\s+\.\s+\./,
-  /(?<![A-ZÇĞİÖŞÜ])[bcçdfgğhjklmnprsştvyz]{4,}(?![A-ZÇĞİÖŞÜ])/i,
-  /[ÔÊÂÎÛôêâîû@#$\\/|<>~]/,
+  /(?<![A-ZÇĞİÖŞÜ])[bcçdfgğhjklmnprsştvyz]{5,}(?![A-ZÇĞİÖŞÜ])/i,
+  /[ÔÊôê@#$\\/|<>~]/,
   /\b[a-zçğıöşü]+[A-ZÇĞİÖŞÜ]+[a-zçğıöşü]+\b/,
 ];
 

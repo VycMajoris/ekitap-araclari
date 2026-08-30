@@ -675,16 +675,15 @@ const mockKv = {
   put: async (key, val) => { mockKvStore.set(key, val); }
 };
 
-// 1. Initial GET on empty KV -> must seed baseline 142/68/24500 and write to KV
+// 1. Initial GET on empty KV -> starts with 0
 const cfGetRes1 = await cfGet({ env: { STATS_KV: mockKv }, request: new Request('http://localhost/api/stats') });
 const cfGetData1 = await cfGetRes1.json();
 assert.strictEqual(cfGetData1.success, true);
-assert.strictEqual(cfGetData1.stats.totalConverted, 142);
-assert.strictEqual(cfGetData1.stats.totalTranslated, 68);
-assert.strictEqual(cfGetData1.stats.totalWordsFixed, 24500);
-assert(mockKvStore.has('stats'), 'KV must be seeded with stats key on first read');
+assert.strictEqual(cfGetData1.stats.totalConverted, 0);
+assert.strictEqual(cfGetData1.stats.totalTranslated, 0);
+assert.strictEqual(cfGetData1.stats.totalWordsFixed, 0);
 
-// 2. POST convert -> must increment totalConverted in KV
+// 2. POST convert -> increments totalConverted in KV
 const cfPostRes1 = await cfPost({
   env: { STATS_KV: mockKv },
   request: new Request('http://localhost/api/stats', {
@@ -695,14 +694,14 @@ const cfPostRes1 = await cfPost({
 });
 const cfPostData1 = await cfPostRes1.json();
 assert.strictEqual(cfPostData1.success, true);
-assert.strictEqual(cfPostData1.stats.totalConverted, 143);
-assert.strictEqual(cfPostData1.stats.totalWordsFixed, 24525);
+assert.strictEqual(cfPostData1.stats.totalConverted, 1);
+assert.strictEqual(cfPostData1.stats.totalWordsFixed, 25);
 
-// 3. Second GET -> must reflect KV persisted data
+// 3. Second GET -> reflects KV persisted data
 const cfGetRes2 = await cfGet({ env: { STATS_KV: mockKv }, request: new Request('http://localhost/api/stats') });
 const cfGetData2 = await cfGetRes2.json();
-assert.strictEqual(cfGetData2.stats.totalConverted, 143);
-assert.strictEqual(cfGetData2.stats.totalWordsFixed, 24525);
+assert.strictEqual(cfGetData2.stats.totalConverted, 1);
+assert.strictEqual(cfGetData2.stats.totalWordsFixed, 25);
 console.log('Cloudflare Pages Function KV Storage Protocol passed 100% successfully!');
 
 // 12. Test Footnote Tag Protection in Turkish OCR Regex & Anomaly Checking
@@ -796,20 +795,18 @@ assert(stylesInZip.includes('epub-noteref'), 'styles.css must include epub-noter
 assert(stylesInZip.includes('epub-footnote'), 'styles.css must include epub-footnote styling');
 console.log('End-to-End PDF-to-EPUB Footnote Generation test passed 100% successfully!');
 
-// 16. Test Global Stats API and Baseline Seeding
-console.log('Testing Global Stats API and Baseline Seeding...');
-const { BASELINE_STATS, GET, POST } = await import('../src/app/api/stats/route.ts');
-assert.strictEqual(BASELINE_STATS.totalConverted, 142, 'Baseline converted must be 142');
-assert.strictEqual(BASELINE_STATS.totalTranslated, 68, 'Baseline translated must be 68');
-assert.strictEqual(BASELINE_STATS.totalWordsFixed, 24500, 'Baseline fixed words must be 24500');
+// 16. Test Global Stats API Serverless Endpoint
+console.log('Testing Global Stats API Serverless Endpoint...');
+const { DEFAULT_STATS, GET, POST } = await import('../src/app/api/stats/route.ts');
+assert.strictEqual(DEFAULT_STATS.totalConverted, 0);
+assert.strictEqual(DEFAULT_STATS.totalTranslated, 0);
+assert.strictEqual(DEFAULT_STATS.totalWordsFixed, 0);
 
 const initialGetReq = new Request('http://localhost:3000/api/stats');
 const initialGetRes = await GET(initialGetReq);
 const initialGetData = await initialGetRes.json();
 assert.strictEqual(initialGetData.success, true);
-assert(initialGetData.stats.totalConverted >= 142, 'Stats totalConverted must be >= baseline 142');
-assert(initialGetData.stats.totalTranslated >= 68, 'Stats totalTranslated must be >= baseline 68');
-assert(initialGetData.stats.totalWordsFixed >= 24500, 'Stats totalWordsFixed must be >= baseline 24500');
+assert(typeof initialGetData.stats.totalConverted === 'number');
 
 const convertPostReq = new Request('http://localhost:3000/api/stats', {
   method: 'POST',
@@ -819,9 +816,59 @@ const convertPostReq = new Request('http://localhost:3000/api/stats', {
 const convertPostRes = await POST(convertPostReq);
 const convertPostData = await convertPostRes.json();
 assert.strictEqual(convertPostData.success, true);
-assert(convertPostData.stats.totalConverted >= initialGetData.stats.totalConverted + 1, 'totalConverted must increment by at least 1');
-assert(convertPostData.stats.totalWordsFixed >= initialGetData.stats.totalWordsFixed + 15, 'totalWordsFixed must increment by at least 15');
-console.log('Global Stats API and Baseline Seeding tests passed 100% successfully!');
+assert.strictEqual(convertPostData.stats.totalConverted, initialGetData.stats.totalConverted + 1);
+assert.strictEqual(convertPostData.stats.totalWordsFixed, initialGetData.stats.totalWordsFixed + 15);
+console.log('Global Stats API Serverless Endpoint passed 100% successfully!');
+
+// 17. Test Hyphen-Merge DOM Alignment & Zero Paragraph Shift in reconstructChapterHtml
+console.log('Testing Hyphen-Merge DOM Alignment & Zero Paragraph Shift...');
+const sampleHyphenHtml = '<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Test</title></head><body><h1>Chapter 1</h1><p>Bu araştırmada kullanılan yöntem-</p><p>lerin tüm detayları incelenmiştir.</p><p>Üçüncü ve son paragraf buradadır.</p></body></html>';
+const extractedChapter = extractBlocksFromHtml(sampleHyphenHtml, 'ch1', 1);
+assert.strictEqual(extractedChapter.blocks.length, 4, 'Must extract h1 + p1 + merged_p2 + p3');
+const p1Block = extractedChapter.blocks[1];
+const p2Block = extractedChapter.blocks[2];
+const p3Block = extractedChapter.blocks[3];
+
+assert(p1Block.originalText.includes('yöntemlerin'), 'p1 must contain joined word yöntemlerin');
+assert.strictEqual(p2Block.isMergedIntoPrevious, true, 'p2 must be marked as isMergedIntoPrevious');
+assert(p3Block.originalText.includes('Üçüncü ve son paragraf'), 'p3 must be untouched');
+
+// Simulate block corrections
+p1Block.correctedHtml = 'Bu araştırmada kullanılan yöntemlerin tüm detayları incelenmiştir.';
+p3Block.correctedHtml = 'Üçüncü ve son paragraf buradadır.';
+
+const reconstructedHyphenHtml = reconstructChapterHtml({
+  id: 'ch1',
+  href: 'chapter1.xhtml',
+  title: 'Chapter 1',
+  rawContent: sampleHyphenHtml,
+  blocks: extractedChapter.blocks,
+  isSelected: true,
+  status: 'completed',
+  stats: { totalBlocks: 4, processedBlocks: 4, fixedWords: 0 }
+});
+
+assert(reconstructedHyphenHtml.includes('<p>Bu araştırmada kullanılan yöntemlerin tüm detayları incelenmiştir.</p>'), 'Reconstructed HTML must contain merged p1');
+assert(reconstructedHyphenHtml.includes('<p>Üçüncü ve son paragraf buradadır.</p>'), 'Reconstructed HTML must contain p3 without DOM shift');
+assert(!reconstructedHyphenHtml.includes('<p>lerin tüm detayları'), 'Merged second paragraph p2 must be cleanly removed from DOM');
+console.log('Hyphen-Merge DOM Alignment passed 100% with ZERO paragraph shift!');
+
+// 18. Test Turkish Circumflex Vowels (â, î, û) Are NOT Flagged as OCR Anomalies
+console.log('Testing Turkish Circumflex Vowels Non-Anomaly Rule...');
+const standardCircumflexTurkish = 'Rüzgâr estiğinde kâğıtlar uçuştu, hikâye henüz bitmedi ve hâlâ bekliyoruz.';
+assert.strictEqual(hasOcrAnomaly(standardCircumflexTurkish), false, 'Circumflex vowels (â, î, û) must NOT trigger OCR anomaly');
+console.log('Turkish Circumflex Vowels Non-Anomaly Rule passed 100% successfully!');
+
+// 19. Test PDF Footnote Non-False-Positive on Standard Body Numbers
+console.log('Testing PDF Footnote Non-False-Positive on Body Numbers...');
+const mockPageWithBodyNumbers = [
+  { y: 100, minX: 50, maxX: 500, height: 12, fontSize: 12, text: 'Cilt 1 sayfa 20 üzerindeki Madde 1 metnidir.' },
+  { y: 550, minX: 50, maxX: 450, height: 9, fontSize: 9, text: '1. Sayfa altı dipnot metnidir.' }
+];
+const extractedBodyPage = extractFootnotesAndBodyFromPage(mockPageWithBodyNumbers, 1, 12, 600);
+assert(!extractedBodyPage.bodyParagraphs[0].text.includes('Cilt[^p1_1]'), 'Must NOT convert plain "Cilt 1" into footnote reference');
+assert(!extractedBodyPage.bodyParagraphs[0].text.includes('Madde[^p1_1]'), 'Must NOT convert plain "Madde 1" into footnote reference');
+console.log('PDF Footnote Non-False-Positive passed 100% successfully!');
 
 
 

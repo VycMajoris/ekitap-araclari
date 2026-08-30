@@ -16,14 +16,14 @@ interface KVNamespace {
   delete(key: string): Promise<void>;
 }
 
-export const BASELINE_STATS: GlobalStats = {
-  totalConverted: 142,
-  totalTranslated: 68,
-  totalWordsFixed: 24500,
-  lastUpdated: '2026-08-30T00:00:00.000Z',
+export const DEFAULT_STATS: GlobalStats = {
+  totalConverted: 0,
+  totalTranslated: 0,
+  totalWordsFixed: 0,
+  lastUpdated: new Date().toISOString(),
 };
 
-let inMemoryStats: GlobalStats = { ...BASELINE_STATS };
+let inMemoryStats: GlobalStats = { ...DEFAULT_STATS };
 
 function getCloudflareKv(req?: NextRequest): KVNamespace | null {
   try {
@@ -83,17 +83,17 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
       const kvData = await kv.get('stats', 'json');
       if (kvData && typeof kvData === 'object') {
         inMemoryStats = {
-          totalConverted: Math.max(Number(kvData.totalConverted) || 0, BASELINE_STATS.totalConverted),
-          totalTranslated: Math.max(Number(kvData.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
-          totalWordsFixed: Math.max(Number(kvData.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
+          totalConverted: Number(kvData.totalConverted) || 0,
+          totalTranslated: Number(kvData.totalTranslated) || 0,
+          totalWordsFixed: Number(kvData.totalWordsFixed) || 0,
           lastUpdated: kvData.lastUpdated || new Date().toISOString(),
         };
         return inMemoryStats;
       } else {
         try {
-          await kv.put('stats', JSON.stringify(BASELINE_STATS));
+          await kv.put('stats', JSON.stringify(DEFAULT_STATS));
         } catch {}
-        inMemoryStats = { ...BASELINE_STATS };
+        inMemoryStats = { ...DEFAULT_STATS };
         return inMemoryStats;
       }
     } catch (err) {
@@ -104,9 +104,9 @@ async function readStatsAsync(req?: NextRequest): Promise<GlobalStats> {
   const restData = await fetchCloudflareKvRest('get');
   if (restData && typeof restData === 'object') {
     inMemoryStats = {
-      totalConverted: Math.max(Number(restData.totalConverted) || 0, BASELINE_STATS.totalConverted),
-      totalTranslated: Math.max(Number(restData.totalTranslated) || 0, BASELINE_STATS.totalTranslated),
-      totalWordsFixed: Math.max(Number(restData.totalWordsFixed) || 0, BASELINE_STATS.totalWordsFixed),
+      totalConverted: Number(restData.totalConverted) || 0,
+      totalTranslated: Number(restData.totalTranslated) || 0,
+      totalWordsFixed: Number(restData.totalWordsFixed) || 0,
       lastUpdated: restData.lastUpdated || new Date().toISOString(),
     };
     return inMemoryStats;
@@ -145,38 +145,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const action = body.action as 'convert' | 'translate' | 'fix' | 'sync';
+    const action = body.action as 'convert' | 'translate';
     const fixedWords = Number(body.fixedWords) || 0;
-    const clientConverted = Number(body.totalConverted) || 0;
-    const clientTranslated = Number(body.totalTranslated) || 0;
-    const clientWordsFixed = Number(body.totalWordsFixed) || 0;
 
     const stats = await readStatsAsync(req);
 
-    if (action === 'sync') {
-      stats.totalConverted = Math.max(stats.totalConverted, clientConverted);
-      stats.totalTranslated = Math.max(stats.totalTranslated, clientTranslated);
-      stats.totalWordsFixed = Math.max(stats.totalWordsFixed, clientWordsFixed);
-    } else {
-      if (action === 'convert') {
-        stats.totalConverted += 1;
-      } else if (action === 'translate') {
-        stats.totalTranslated += 1;
-      }
+    if (action === 'convert') {
+      stats.totalConverted += 1;
+    } else if (action === 'translate') {
+      stats.totalTranslated += 1;
+    }
 
-      if (fixedWords > 0) {
-        stats.totalWordsFixed += fixedWords;
-      }
-
-      if (clientConverted > 0) {
-        stats.totalConverted = Math.max(stats.totalConverted, clientConverted);
-      }
-      if (clientTranslated > 0) {
-        stats.totalTranslated = Math.max(stats.totalTranslated, clientTranslated);
-      }
-      if (clientWordsFixed > 0) {
-        stats.totalWordsFixed = Math.max(stats.totalWordsFixed, clientWordsFixed);
-      }
+    if (fixedWords > 0) {
+      stats.totalWordsFixed += Math.min(Math.max(0, fixedWords), 100000);
     }
 
     stats.lastUpdated = new Date().toISOString();

@@ -1118,8 +1118,8 @@ export function extractFootnotesAndBodyFromPage(
     });
 
     for (const fn of footnoteDefs) {
-      const numPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ0-9.,?!:»"'])(?:\\s+|\\[|\\()${fn.num}(?:\\]|\\))?(?=\\s+[A-ZÇĞİÖŞÜa-zçğıöşü0-9]|$)`, 'g');
-      scopedText = scopedText.replace(numPattern, `$1[^${fn.id}]`);
+      const bracketPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ0-9.,?!:»"'])(?:\\s*\\[${fn.num}\\]|\\s*\\(${fn.num}\\))(?=\\s+|[,.!?:;]|$)`, 'g');
+      scopedText = scopedText.replace(bracketPattern, `$1[^${fn.id}]`);
     }
 
     return {

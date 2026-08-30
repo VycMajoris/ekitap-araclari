@@ -250,6 +250,7 @@ export function extractBlocksFromHtml(
     const b1 = blocks[i];
     const b2 = blocks[i + 1];
     if (
+      !b1.isMergedIntoPrevious &&
       (b1.elementTag === 'p' || b1.elementTag === 'div') &&
       (b2.elementTag === 'p' || b2.elementTag === 'div')
     ) {
@@ -270,11 +271,12 @@ export function extractBlocksFromHtml(
         b2.correctedHtml = '';
         b2.correctedText = '';
         b2.status = 'completed';
+        b2.isMergedIntoPrevious = true;
       }
     }
   }
 
-  return { title, blocks: blocks.filter((b) => b.originalText.length > 0 || b.originalHtml.length > 0) };
+  return { title, blocks };
 }
 
 /**
@@ -335,6 +337,13 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
     for (const el of elements) {
       if (blockIndex < chapter.blocks.length) {
         const block = chapter.blocks[blockIndex];
+
+        if (block.isMergedIntoPrevious) {
+          el.parentNode?.removeChild(el);
+          blockIndex++;
+          continue;
+        }
+
         const targetTag = block.elementTag || el.tagName.toLowerCase();
         const safeHtml = block.correctedHtml || el.innerHTML;
 
@@ -350,7 +359,7 @@ export function reconstructChapterHtml(chapter: EpubChapter): string {
               : doc.createElement(targetTag);
             newEl.innerHTML = safeHtml;
             el.parentNode?.replaceChild(newEl, el);
-          } else if (block.correctedHtml && block.correctedHtml !== block.originalHtml) {
+          } else {
             el.innerHTML = safeHtml;
           }
         } catch {

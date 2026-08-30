@@ -383,18 +383,6 @@ export default function Home() {
       if (result.chapters.length > 0) {
         setSelectedChapterId(result.chapters[0].id);
       }
-
-      fetch('/api/stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'convert' }),
-      })
-        .then(() => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('ekitap_stats_updated'));
-          }
-        })
-        .catch(() => {});
     } catch (err: unknown) {
       console.error('PDF ayrıştırma hatası:', err);
       const msg = err instanceof Error ? err.message : 'PDF dosyası ayrıştırılamadı.';
@@ -583,19 +571,6 @@ export default function Home() {
         );
 
       const isTrans = options.taskType === 'translate';
-      let localTotals = { totalConverted: 0, totalTranslated: 0, totalWordsFixed: 0 };
-      if (typeof window !== 'undefined') {
-        try {
-          const raw = localStorage.getItem('ekitap_global_stats_persistent');
-          const cur = raw ? JSON.parse(raw) : { totalConverted: 0, totalTranslated: 0, totalWordsFixed: 0 };
-          localTotals = {
-            totalConverted: (Number(cur.totalConverted) || 0) + (isTrans ? 0 : 1),
-            totalTranslated: (Number(cur.totalTranslated) || 0) + (isTrans ? 1 : 0),
-            totalWordsFixed: (Number(cur.totalWordsFixed) || 0) + fixedCount,
-          };
-          localStorage.setItem('ekitap_global_stats_persistent', JSON.stringify(localTotals));
-        } catch {}
-      }
 
       fetch('/api/stats', {
         method: 'POST',
@@ -603,9 +578,6 @@ export default function Home() {
         body: JSON.stringify({
           action: isTrans ? 'translate' : 'convert',
           fixedWords: fixedCount,
-          totalConverted: localTotals.totalConverted,
-          totalTranslated: localTotals.totalTranslated,
-          totalWordsFixed: localTotals.totalWordsFixed,
         }),
       })
         .then(() => {

@@ -14,12 +14,10 @@ async function buildWordList() {
   const data = await res.json();
   const trLower = (s) =>
     s
-      .replace(/İ/g, 'i')
-      .replace(/I/g, 'ı')
-      .toLowerCase()
+      .toLocaleLowerCase('tr-TR')
       .replace(/[âä]/g, 'a')
-      .replace(/[îï]/g, 'i')
-      .replace(/[ûü]/g, 'u');
+      .replace(/î/g, 'i')
+      .replace(/û/g, 'u');
 
   const words = new Set();
   for (const item of data) {

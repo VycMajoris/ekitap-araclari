@@ -52,6 +52,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   const isTranslation = taskType === 'translate';
 
   const filteredBlocks = chapter.blocks.filter((b) => {
+    if (b.isMergedIntoPrevious) return false;
     if (onlyDiffs && b.diffCount === 0 && b.originalText === b.correctedText) {
       return false;
     }

@@ -202,9 +202,9 @@ export class TdkDictionary {
 
   private normalizeTr(s: string): string {
     return s
+      .toLocaleLowerCase('tr-TR')
       .replace(/İ/g, 'i')
       .replace(/I/g, 'ı')
-      .toLowerCase()
       .replace(/[âä]/g, 'a')
       .replace(/[îï]/g, 'i')
       .replace(/[ûü]/g, 'u');

@@ -698,6 +698,11 @@ export async function processEpubChapters(
     let chapterPendingAiBlocks = 0;
 
     for (const block of chapter.blocks) {
+      if (block.isMergedIntoPrevious) {
+        block.status = 'completed';
+        continue;
+      }
+
       if (block.elementTag === 'figure') {
         block.status = 'completed';
         stats.processedBlocks++;
