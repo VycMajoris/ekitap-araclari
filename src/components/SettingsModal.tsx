@@ -19,6 +19,7 @@ import {
   Server,
   Languages,
   Plus,
+  Zap,
 } from 'lucide-react';
 import {
   OpenRouterModel,
@@ -1214,53 +1215,114 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
               </div>
 
-              {/* Sliders */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Concurrency */}
-                <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-zinc-700 dark:text-zinc-300 font-medium">
-                      Eşzamanlı İstek (Concurrency)
+              <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <div>
+                      <span className="font-bold text-xs text-zinc-900 dark:text-white block">
+                        Paket Boyutu &amp; Token Verimi (Batch Size)
+                      </span>
+                      <p className="text-[11px] text-zinc-500">
+                        Tek istekte işlenen karakter miktarı. Yüksek değerler çeviriyi hızlandırır ve günlük istek limitinizi (RPD) korur.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400 block">
+                      {(options.chunkSize || 15000).toLocaleString('tr-TR')} chr
                     </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {options.concurrency}
+                    <span className="text-[10px] text-zinc-400 block">
+                      ~{Math.round((options.chunkSize || 15000) / 6).toLocaleString('tr-TR')} kelime
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="3"
-                    step="1"
-                    value={options.concurrency}
-                    onChange={(e) =>
-                      onOptionsChange({ ...options, concurrency: parseInt(e.target.value, 10) })
-                    }
-                    className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
-                  />
                 </div>
 
-                {/* Chunk Size */}
-                <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-zinc-700 dark:text-zinc-300 font-medium">
-                      Paket Boyutu (Batch Chars)
-                    </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {options.chunkSize} chr
-                    </span>
-                  </div>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => onOptionsChange({ ...options, chunkSize: 5000 })}
+                    className={`py-2 px-2.5 rounded-xl text-[11px] font-medium border text-center transition-all cursor-pointer ${
+                      options.chunkSize === 5000
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300'
+                    }`}
+                  >
+                    <div className="font-bold">5.000 chr</div>
+                    <div className="text-[10px] text-zinc-400">Düşük Donanım</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOptionsChange({ ...options, chunkSize: 15000 })}
+                    className={`py-2 px-2.5 rounded-xl text-[11px] font-medium border text-center transition-all cursor-pointer ${
+                      (options.chunkSize || 15000) === 15000
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300'
+                    }`}
+                  >
+                    <div className="font-bold flex items-center justify-center gap-1">
+                      <span>15.000 chr</span>
+                      <span className="text-[9px] bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-1 rounded-sm">Önerilen</span>
+                    </div>
+                    <div className="text-[10px] text-zinc-400">Yüksek Verim</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOptionsChange({ ...options, chunkSize: 25000 })}
+                    className={`py-2 px-2.5 rounded-xl text-[11px] font-medium border text-center transition-all cursor-pointer ${
+                      options.chunkSize === 25000
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300'
+                    }`}
+                  >
+                    <div className="font-bold">25.000 chr</div>
+                    <div className="text-[10px] text-zinc-400">Maksimum Hız</div>
+                  </button>
+                </div>
+
+                <div className="pt-2 space-y-1">
                   <input
                     type="range"
-                    min="800"
-                    max="3000"
-                    step="200"
-                    value={options.chunkSize}
+                    min="2000"
+                    max="35000"
+                    step="1000"
+                    value={options.chunkSize || 15000}
                     onChange={(e) =>
                       onOptionsChange({ ...options, chunkSize: parseInt(e.target.value, 10) })
                     }
                     className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
                   />
+                  <div className="flex justify-between text-[10px] text-zinc-400">
+                    <span>2.000 chr (Küçük)</span>
+                    <span>15.000 chr (Standart)</span>
+                    <span>35.000 chr (Turbo)</span>
+                  </div>
                 </div>
+              </div>
+
+              <div className="bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                    Eşzamanlı İstek (Concurrency)
+                  </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {options.concurrency}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="1"
+                  value={options.concurrency}
+                  onChange={(e) =>
+                    onOptionsChange({ ...options, concurrency: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg cursor-pointer"
+                />
+                <p className="text-[11px] text-zinc-500">
+                  Paralel gönderilecek istek sayısı. Çeviride bağlam tutarlılığı için 1 önerilir.
+                </p>
               </div>
 
               {/* Collapsible System Prompt */}

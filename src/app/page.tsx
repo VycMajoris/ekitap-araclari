@@ -60,7 +60,7 @@ const DEFAULT_OPTIONS: ProcessingOptions = {
   geminiApiKey: '',
   model: 'gemini-3.7-flash',
   concurrency: 1,
-  chunkSize: 3000,
+  chunkSize: 15000,
   useRegexPreClean: true,
   useLlm: false,
   scanMode: 'rules_only',
@@ -153,6 +153,12 @@ export default function Home() {
           : 'meta-llama/llama-3.3-70b-instruct:free'
       );
       const storedDevMode = localStorage.getItem('epub_ocr_dev_mode') === 'true';
+      const storedChunkSizeRaw = localStorage.getItem('epub_ocr_chunk_size');
+      const storedChunkSize = storedChunkSizeRaw ? parseInt(storedChunkSizeRaw, 10) : 15000;
+      const validChunkSize = !isNaN(storedChunkSize) && storedChunkSize >= 2000 && storedChunkSize <= 40000 ? storedChunkSize : 15000;
+      const storedConcurrencyRaw = localStorage.getItem('epub_ocr_concurrency');
+      const storedConcurrency = storedConcurrencyRaw ? parseInt(storedConcurrencyRaw, 10) : 1;
+      const validConcurrency = !isNaN(storedConcurrency) && storedConcurrency >= 1 && storedConcurrency <= 4 ? storedConcurrency : 1;
       const storedTaskType = (localStorage.getItem('ekitap_task_type') as TaskType) || 'ocr_fix';
       const storedSourceLang = localStorage.getItem('ekitap_source_lang') || 'auto';
       const storedTargetLang = localStorage.getItem('ekitap_target_lang') || 'tr';
@@ -210,6 +216,8 @@ export default function Home() {
         customOpenAiModel: storedOpenAiModel,
         antigravityAuth,
         model: storedModel,
+        concurrency: validConcurrency,
+        chunkSize: validChunkSize,
         scanMode: effectiveScanMode,
         useLlm: effectiveUseLlm,
         isDevMode: storedDevMode,
@@ -272,6 +280,8 @@ export default function Home() {
         localStorage.removeItem('epub_ocr_antigravity_auth');
       }
       localStorage.setItem('epub_ocr_model', newOptions.model);
+      if (newOptions.chunkSize) localStorage.setItem('epub_ocr_chunk_size', String(newOptions.chunkSize));
+      if (newOptions.concurrency) localStorage.setItem('epub_ocr_concurrency', String(newOptions.concurrency));
       localStorage.setItem('epub_ocr_dev_mode', String(Boolean(newOptions.isDevMode)));
     }
   };

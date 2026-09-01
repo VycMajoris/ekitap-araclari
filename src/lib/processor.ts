@@ -132,7 +132,7 @@ export interface QueuedBlockItem {
   block: TextBlock;
 }
 
-function createQueuedBlockBatches(items: QueuedBlockItem[], maxCharsPerBatch: number = 10000): QueuedBlockItem[][] {
+function createQueuedBlockBatches(items: QueuedBlockItem[], maxCharsPerBatch: number = 15000): QueuedBlockItem[][] {
   const batches: QueuedBlockItem[][] = [];
   let currentBatch: QueuedBlockItem[] = [];
   let currentLength = 0;
@@ -166,14 +166,14 @@ export function parseBatchResponse(response: string, expectedCount: number): str
 
   const sanitizeContent = (raw: string): string => {
     return raw
-      .replace(/(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
-      .replace(/(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)/gi, '')
+      .replace(/\*{0,2}(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)\*{0,2}/gi, '')
+      .replace(/\*{0,2}(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)\*{0,2}/gi, '')
       .replace(/\s{2,}/g, ' ')
       .replace(/\s+<\//g, '</')
       .trim();
   };
 
-  const closedTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>)([\s\S]*?)(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]\1(?:\]|>)/gi;
+  const closedTagRegex = /\*{0,2}(?:\[|<)(?:BLOCK|BLOK)[_\s]?(\d+)(?:\]|>)\*{0,2}:?([\s\S]*?)\*{0,2}(?:\[\/|<(?:\/)?)(?:BLOCK|BLOK)[_\s]?\1(?:\]|>)\*{0,2}/gi;
   let match: RegExpExecArray | null;
   while ((match = closedTagRegex.exec(cleanResponse)) !== null) {
     const index = parseInt(match[1], 10);
@@ -184,7 +184,7 @@ export function parseBatchResponse(response: string, expectedCount: number): str
   }
 
   if (blockMap.size < expectedCount) {
-    const openTagRegex = /(?:\[|<)(?:BLOCK|BLOK)[_\s](\d+)(?:\]|>):?([\s\S]*?)(?=(?:\[|<)(?:BLOCK|BLOK)[_\s]\d+(?:\]|>)|$)/gi;
+    const openTagRegex = /\*{0,2}(?:\[|<)(?:BLOCK|BLOK)[_\s]?(\d+)(?:\]|>)\*{0,2}:?([\s\S]*?)(?=\*{0,2}(?:\[|<)(?:BLOCK|BLOK)[_\s]?\d+(?:\]|>)|$)/gi;
     while ((match = openTagRegex.exec(cleanResponse)) !== null) {
       const index = parseInt(match[1], 10);
       const content = sanitizeContent(match[2]);
@@ -866,7 +866,7 @@ export async function processEpubChapters(
   }
 
   if (globalSuspiciousQueue.length > 0 && options.useLlm && isProviderReady(options) && !signal?.aborted) {
-    const defaultChunkSize = isTranslation ? 4500 : 10000;
+    const defaultChunkSize = 15000;
     const batches = createQueuedBlockBatches(globalSuspiciousQueue, options.chunkSize || defaultChunkSize);
 
     stats.phase = 'ai';

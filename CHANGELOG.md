@@ -5,6 +5,20 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.5.1] - 2026-09-01
+
+### 🚀 Yeni Özellikler ve Performans Optimizasyonları (Added & Optimized)
+* **⚡ Yüksek Token Verimi & Genişletilmiş Paket Boyutu (Batch Size 15.000 chr):**
+  - Yapay zekâ çeviri ve OCR onarım motorunda varsayılan paket boyutu `3.000` karakterden **`15.000` karaktere (~2.500 kelime / ~3.500 token)** yükseltildi.
+  - Tek istekte gönderilen metin hacmi 5 katına çıkarılarak günlük istek sınırı (RPD) gereksiz tüketilmeden günde çevrilebilecek kitap/yazı kapasitesi 5–8 kat artırıldı.
+* **🎛️ Ayarlar Panelinde Hızlı Paket Hazır Ayarları & Dinamik Slider (`src/components/SettingsModal.tsx`):**
+  - Kullanıcıların tek tıkla geçiş yapabileceği `5.000 chr` (Düşük Donanım / Lokal Ollama), `15.000 chr` (Önerilen & Yüksek Verim) ve `25.000 chr` (Turbo Hız) hazır butonları eklendi.
+  - `2.000 - 35.000` karakter aralığında çalışan akıcı paket boyutu slider'ı ve anlık kelime hesabı gösterimi eklendi. Tercihler `localStorage` üzerinde kalıcı hale getirildi.
+* **🛡️ Büyük Paket Ayrıştırma Dayanıklılığı (`src/lib/processor.ts`):**
+  - 25+ paragraftan oluşan büyük paket yanıtlarında Markdown etiketlemeleri ve indeks kaymalarını tolere eden güçlendirilmiş ayrıştırıcı mimarisine geçildi.
+
+---
+
 ## [0.5.0] - 2026-08-30
 
 ### 🚀 Yeni Özellikler ve Mimari İyileştirmeler (Added & Fixed)

@@ -870,6 +870,43 @@ assert(!extractedBodyPage.bodyParagraphs[0].text.includes('Cilt[^p1_1]'), 'Must 
 assert(!extractedBodyPage.bodyParagraphs[0].text.includes('Madde[^p1_1]'), 'Must NOT convert plain "Madde 1" into footnote reference');
 console.log('PDF Footnote Non-False-Positive passed 100% successfully!');
 
+// 20. Test Large Batch (15k-25k chars, 25+ blocks) Response Parsing Resilience
+console.log('Testing Large Batch (15k-25k chars, 25+ blocks) Response Parsing Resilience...');
+const largeBatchBlockCount = 25;
+let simulatedResponse = '';
+const expectedBlockTexts = [];
+
+for (let i = 0; i < largeBatchBlockCount; i++) {
+  const paragraphText = `<p>Bu paragraf ${i}. blok içeriğidir ve büyük paket token verimini test etmek için yeterince uzun edebi bir metin parçası içermektedir. Paragraf detayları burada devam eder.</p>`;
+  expectedBlockTexts.push(paragraphText);
+  if (i % 3 === 0) {
+    simulatedResponse += `**[BLOCK_${i}]**\n${paragraphText}\n**[/BLOCK_${i}]**\n\n`;
+  } else if (i % 3 === 1) {
+    simulatedResponse += `[BLOCK_${i}]:\n${paragraphText}\n[/BLOCK_${i}]\n\n`;
+  } else {
+    simulatedResponse += `<BLOCK_${i}>${paragraphText}</BLOCK_${i}>\n\n`;
+  }
+}
+
+assert(simulatedResponse.length > 4000, 'Simulated batch must contain multi-thousand characters');
+const parsedLargeBatch = parseBatchResponse(simulatedResponse, largeBatchBlockCount);
+assert.strictEqual(parsedLargeBatch.length, largeBatchBlockCount, `Must parse exactly ${largeBatchBlockCount} blocks`);
+
+for (let i = 0; i < largeBatchBlockCount; i++) {
+  assert(parsedLargeBatch[i].includes(`Bu paragraf ${i}. blok içeriğidir`), `Block ${i} content must match exactly without shifting`);
+}
+
+let oneBasedResponse = '';
+for (let i = 1; i <= largeBatchBlockCount; i++) {
+  oneBasedResponse += `[BLOCK_${i}]\n<p>1-tabanlı blok metni ${i}</p>\n[/BLOCK_${i}]\n\n`;
+}
+const parsedOneBased = parseBatchResponse(oneBasedResponse, largeBatchBlockCount);
+assert.strictEqual(parsedOneBased.length, largeBatchBlockCount);
+assert(parsedOneBased[0].includes('1-tabanlı blok metni 1'), 'First index must map to 0');
+assert(parsedOneBased[24].includes('1-tabanlı blok metni 25'), 'Last index must map to 24');
+
+console.log('Large Batch Response Parsing Resilience passed 100% successfully!');
+
 
 
 
