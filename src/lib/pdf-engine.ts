@@ -1,8 +1,8 @@
-import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds, EpubImageAsset, FootnoteItem } from './types';
+import { EpubMetadata, EpubChapter, TextBlock, PdfCropBounds, EpubImageAsset, FootnoteItem, PdfChapterMode } from './types';
 import { createEpubFromChapters } from './epub-engine';
 import JSZip from 'jszip';
 
-export type { PdfCropBounds, EpubImageAsset, FootnoteItem } from './types';
+export type { PdfCropBounds, EpubImageAsset, FootnoteItem, PdfChapterMode } from './types';
 
 export interface PdfParseProgress {
   currentPage: number;
@@ -13,6 +13,7 @@ export interface PdfParseProgress {
 
 export interface PdfParseOptions {
   pagesPerChapterFallback?: number;
+  chapterMode?: PdfChapterMode;
   headerMarginPercent?: number;
   footerMarginPercent?: number;
   cropBounds?: PdfCropBounds;
@@ -81,7 +82,7 @@ const SUPERSCRIPT_MAP: Record<string, string> = {
   '‡': '2',
 };
 
-const FOOTNOTE_START_REGEX = /^(?:\[\^?(\d{1,2}|[*†‡])\]|\^?(\d{1,2}|[*†‡])[\.\)]|\^?(\d{1,2}|[*†‡])(?=\s+[A-ZÇĞİÖŞÜa-zçğıöşü])|([¹²³⁴⁵⁶⁷⁸⁹*†‡])|(?:\b(?:[dD]ipnot|[nN]ote|[fF]ootnote)\s*(\d{1,2})?[:.]))\s*(.*)$/u;
+const FOOTNOTE_START_REGEX = /^(?:\[\^?(\d{1,2}|[*†‡])\]|\^?(\d{1,2}|[*†‡])[\.\)]|\^?(\d{1,2}|[*†‡])(?=\s+["'A-ZÇĞİÖŞÜ0-9])|([¹²³⁴⁵⁶⁷⁸⁹*†‡])|(?:\b(?:[dD]ipnot|[nN]ote|[fF]ootnote)\s*(\d{1,2})?[:.]))\s*(.*)$/u;
 
 const FINISHED_WORD_OR_SUFFIX_REGEX = /(?:[dt][ıiuü]m|[dt][ıiuü]n|[dt][ıiuü]k|[dt][ıiuü]n[ıiuü]z|[dt][ıiuü]ler|m[ıiuü]şt[ıiuü]m|m[ıiuü]şt[ıiuü]n|m[ıiuü]şt[ıiuü]k|m[ıiuü]şt[ıiuü]ler|m[ıiuü]ş|m[ıiuü]şiz|m[ıiuü]şsiniz|m[ıiuü]şler|[ıiuü]?yor|[ıiuü]?yorum|[ıiuü]?yorsun|[ıiuü]?yoruz|[ıiuü]?yorsunuz|[ıiuü]?yorlar|[ae]c[ae]k|[ae]c[ae]ğ[ıi]m|[ae]c[ae]ksin|[ae]c[ae]ğiz|[ae]c[ae]ksiniz|[ae]c[ae]kl[ae]r|[ıiuü]r|[ae]r|m[ae]l[ıi]|m[ae]l[ıi]y[ıi]m|m[ae]l[ıi]sin|m[ae]l[ıi]yiz|s[ae]m|s[ae]n|s[ae]k|s[ae]niz|s[ae]l[ae]r|[ae]r[ae]k|[ıiuü]nc[ae]|d[ıiuü]ğ[ıi]|d[ıiuü]kt[ae]n|m[ae]d[ae]n|y[ae]n|[ae]n|d[ıiuü]kç[ae]|k[ae]n|[dt][ıiuü]r|[dt][ıiuü]|[dt][ae]n|[dt][ae]|l[ae]r|l[ae]ri|l[ae]re|l[ae]rd[ae]|l[ae]rd[ae]n|[ıiuü]n|[ıiuü]m|[ıiuü]z|s[ıiuü]|s[ıiuü]n[ıiuü]|s[ıiuü]n[ae]|s[ıiuü]nd[ae]|s[ıiuü]nd[ae]n|y[ae]|y[ıiuü]|n[ıiuü]n|n[ıiuü]|n[ae]|nd[ae]|nd[ae]n|'dur|'dür|'dır|'dir|'tur|'tür|'tır|'tir)$/i;
 
@@ -1011,13 +1012,16 @@ function reflowLinesToParagraphs(
       const lastLineText = currentPara[currentPara.length - 1];
       const prevLineEndedWithSentencePunctuation = /[.?!:»"']\s*$/.test(lastLineText);
 
+      const indentThreshold = Math.max(8, medianFontSize * 1.25);
+      const shortLineThreshold = Math.max(25, medianFontSize * 4.0);
+
       if (/^[—–-]\s+[A-ZÇĞİÖŞÜa-zçğıöşü]/.test(text)) {
         isNewParagraph = true;
-      } else if (lineGap > expectedLineHeight * 1.65) {
+      } else if (lineGap > expectedLineHeight * 1.8) {
         isNewParagraph = true;
       } else if (prevLineEndedWithSentencePunctuation) {
-        const isIndented = line.minX > pageLeftMargin + 10;
-        const prevLineWasShort = prevLine.maxX < pageRightMargin - 40;
+        const isIndented = line.minX > pageLeftMargin + indentThreshold;
+        const prevLineWasShort = prevLine.maxX < pageRightMargin - shortLineThreshold;
 
         if (isIndented || prevLineWasShort) {
           isNewParagraph = true;
@@ -1067,6 +1071,7 @@ export function extractFootnotesAndBodyFromPage(
     if (!text) continue;
 
     const isNearBottom = line.y >= pageHeight * 0.45;
+    const isVeryNearBottom = line.y >= pageHeight * 0.65;
     const isSmallerFont = line.fontSize <= medianFontSize * 0.94;
     const isSeparatorLine = /^[-—_~=·•\s]{3,}$/.test(text);
 
@@ -1076,24 +1081,28 @@ export function extractFootnotesAndBodyFromPage(
     }
 
     const fnMatch = isNearBottom ? text.match(FOOTNOTE_START_REGEX) : null;
+    const hasValidFnFormat = Boolean(
+      fnMatch &&
+      (fnMatch[1] || fnMatch[2] || fnMatch[4] || fnMatch[5] || /^[A-ZÇĞİÖŞÜ0-9"']/.test(fnMatch[6]?.trim() || ''))
+    );
 
-    if (fnMatch && (isSmallerFont || isInsideFootnoteArea)) {
+    if (hasValidFnFormat && (isSmallerFont || isInsideFootnoteArea || isVeryNearBottom)) {
       isInsideFootnoteArea = true;
       if (currentFootnote) {
         footnoteDefs.push(currentFootnote);
       }
-      const rawNum = fnMatch[1] || fnMatch[2] || fnMatch[3] || fnMatch[4] || fnMatch[5] || '1';
+      const rawNum = fnMatch![1] || fnMatch![2] || fnMatch![3] || fnMatch![4] || fnMatch![5] || '1';
       const cleanNum = SUPERSCRIPT_MAP[rawNum] || rawNum;
       const fnId = `p${pageNumber}_${cleanNum}`;
       currentFootnote = {
         num: cleanNum,
         id: fnId,
-        textLines: [fnMatch[6].trim()],
+        textLines: [fnMatch![6].trim()],
       };
       continue;
     }
 
-    if (isInsideFootnoteArea && currentFootnote && isSmallerFont) {
+    if (isInsideFootnoteArea && currentFootnote && (isSmallerFont || isVeryNearBottom)) {
       currentFootnote.textLines.push(text);
       continue;
     }
@@ -1120,6 +1129,14 @@ export function extractFootnotesAndBodyFromPage(
     for (const fn of footnoteDefs) {
       const bracketPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ0-9.,?!:»"'])(?:\\s*\\[${fn.num}\\]|\\s*\\(${fn.num}\\))(?=\\s+|[,.!?:;]|$)`, 'g');
       scopedText = scopedText.replace(bracketPattern, `$1[^${fn.id}]`);
+
+      const caretPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ.,?!:»"'])\\^${fn.num}(?=[\\s.,!?:;»"']|$)`, 'g');
+      scopedText = scopedText.replace(caretPattern, `$1[^${fn.id}]`);
+
+      if (/^\d{1,2}$/.test(fn.num)) {
+        const directAttachedPattern = new RegExp(`([a-zA-ZçğıöşüÇĞİÖŞÜ])${fn.num}(?=[\\s.,!?:;»"']|$)`, 'g');
+        scopedText = scopedText.replace(directAttachedPattern, `$1[^${fn.id}]`);
+      }
     }
 
     return {
@@ -1206,6 +1223,7 @@ export async function parsePdf(
   };
 
   const allPageParagraphs: { page: number; paragraphs: ExtractedParagraph[] }[] = [];
+  const allFootnotesList: ExtractedParagraph[] = [];
   const fontSizes: number[] = [];
   const allExtractedImages: EpubImageAsset[] = [];
   const imageCounterRef = { count: 0 };
@@ -1336,7 +1354,7 @@ export async function parsePdf(
         viewport.height
       );
       pageParagraphs.push(...bodyParagraphs);
-      pageParagraphs.push(...footnoteParagraphs);
+      allFootnotesList.push(...footnoteParagraphs);
     }
 
     if (pageImages.length > 0) {
@@ -1383,7 +1401,6 @@ export async function parsePdf(
         continue;
       }
       if (p.isFootnote || (p.text.startsWith('[^p') && p.text.includes(']:'))) {
-        consolidatedParagraphs.push(p);
         continue;
       }
 
@@ -1398,8 +1415,17 @@ export async function parsePdf(
       }
 
       if (consolidatedParagraphs.length > 0 && !p.isHeading) {
-        const lastP = consolidatedParagraphs[consolidatedParagraphs.length - 1];
-        if (!lastP.isHeading && !lastP.isImageHtml && !lastP.isFootnote) {
+        let lastNormalIndex = -1;
+        for (let k = consolidatedParagraphs.length - 1; k >= 0; k--) {
+          const cand = consolidatedParagraphs[k];
+          if (!cand.isHeading && !cand.isImageHtml && !cand.isFootnote && !cand.text.startsWith('[^p')) {
+            lastNormalIndex = k;
+            break;
+          }
+        }
+
+        if (lastNormalIndex >= 0) {
+          const lastP = consolidatedParagraphs[lastNormalIndex];
           const lastText = lastP.text.trim();
           const lastEndsWithPunct = /[.?!:»"']\s*$/.test(lastText);
           const currentStartsWithLower = /^[a-zçğıöşü]/.test(trimmed);
@@ -1420,8 +1446,10 @@ export async function parsePdf(
     }
   }
 
+  const chapterMode = options?.chapterMode || 'auto';
+
   for (const p of consolidatedParagraphs) {
-    if (p.isImageHtml || p.isFootnote) {
+    if (p.isImageHtml) {
       if (!currentChapter) {
         currentChapter = {
           title: metadata.title || 'Bölüm 1',
@@ -1435,19 +1463,17 @@ export async function parsePdf(
       continue;
     }
 
-    if (p.isHeading && p.text.length < 80) {
+    if (chapterMode === 'auto' && p.isHeading && p.text.length < 80) {
       const normalizedTitle = collapseLetterSpacing(p.text.trim());
       const isMajorChapterBreak =
         /^(?:(?:BİRİNCİ|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI|YEDİNCİ|SEKİZİNCİ|DOKUZUNCU|ONUNCU|ON\s+BİRİNCİ|ON\s+İKİNCİ|ON\s+ÜÇÜNCÜ|ON\s+DÖRDÜNCÜ|ON\s+BEŞİNCİ|ON\s+ALTINCI|ON\s+YEDİNCİ|ON\s+SEKİZİNCİ|ON\s+DOKUZUNCU|YİRMİNCİ|YİRMİ\s+BİRİNCİ|YİRMİ\s+İKİNCİ)\s+(?:BÖLÜM|KISIM)|(?:BÖLÜM|KISIM|CHAPTER|PART)\s*(?:[0-9]{1,3}|[IVXLCDM]{1,6})?|GİRİŞ|ÖNSÖZ|SON\s*SÖZ|EPİLOG|PROLOG|İÇİNDEKİLER|iÇiNDEKiLER|[0-9]{1,2}\.?$|[IVXLCDM]{1,6}\.?$)/i.test(
           normalizedTitle
         );
 
-      if (currentChapter && (isMajorChapterBreak || currentChapter.paragraphs.length >= 4)) {
-        if (currentChapter.paragraphs.length > 0) {
-          currentChapter.endPage = p.pageNumber;
-          chaptersDrafts.push(currentChapter);
-          detectedExplicitChapters++;
-        }
+      if (currentChapter && isMajorChapterBreak && currentChapter.paragraphs.length >= 2) {
+        currentChapter.endPage = p.pageNumber;
+        chaptersDrafts.push(currentChapter);
+        detectedExplicitChapters++;
 
         currentChapter = {
           title: normalizedTitle,
@@ -1469,7 +1495,7 @@ export async function parsePdf(
 
     if (!currentChapter) {
       currentChapter = {
-        title: metadata.title || 'Bölüm 1',
+        title: chapterMode === 'fixed_pages' ? `Kısım 1 (Sayfa 1-${pagesPerChapterFallback})` : (metadata.title || 'Bölüm 1'),
         startPage: p.pageNumber,
         endPage: p.pageNumber,
         paragraphs: [],
@@ -1479,17 +1505,20 @@ export async function parsePdf(
     currentChapter.paragraphs.push(p);
     currentChapter.endPage = p.pageNumber;
 
-    if (
-      detectedExplicitChapters === 0 &&
-      currentChapter &&
-      currentChapter.paragraphs.length >= 30 &&
-      p.pageNumber % pagesPerChapterFallback === 0
-    ) {
+    const shouldSplitByPages =
+      chapterMode === 'fixed_pages'
+        ? currentChapter.paragraphs.length >= 20 && p.pageNumber >= currentChapter.startPage + pagesPerChapterFallback
+        : detectedExplicitChapters === 0 && currentChapter.paragraphs.length >= 35 && p.pageNumber % pagesPerChapterFallback === 0;
+
+    if (shouldSplitByPages) {
       currentChapter.endPage = p.pageNumber;
       chaptersDrafts.push(currentChapter);
       const nextStart = p.pageNumber + 1;
+      const nextEnd = nextStart + pagesPerChapterFallback - 1;
       currentChapter = {
-        title: `Bölüm ${chaptersDrafts.length + 1} (Sayfa ${nextStart})`,
+        title: chapterMode === 'fixed_pages'
+          ? `Kısım ${chaptersDrafts.length + 1} (Sayfa ${nextStart}-${nextEnd})`
+          : `Bölüm ${chaptersDrafts.length + 1} (Sayfa ${nextStart})`,
         startPage: nextStart,
         endPage: nextStart,
         paragraphs: [],
@@ -1508,8 +1537,19 @@ export async function parsePdf(
     message: 'EPUB arşivi ve görsel bloklar oluşturuluyor...',
   });
 
+  const pendingFootnotesMap = new Map<string, { tag: string; body: string; pageNumber: number }>();
+  for (const fn of allFootnotesList) {
+    const match = fn.text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
+    if (match) {
+      const tag = match[1];
+      const fnBody = match[2].trim();
+      pendingFootnotesMap.set(tag, { tag, body: fnBody, pageNumber: fn.pageNumber });
+    }
+  }
+
   const chapters: EpubChapter[] = [];
   let totalBookFootnotes = 0;
+  const assignedFootnoteTags = new Set<string>();
 
   for (let cIdx = 0; cIdx < chaptersDrafts.length; cIdx++) {
     const draft = chaptersDrafts[cIdx];
@@ -1522,47 +1562,43 @@ export async function parsePdf(
     const tagToFootnoteMap = new Map<string, FootnoteItem>();
 
     for (const p of draft.paragraphs) {
-      if (p.isFootnote || (p.text.startsWith('[^') && p.text.includes(']:'))) {
-        const match = p.text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
-        if (match) {
-          const tag = match[1];
-          const fnBody = match[2].trim();
+      if (!p.isImageHtml) {
+        const refMatches = Array.from(p.text.matchAll(/\[\^([^\]]+)\]/g));
+        for (const rm of refMatches) {
+          const tag = rm[1];
           if (!tagToFootnoteMap.has(tag)) {
+            const pending = pendingFootnotesMap.get(tag);
             const fnItem: FootnoteItem = {
               id: `fn-${fnSeq}`,
               rawTag: `[^${tag}]`,
               number: fnSeq,
-              text: fnBody,
+              text: pending?.body || '',
               chapterId,
-              pageNumber: p.pageNumber,
+              pageNumber: pending?.pageNumber || p.pageNumber,
             };
             tagToFootnoteMap.set(tag, fnItem);
             chapterFootnotes.push(fnItem);
+            assignedFootnoteTags.add(tag);
             fnSeq++;
           }
         }
       }
     }
 
-    for (const p of draft.paragraphs) {
-      if (!p.isFootnote && !p.isImageHtml) {
-        const refMatches = Array.from(p.text.matchAll(/\[\^([^\]]+)\]/g));
-        for (const rm of refMatches) {
-          const tag = rm[1];
-          if (!tagToFootnoteMap.has(tag)) {
-            const fnItem: FootnoteItem = {
-              id: `fn-${fnSeq}`,
-              rawTag: `[^${tag}]`,
-              number: fnSeq,
-              text: '',
-              chapterId,
-              pageNumber: p.pageNumber,
-            };
-            tagToFootnoteMap.set(tag, fnItem);
-            chapterFootnotes.push(fnItem);
-            fnSeq++;
-          }
-        }
+    for (const [tag, pending] of pendingFootnotesMap.entries()) {
+      if (!assignedFootnoteTags.has(tag) && pending.pageNumber >= draft.startPage && pending.pageNumber <= draft.endPage) {
+        const fnItem: FootnoteItem = {
+          id: `fn-${fnSeq}`,
+          rawTag: `[^${tag}]`,
+          number: fnSeq,
+          text: pending.body,
+          chapterId,
+          pageNumber: pending.pageNumber,
+        };
+        tagToFootnoteMap.set(tag, fnItem);
+        chapterFootnotes.push(fnItem);
+        assignedFootnoteTags.add(tag);
+        fnSeq++;
       }
     }
 
@@ -1590,28 +1626,6 @@ export async function parsePdf(
         continue;
       }
 
-      if (p.isFootnote || (p.text.startsWith('[^') && p.text.includes(']:'))) {
-        const match = p.text.match(/^\[\^([^\]]+)\]:\s*([\s\S]+)$/);
-        const tag = match ? match[1] : (p.footnoteId || '');
-        const fnItem = tagToFootnoteMap.get(tag);
-        const fnNum = fnItem ? fnItem.number : 1;
-        const fnBody = match ? match[2].trim() : p.text;
-        const escapedFootnoteBody = escapeXml(fnBody);
-        const asideHtml = `<aside id="fn-${fnNum}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fnNum}" class="epub-footnote-backlink">${fnNum}.</a> ${escapedFootnoteBody}</p></aside>`;
-
-        blocks.push({
-          id: `${chapterNum}-${blockIdx++}`,
-          elementTag: 'aside',
-          originalHtml: asideHtml,
-          originalText: `[^${tag}]: ${fnBody}`,
-          correctedHtml: asideHtml,
-          correctedText: `[^${tag}]: ${fnBody}`,
-          status: 'completed',
-          diffCount: 0,
-        });
-        continue;
-      }
-
       const tag = p.isHeading ? 'h2' : 'p';
       let formattedText = escapeXml(p.text);
       formattedText = formattedText.replace(/\[\^([^\]]+)\]/g, (_m, refTag) => {
@@ -1625,13 +1639,18 @@ export async function parsePdf(
       const elementHtml = `<${tag}>${formattedText}</${tag}>`;
       htmlContent += `    ${elementHtml}\n`;
 
+      const plainTextForDiff = p.text.replace(/\[\^([^\]]+)\]/g, (_m, refTag) => {
+        const fnItem = tagToFootnoteMap.get(refTag);
+        return fnItem ? `[${fnItem.number}]` : '';
+      });
+
       blocks.push({
         id: `${chapterNum}-${blockIdx++}`,
         elementTag: tag,
         originalHtml: formattedText,
-        originalText: p.text,
+        originalText: plainTextForDiff,
         correctedHtml: formattedText,
-        correctedText: p.text,
+        correctedText: plainTextForDiff,
         status: 'pending',
         diffCount: 0,
       });
@@ -1641,7 +1660,19 @@ export async function parsePdf(
       htmlContent += `    <section class="epub-footnotes" epub:type="footnotes">\n`;
       for (const fn of chapterFootnotes) {
         const escapedFootnoteBody = escapeXml(fn.text);
-        htmlContent += `      <aside id="fn-${fn.number}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fn.number}" class="epub-footnote-backlink">${fn.number}.</a> ${escapedFootnoteBody}</p></aside>\n`;
+        const asideHtml = `<aside id="fn-${fn.number}" class="epub-footnote" epub:type="footnote"><p><a href="#ref-${fn.number}" class="epub-footnote-backlink">${fn.number}.</a> ${escapedFootnoteBody}</p></aside>`;
+        htmlContent += `      ${asideHtml}\n`;
+
+        blocks.push({
+          id: `${chapterNum}-${blockIdx++}`,
+          elementTag: 'aside',
+          originalHtml: asideHtml,
+          originalText: `${fn.number}. ${fn.text}`,
+          correctedHtml: asideHtml,
+          correctedText: `${fn.number}. ${fn.text}`,
+          status: 'completed',
+          diffCount: 0,
+        });
       }
       htmlContent += `    </section>\n`;
     }

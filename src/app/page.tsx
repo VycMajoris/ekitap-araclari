@@ -26,6 +26,7 @@ import {
   TaskType,
   TranslationStyle,
   PdfCropBounds,
+  PdfChapterMode,
 } from '@/lib/types';
 import { parseEpub, packageEpub } from '@/lib/epub-engine';
 import { parsePdf } from '@/lib/pdf-engine';
@@ -223,7 +224,7 @@ export default function Home() {
         isDevMode: storedDevMode,
       }));
 
-      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.5.0') === 'true';
+      const hideNotice = localStorage.getItem('ekitap_hide_notice_v0.5.2') === 'true';
       if (!hideNotice) {
         const timer = setTimeout(() => {
           setIsAiNoticeOpen(true);
@@ -356,7 +357,8 @@ export default function Home() {
   const handlePdfCropConfirm = async (
     cropBounds: PdfCropBounds,
     preserveAllLines: boolean,
-    extractImages: boolean
+    extractImages: boolean,
+    chapterMode?: PdfChapterMode
   ) => {
     if (!pendingPdfFile) return;
     const uploadedFile = pendingPdfFile;
@@ -370,6 +372,7 @@ export default function Home() {
         cropBounds,
         preserveAllLines,
         extractImages,
+        chapterMode,
         onProgress: (p) => {
           if (p.message) setLoadingMessage(p.message);
         },
@@ -752,10 +755,10 @@ export default function Home() {
         <div className="bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 border border-emerald-200/80 dark:border-emerald-900/40 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-              v0.5.0
+              v0.5.2
             </span>
             <span>
-              <strong>Yenilik:</strong> Sıfır kaymalı EPUB bölüm onarımı, Cloudflare Pages Edge KV sayaç motoru ve Türkçe şapkalı harf hassasiyeti eklendi.
+              <strong>Yenilik:</strong> 15.000 karakterlik yüksek token verimi, dinamik PDF paragraf reflow mantığı ve sayfa geçişlerinde kesintisiz dipnot birleştirme devrede.
             </span>
           </div>
           <button

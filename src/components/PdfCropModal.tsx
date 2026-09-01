@@ -19,6 +19,7 @@ import {
 import {
   PdfCropBounds,
   PdfRepresentativePageInfo,
+  PdfChapterMode,
   findRepresentativePdfPage,
   getPdfJs,
 } from '@/lib/pdf-engine';
@@ -27,7 +28,7 @@ interface PdfCropModalProps {
   isOpen: boolean;
   file: File | null;
   onClose: () => void;
-  onConfirm: (cropBounds: PdfCropBounds, preserveAllLines: boolean, extractImages: boolean) => void;
+  onConfirm: (cropBounds: PdfCropBounds, preserveAllLines: boolean, extractImages: boolean, chapterMode?: PdfChapterMode) => void;
 }
 
 export const PdfCropModal: React.FC<PdfCropModalProps> = ({
@@ -50,6 +51,7 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
   });
   const [preserveAllLines, setPreserveAllLines] = useState<boolean>(false);
   const [extractImages, setExtractImages] = useState<boolean>(false);
+  const [chapterMode, setChapterMode] = useState<PdfChapterMode>('auto');
   const [activePreset, setActivePreset] = useState<'auto' | 'full' | 'novel' | 'wide' | 'custom'>('auto');
   const [showGuide, setShowGuide] = useState<boolean>(false);
 
@@ -191,7 +193,7 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
   };
 
   const handleConfirm = () => {
-    onConfirm(cropBounds, preserveAllLines, extractImages);
+    onConfirm(cropBounds, preserveAllLines, extractImages, chapterMode);
   };
 
   if (!isOpen) return null;
@@ -577,6 +579,39 @@ export const PdfCropModal: React.FC<PdfCropModalProps> = ({
                     </p>
                   </div>
                 </label>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-purple-500/5 dark:bg-purple-950/20 border border-purple-500/20 text-xs space-y-2">
+                <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100">
+                  <BookOpen className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Bölümleme Mantığı</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setChapterMode('auto')}
+                    className={`p-2 rounded-xl border text-left text-[11px] font-medium transition-all cursor-pointer ${
+                      chapterMode === 'auto'
+                        ? 'bg-purple-100 dark:bg-purple-950/80 border-purple-400 text-purple-900 dark:text-purple-200 shadow-2xs font-bold'
+                        : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <span className="block font-bold">Akıllı Başlık Algılama</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-0.5">BÖLÜM, KISIM gibi ana başlıkları otomatik bulur.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChapterMode('fixed_pages')}
+                    className={`p-2 rounded-xl border text-left text-[11px] font-medium transition-all cursor-pointer ${
+                      chapterMode === 'fixed_pages'
+                        ? 'bg-purple-100 dark:bg-purple-950/80 border-purple-400 text-purple-900 dark:text-purple-200 shadow-2xs font-bold'
+                        : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <span className="block font-bold">Sabit Sayfa Bölümleme</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-0.5">Başlığı olmayan kitapları 15 sayfada bir böler.</span>
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -35,6 +35,8 @@ export interface PdfCropBounds {
   rightPercent: number; // 0 to 0.4
 }
 
+export type PdfChapterMode = 'auto' | 'fixed_pages';
+
 export interface TextBlock {
   id: string;
   elementTag: string; // 'p', 'h1', 'h2', 'li', 'blockquote', etc.

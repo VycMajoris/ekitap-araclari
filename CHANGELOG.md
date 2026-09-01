@@ -5,6 +5,25 @@ Format, [Keep a Changelog](https://keepachangelog.com/tr/1.0.0/) standardına da
 
 ---
 
+## [0.5.2] - 2026-09-01
+
+### 🚀 Yeni Özellikler ve Algoritmik İyileştirmeler (Added & Fixed)
+* **📏 Dinamik Font Boyutu Bazlı Paragraf Reflow Mantığı (`src/lib/pdf-engine.ts`):**
+  - Sabit piksel eşikleri yerine metnin `medianFontSize` değerine oranlı dinamik girinti (`medianFontSize * 1.25`) ve kısa satır (`medianFontSize * 4.0`) eşikleri getirildi.
+  - İki yana yaslanmış (justified) ve büyük fontlu metinlerde cümle ortasından gereksiz paragraf bölünmeleri engellendi.
+* **🔄 Sayfa Geçişlerinde Cümle Bütünlüğü ve Dipnot Atlama (`src/lib/pdf-engine.ts`):**
+  - Sayfa sonundaki dipnot ve görselleri atlayarak geriye dönük tarama yapan akıllı birleştirme algoritması eklendi. Sayfa sınırında yarım kalan cümleler dipnotlara takılmadan kesintisiz birleştirildi.
+* **📌 Güçlendirilmiş Dipnot ve Üst Simge Tespiti (`src/lib/pdf-engine.ts`):**
+  - Sayfanın alt %35'lik alanında (`isVeryNearBottom`) font boyutu eşit olsa bile dipnot tespiti sağlandı.
+  - Rakamdan sonra zorunlu büyük harf/rakam kuralı getirilerek OCR gürültülerinin dipnot sanılması önlendi; kelimeye bitişik üst simge numaraları (`Kelime1`) bağlandı.
+* **📑 Esnek Bölümleme ve Referans Bazlı Dipnot Yönlendirme (`src/lib/pdf-engine.ts`, `src/components/PdfCropModal.tsx`):**
+  - PDF aktarım modalına **Akıllı Başlık Algılama** ve **Sabit Sayfa Bölümleme (Kısım 1, 2...)** seçim seçenekleri eklendi.
+  - Dipnotlar merkezi havuzda toplanıp referans etiketinin (`[^pX_Y]`) bulunduğu doğru XHTML bölümüne aktarıldı.
+* **✨ Diff Viewer Sahte Değişiklik (Fake Diff) Giderimi (`src/lib/pdf-engine.ts`):**
+  - `TextBlock` başlangıç `originalText` metni kullanıcıya gösterilecek `[1]` formatına normalize edilerek sıfır diff ile başlatıldı; yapay sahte kırmızı/yeşil diff'ler tamamen temizlendi.
+
+---
+
 ## [0.5.1] - 2026-09-01
 
 ### 🚀 Yeni Özellikler ve Performans Optimizasyonları (Added & Optimized)

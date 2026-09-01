@@ -7,7 +7,7 @@
 Tarayıcı üzerinde çalışan, gizlilik odaklı, Türkçe dilbilgisi ve yapay zeka destekli e-kitap araç seti.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.2-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![Version](https://img.shields.io/badge/Version-v0.5.1-purple?style=flat)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v0.5.2-purple?style=flat)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Tests: 47 Passed](https://img.shields.io/badge/Tests-47%2F47%20Passed-success)](scripts/verify-fixes.mjs)
 

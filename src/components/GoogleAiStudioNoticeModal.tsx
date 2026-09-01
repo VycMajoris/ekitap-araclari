@@ -27,14 +27,14 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
 
   const handleClose = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.5.0', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.5.2', 'true');
     }
     onClose();
   };
 
   const handleGoToSettings = () => {
     if (dontShowAgain && typeof window !== 'undefined') {
-      localStorage.setItem('ekitap_hide_notice_v0.5.0', 'true');
+      localStorage.setItem('ekitap_hide_notice_v0.5.2', 'true');
     }
     onOpenGeminiSettings();
   };
@@ -57,10 +57,10 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             </div>
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                v0.5.0 Sürüm Yenilikleri
+                v0.5.2 Sürüm Yenilikleri
               </span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-white leading-snug">
-                eKitap Araçları v0.5.0 Yenilikleri
+                eKitap Araçları v0.5.2 Yenilikleri
               </h3>
             </div>
           </div>
@@ -71,7 +71,7 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
             <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-white text-xs">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Neler Yeni? (v0.5.0)</span>
+                <span>Neler Yeni? (v0.5.2)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                 Son Güncelleme
@@ -81,25 +81,37 @@ export const GoogleAiStudioNoticeModal: React.FC<GoogleAiStudioNoticeModalProps>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Sıfır Kaymalı EPUB Bölüm Onarımı:</strong> Heceleme tireleriyle bölünen paragraflar birleştirildiğinde bölüm genelindeki paragrafların kayması engellendi.
+                  <strong>⚡ Yüksek Token Verimi &amp; Genişletilmiş Paket Boyutu:</strong> Varsayılan işlem hacmi 3.000 karakterden <strong>15.000 karaktere (~3.500 token)</strong> çıkarıldı. Günlük model istek limiti harcanmadan günde işlenebilecek kitap kapasitesi 5 katına yükseltildi. Ayarlar panelinden 5k / 15k / 25k hazır şablonları eklendi.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Cloudflare Pages Edge KV Sayaç Motoru:</strong> Sunucusuz doğrudan edge worker üzerinde çalışan gerçek zamanlı küresel sayaç mimarisi devreye alındı.
+                  <strong>📏 Dinamik Font Bazlı Paragraf Reflow Mantığı:</strong> PDF&apos;ten metin aktarırken iki yana yaslanmış (justified) ve büyük puntolu metinlerde cümlelerin ortasından bölünmesi engellendi.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>🔄 Sayfa Geçişlerinde Kesintisiz Cümle Bütünlüğü:</strong> Sayfa sonlarında araya giren dipnot ve görsellere rağmen sayfa 1&apos;deki yarım kalan cümleler sayfa 2&apos;deki devamıyla kesintisiz birleştirildi.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>İnteraktif Açılır Pencere (Popup Footnote) &amp; EPUB 3 Dipnotları:</strong> PDF&apos;lerdeki dipnot numaralarını (¹, ², [1]) ve sayfa altı açıklamalarını otomatik algılayıp Apple Books, KOReader, Kindle ve Kobo için yerinde açılan interaktif popup kartlara dönüştürme eklendi.
+                  <strong>📌 Güçlendirilmiş Dipnot Tespiti &amp; Bölüm Yönlendirme:</strong> Sayfa altı dipnotları ana metinle aynı font boyutunda olsa dahi tespit edilir, referans etiketinin bulunduğu ilgili XHTML bölümüne aktarılır.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Türkçe Şapkalı Harf &amp; OCR Hassasiyeti:</strong> Edebi eserlerdeki şapkalı ünlüler (*hâlâ, rüzgâr, kâğıt*) anomali filtresinden çıkarılarak Türkçe yerel harf dönüşümleri korundu.
+                  <strong>📑 Esnek Bölümleme (Akıllı Başlık vs Sabit Sayfa):</strong> PDF aktarımında ana başlıkları otomatik algılama veya başlıksız metinler için 15 sayfada bir &ldquo;Kısım 1, Kısım 2&rdquo; şeklinde sabit bölme seçeneği sunuldu.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>✨ Sıfır Kaymalı Bölüm Onarımı &amp; Temiz Diff Önizleme:</strong> Heceleme tireleri birleştirildiğinde oluşan indeks kaymaları ve dipnotlu paragraflardaki sahte diff görüntüleri tamamen giderildi.
                 </span>
               </li>
             </ul>

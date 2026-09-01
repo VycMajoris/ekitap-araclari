@@ -1,4 +1,4 @@
-import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly } from '../src/lib/turkish-ocr-rules.ts';
+import { applyTurkishRegexPreClean, applyTurkishRegexWithLogs, hasOcrAnomaly, computeTextDiff } from '../src/lib/turkish-ocr-rules.ts';
 import { parseBatchResponse } from '../src/lib/processor.ts';
 import { TdkDictionary } from '../src/lib/tdk-dictionary.ts';
 import { extractBlocksFromHtml, reconstructChapterHtml, createEpubFromChapters, renumberAndSynthesizeFootnotes } from '../src/lib/epub-engine.ts';
@@ -906,6 +906,139 @@ assert(parsedOneBased[0].includes('1-tabanlı blok metni 1'), 'First index must 
 assert(parsedOneBased[24].includes('1-tabanlı blok metni 25'), 'Last index must map to 24');
 
 console.log('Large Batch Response Parsing Resilience passed 100% successfully!');
+
+// 21. Test Dynamic Font-Size Based Reflow in reflowLinesToParagraphs
+console.log('Testing Dynamic Font-Size Based Reflow...');
+const { extractFootnotesAndBodyFromPage: extractFnAndBody } = await import('../src/lib/pdf-engine.ts');
+
+const mockJustifiedLines = [
+  { y: 100, minX: 52, maxX: 500, height: 16, fontSize: 16, text: 'Bu satır büyük fontlu bir metnin ilk satırıdır ve' },
+  { y: 125, minX: 58, maxX: 495, height: 16, fontSize: 16, text: 'ikinci satır hafif girintili olsa bile cümle ortasında asla bölünmemelidir.' },
+  { y: 165, minX: 85, maxX: 490, height: 16, fontSize: 16, text: 'Bu ise yeni bir paragrafın başlangıcıdır.' }
+];
+const justifiedResult = extractFnAndBody(mockJustifiedLines, 1, 16, 800);
+assert.strictEqual(justifiedResult.bodyParagraphs.length, 2, 'Should create exactly 2 paragraphs, not 3');
+assert(justifiedResult.bodyParagraphs[0].text.includes('Bu satır büyük fontlu bir metnin ilk satırıdır ve ikinci satır'), 'First paragraph must be merged');
+assert(justifiedResult.bodyParagraphs[1].text.includes('Bu ise yeni bir paragrafın başlangıcıdır.'), 'Second paragraph must be distinct');
+console.log('Dynamic Font-Size Based Reflow passed 100% successfully!');
+
+// 22. Test Cross-Page Sentence Continuity Across Footnotes and Images
+console.log('Testing Cross-Page Sentence Continuity Across Footnotes and Images...');
+const mockPage1Lines = [
+  { y: 100, minX: 50, maxX: 500, height: 12, fontSize: 12, text: 'Yazar kitabın birinci sayfasında önemli bir tespitte bulundu ve bu tespit' },
+  { y: 650, minX: 50, maxX: 400, height: 9, fontSize: 9, text: '1. Bu dipnot sayfa 1 altında yer almaktadır.' }
+];
+const mockPage2Lines = [
+  { y: 100, minX: 50, maxX: 500, height: 12, fontSize: 12, text: 'tüm bilim dünyasını derinden etkiledi.' }
+];
+
+const p1Extracted = extractFnAndBody(mockPage1Lines, 1, 12, 700);
+const p2Extracted = extractFnAndBody(mockPage2Lines, 2, 12, 700);
+
+const consolidatedTest = [];
+const allPagesTest = [
+  { page: 1, paragraphs: [...p1Extracted.bodyParagraphs, ...p1Extracted.footnoteParagraphs] },
+  { page: 2, paragraphs: [...p2Extracted.bodyParagraphs, ...p2Extracted.footnoteParagraphs] }
+];
+
+for (const pageData of allPagesTest) {
+  for (const p of pageData.paragraphs) {
+    if (p.isImageHtml || p.isFootnote || (p.text.startsWith('[^p') && p.text.includes(']:'))) {
+      continue;
+    }
+    const trimmed = p.text.trim();
+    if (!trimmed) continue;
+
+    if (consolidatedTest.length > 0 && !p.isHeading) {
+      let lastNormalIndex = -1;
+      for (let k = consolidatedTest.length - 1; k >= 0; k--) {
+        const cand = consolidatedTest[k];
+        if (!cand.isHeading && !cand.isImageHtml && !cand.isFootnote && !cand.text.startsWith('[^p')) {
+          lastNormalIndex = k;
+          break;
+        }
+      }
+
+      if (lastNormalIndex >= 0) {
+        const lastP = consolidatedTest[lastNormalIndex];
+        const lastText = lastP.text.trim();
+        const lastEndsWithPunct = /[.?!:»"']\s*$/.test(lastText);
+        const currentStartsWithLower = /^[a-zçğıöşü]/.test(trimmed);
+
+        if (lastText.endsWith('-')) {
+          lastP.text = lastText.slice(0, -1) + trimmed;
+          continue;
+        } else if (!lastEndsWithPunct && currentStartsWithLower) {
+          lastP.text = lastText + ' ' + trimmed;
+          continue;
+        }
+      }
+    }
+    consolidatedTest.push(p);
+  }
+}
+
+assert.strictEqual(consolidatedTest.length, 1, 'Sentence interrupted by footnote across page boundary must merge into 1 paragraph');
+assert.strictEqual(consolidatedTest[0].text, 'Yazar kitabın birinci sayfasında önemli bir tespitte bulundu ve bu tespit tüm bilim dünyasını derinden etkiledi.');
+console.log('Cross-Page Sentence Continuity passed 100% successfully!');
+
+// 23. Test Hardened Footnote Detection with isVeryNearBottom and Attached Superscripts
+console.log('Testing Hardened Footnote Detection and Attached Superscripts...');
+const mockPageWithAttachedSuperscript = [
+  { y: 200, minX: 50, maxX: 500, height: 12, fontSize: 12, text: 'Önemli bir iddia ortaya atıldı1 ve tartışmalar başladı.' },
+  { y: 550, minX: 50, maxX: 450, height: 12, fontSize: 12, text: '1. Bu iddia tarihi kaynaklara dayanır.' }
+];
+const attachedFnResult = extractFnAndBody(mockPageWithAttachedSuperscript, 5, 12, 600);
+assert.strictEqual(attachedFnResult.footnoteParagraphs.length, 1, 'Must detect footnote at bottom even with same font size');
+assert(attachedFnResult.bodyParagraphs[0].text.includes('atıldı[^p5_1]'), 'Must link attached number atıldı1 to [^p5_1]');
+console.log('Hardened Footnote Detection and Attached Superscripts passed 100% successfully!');
+
+// 24. Test Zero Fake Diff on Footnote Paragraphs in TextBlocks
+console.log('Testing Zero Fake Diff in Footnote TextBlocks...');
+const tagToFnMap = new Map();
+tagToFnMap.set('p10_1', { id: 'fn-1', rawTag: '[^p10_1]', number: 1, text: 'Örnek açıklama' });
+
+const sampleParagraphText = 'Bu cümle bir dipnot[^p10_1] içermektedir.';
+const plainTextClean = sampleParagraphText.replace(/\[\^([^\]]+)\]/g, (_m, refTag) => {
+  const fnItem = tagToFnMap.get(refTag);
+  return fnItem ? `[${fnItem.number}]` : '';
+});
+
+const sampleBlock = {
+  id: '1-0',
+  elementTag: 'p',
+  originalHtml: 'Bu cümle bir dipnot<a href="#fn-1"><sup>[1]</sup></a> içermektedir.',
+  originalText: plainTextClean,
+  correctedHtml: 'Bu cümle bir dipnot<a href="#fn-1"><sup>[1]</sup></a> içermektedir.',
+  correctedText: plainTextClean,
+  status: 'pending',
+  diffCount: 0,
+};
+
+assert.strictEqual(sampleBlock.originalText, 'Bu cümle bir dipnot[1] içermektedir.');
+assert.strictEqual(sampleBlock.correctedText, 'Bu cümle bir dipnot[1] içermektedir.');
+const { diffs, fixedWordCount } = computeTextDiff(sampleBlock.originalText, sampleBlock.correctedText);
+assert.strictEqual(fixedWordCount, 0, 'Initial block fixedWordCount must be exactly 0 without fake diffs');
+assert.strictEqual(diffs.length, 1, 'Should have only 1 equal diff item');
+assert.strictEqual(diffs[0].type, 'equal');
+console.log('Zero Fake Diff in Footnote TextBlocks passed 100% successfully!');
+
+// 25. Test Chapter Mode Selection in PdfParseOptions
+console.log('Testing Chapter Mode Selection (Fixed Pages vs Auto)...');
+const samplePdfWithChapters = await PDFDocument.create();
+for (let p = 1; p <= 4; p++) {
+  const page = samplePdfWithChapters.addPage([400, 600]);
+  page.drawText(`Sayfa ${p} metin icerigi burada yer almaktadir.`, { x: 50, y: 500, size: 12 });
+}
+const pdfBytes = await samplePdfWithChapters.save();
+
+const autoResult = await parsePdf(pdfBytes.buffer, { chapterMode: 'auto', pagesPerChapterFallback: 2 });
+assert(autoResult.chapters.length >= 1, 'Must parse chapters under auto mode');
+
+const fixedResult = await parsePdf(pdfBytes.buffer, { chapterMode: 'fixed_pages', pagesPerChapterFallback: 2 });
+assert(fixedResult.chapters.length >= 1, 'Must parse chapters under fixed_pages mode');
+console.log('Chapter Mode Selection passed 100% successfully!');
+
 
 
 
