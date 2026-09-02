@@ -594,51 +594,6 @@ export async function refineChapterTitlesWithAi(
       callbacks?.onChapterUpdated?.(ch);
     }
   }
-
-  if (!options.useLlm || !isProviderReady(options) || chapters.length === 0) {
-    return;
-  }
-
-  // Do not block or abort whole pipeline if title translation fails or times out
-  const titlesList = chapters
-    .map((ch, idx) => `[TITLE_${idx}] ${ch.title}`)
-    .join('\n');
-
-  const targetName = getLanguageName(options.targetLanguage || 'tr');
-
-  const prompt = isTranslation
-    ? `Aşağıda bir kitabın bölümlerine ait orijinal başlık listesi yer almaktadır. Lütfen bu başlıkları bağlamı koruyarak ve doğal bir edebi dille ${targetName} diline çevir. Her başlığı [TITLE_X] Çevrilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`
-    : `Aşağıda bir kitabın bölümlerine ait başlık listesi yer almaktadır. Lütfen bu başlıklardaki OCR, harf birleşme (rn->m, cl->d, l< -> k vb.) ve bozuk karakter hatalarını aslına uygun düzgün Türkçe başlıklar olarak düzelt. Her başlığı [TITLE_X] Düzeltilmiş Başlık formatında tek tek satır olarak geri ver:\n\n${titlesList}`;
-
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Başlık çevirisi zaman aşımına uğradı, paragraflarla devam ediliyor.')), 10000)
-    );
-
-    const response = await Promise.race([
-      callLlmCorrection({
-        options,
-        content: prompt,
-        signal,
-      }),
-      timeoutPromise,
-    ]);
-
-    const lines = response.split('\n');
-    for (const line of lines) {
-      const match = line.match(/\[TITLE_(\d+)\]\s*(.+)/i);
-      if (match) {
-        const idx = parseInt(match[1], 10);
-        const cleanTitle = match[2].trim();
-        if (chapters[idx] && cleanTitle.length > 0) {
-          chapters[idx].title = cleanTitle;
-          callbacks?.onChapterUpdated?.(chapters[idx]);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Başlıkları AI ile iyileştirme atlandı/uyarısı:', err);
-  }
 }
 
 /**
